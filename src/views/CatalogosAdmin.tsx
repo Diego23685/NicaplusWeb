@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, FaTimes, FaUserCheck, FaUserPlus, FaSearch, FaSave } from 'react-icons/fa';
+import { FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, FaTimes, FaUserPlus, FaSearch, FaSave } from 'react-icons/fa';
 
 // INTERFACES
 interface Producto {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaMoneyBillWave, FaEdit, FaBoxOpen, FaUser, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch } from 'react-icons/fa';
+import { FaMoneyBillWave, FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch } from 'react-icons/fa';
 
 export const Reportes: React.FC = () => {
     // Estados del Generador de Reportes Original

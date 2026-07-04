@@ -1,5 +1,4 @@
 import React from 'react';
-import { FaGamepad, FaServer } from 'react-icons/fa';
 
 interface HeroInicioProps {
     setSeccionActiva: (seccion: 'inicio' | 'nosotros' | 'productos' | 'contacto') => void;
