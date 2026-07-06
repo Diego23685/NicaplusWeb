@@ -9,13 +9,22 @@ import { Taller } from './views/Taller';
 import { Reportes } from './views/Reportes';
 import { CatalogosAdmin } from './views/CatalogosAdmin';
 import { PerfilUsuario } from './views/PerfilUsuario';
+import { Cuentas } from './views/Cuentas'; // ◄ 1. IMPORTACIÓN DE LA NUEVA VISTA
 import { FaBars, FaTimes } from 'react-icons/fa';
+import { ClientesCRM } from './views/ClientesCRM';
+import { Proveedores } from './views/Proveedores';
+import { Renovaciones } from './views/Renovaciones';
+import { TicketsSoporteCRM } from './views/TicketsSoporteCRM';
+import { GarantiasCRM } from './views/GarantiasCRM';
+import { ContabilidadCaja } from './views/ContabilidadCaja';
+import { Analitica } from './views/Analitica';
+import { Auditoria } from './views/Auditoria';
 
 const PanelLayout: React.FC = () => {
     const { usuario } = useAuth();
-    const [vistaActiva, setVistaActiva] = useState<'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil'>('inicio');
     
-    // Estado para controlar el menú lateral flotante en dispositivos móviles/tablets
+    // ◄ 2. ACTUALIZACIÓN DEL TIPO DE ESTADO (Añadido 'cuentas' y 'garantias')
+    const [vistaActiva, setVistaActiva] = useState<'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria'>('inicio');
     const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
     if (!usuario) {
@@ -101,6 +110,15 @@ const PanelLayout: React.FC = () => {
                     {vistaActiva === 'reportes' && <Reportes />}
                     {vistaActiva === 'catalogos' && <CatalogosAdmin />}
                     {vistaActiva === 'perfil' && <PerfilUsuario />}
+                    {vistaActiva === 'cuentas' && <Cuentas />} {/* ◄ 3. ENRUTAMIENTO DE LA VISTA CUENTAS */}
+                    {vistaActiva === 'crm' && <ClientesCRM />}
+                    {vistaActiva === 'proveedores' && <Proveedores />}
+                    {vistaActiva === 'renovaciones' && <Renovaciones />}
+                    {vistaActiva === 'tickets' && <TicketsSoporteCRM />}
+                    {vistaActiva === 'garantias' && <GarantiasCRM />} {/* ◄ 4. ENRUTAMIENTO DE LA VISTA GARANTÍAS */}
+                    {vistaActiva === 'contabilidad_caja' && <ContabilidadCaja />}
+                    {vistaActiva === 'analitica' && <Analitica />}
+                    {vistaActiva === 'auditoria' && <Auditoria />}
                 </main>
             </div>
         </div>

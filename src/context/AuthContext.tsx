@@ -9,7 +9,7 @@ interface UsuarioSesion {
 
 interface AuthContextType {
     usuario: UsuarioSesion | null;
-    login: (datos: UsuarioSesion) => void;
+    login: (token: string) => void; // Cambiado de UsuarioSesion a string
     logout: () => void;
     cargando: boolean;
 }
@@ -21,21 +21,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [cargando, setCargando] = useState(true);
 
     useEffect(() => {
-        const sesionGuardada = localStorage.getItem('nicaplus_session');
-        if (sesionGuardada) {
-            setUsuario(JSON.parse(sesionGuardada));
+        const token = localStorage.getItem('nicaplus_token');
+        if (token) {
+            try {
+                // Decodificar token para restaurar sesión al recargar
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setUsuario({
+                    id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]),
+                    nombre: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
+                    username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"], // Ajusta si el nombre de usuario es distinto
+                    rol: payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
+                });
+            } catch (e) {
+                localStorage.removeItem('nicaplus_token');
+            }
         }
         setCargando(false);
     }, []);
 
-    const login = (datos: UsuarioSesion) => {
-        setUsuario(datos);
-        localStorage.setItem('nicaplus_session', JSON.stringify(datos));
+    const login = (token: string) => {
+        localStorage.setItem('nicaplus_token', token);
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        
+        setUsuario({
+            id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]),
+            nombre: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
+            username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
+            rol: payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
+        });
     };
 
     const logout = () => {
         setUsuario(null);
-        localStorage.removeItem('nicaplus_session');
+        localStorage.removeItem('nicaplus_token');
     };
 
     return (

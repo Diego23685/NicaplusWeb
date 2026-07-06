@@ -24,10 +24,15 @@ export const Login: React.FC = () => {
         setIsLoading(true);
         try {
             const res = await api.post('/auth/login', { username, password });
-            login(res.data);
-            alert(`Bienvenido, ${res.data.nombre}`);
+            
+            // CORRECCIÓN AQUÍ: Pasa solo el string del token
+            login(res.data.token); 
+            
+            alert("Bienvenido al sistema");
         } catch (err: any) {
-            alert(err.response?.data || 'Error al iniciar sesión');
+            // Mejoramos el manejo de error para mostrar el mensaje real del servidor
+            const mensaje = err.response?.data || 'Error al iniciar sesión';
+            alert(mensaje);
         } finally {
             setIsLoading(false);
         }

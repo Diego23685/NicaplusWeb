@@ -1,14 +1,17 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FaThLarge, FaShoppingCart, FaTools, FaChartBar, FaBoxOpen, FaSignOutAlt, FaUser } from 'react-icons/fa';
+import { FaThLarge, FaShoppingCart, FaTools, FaChartBar, FaChartLine, FaBoxOpen, FaSignOutAlt, FaUser, FaHandHoldingUsd, FaUserFriends, FaTruck, FaCalendarAlt, FaExclamationTriangle, FaShieldAlt } from 'react-icons/fa';
 
 interface SidebarProps {
     vistaActiva: string;
-    setVistaActiva: (vista: 'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil') => void;
+    setVistaActiva: (vista: 'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva }) => {
     const { usuario, logout } = useAuth();
+
+    // Extraemos el rol de forma segura para TypeScript
+    const rolUsuario = usuario?.rol || '';
 
     const botonEstilo = (id: string) => ({
         display: 'flex',
@@ -34,15 +37,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
             width: '260px', 
             minWidth: '260px', 
             background: '#1e293b', 
-            height: '100%',            /* Se adapta al 100% del contenedor padre seguro */
-            maxHeight: '100vh',        /* Restringe estrictamente el límite superior */
+            height: '100%',            
+            maxHeight: '100vh',        
             padding: '20px', 
             display: 'flex', 
             flexDirection: 'column', 
-            justifyContent: 'space-between', /* CORREGIDO: Sintaxis válida de React/TS */
+            justifyContent: 'space-between', 
             borderRight: '1px solid #334155',
             boxSizing: 'border-box',
-            overflowY: 'hidden'        /* Bloquea de raíz cualquier scroll interno en la barra */
+            overflowY: 'auto' // Cambiado a 'auto' para evitar que se corten los botones en pantallas pequeñas
         }}>
             <div>
                 {/* LOGO / BRANDING */}
@@ -53,6 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
 
                 {/* BOTONES DE NAVEGACIÓN */}
                 <nav style={{ display: 'flex', flexDirection: 'column' }}>
+                    {/* ACCESO UNIVERSAL (Todos los roles) */}
                     <button 
                         onClick={() => setVistaActiva('inicio')} 
                         style={botonEstilo('inicio')}
@@ -62,25 +66,116 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                         <FaThLarge style={{ color: vistaActiva === 'inicio' ? '#FFFFFF' : '#047688' }} /> Dashboard
                     </button>
                     
-                    <button 
-                        onClick={() => setVistaActiva('caja')} 
-                        style={botonEstilo('caja')}
-                        onMouseEnter={(e) => { if(vistaActiva !== 'caja') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
-                        onMouseLeave={(e) => { if(vistaActiva !== 'caja') e.currentTarget.style.background = 'transparent'; }}
-                    >
-                        <FaShoppingCart style={{ color: vistaActiva === 'caja' ? '#FFFFFF' : '#047688' }} /> Ventas (POS)
-                    </button>
+                    {/* ACCESO: Administrador, Socio, Ventas */}
+                    {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('caja')} 
+                            style={botonEstilo('caja')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'caja') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'caja') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaShoppingCart style={{ color: vistaActiva === 'caja' ? '#FFFFFF' : '#047688' }} /> Ventas (POS)
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Ventas */}
+                    {['Administrador'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('auditoria')} 
+                            style={botonEstilo('auditoria')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'caja') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'caja') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaShoppingCart style={{ color: vistaActiva === 'caja' ? '#FFFFFF' : '#047688' }} /> Auditoria
+                        </button>
+                    )}
                     
-                    <button 
-                        onClick={() => setVistaActiva('taller')} 
-                        style={botonEstilo('taller')}
-                        onMouseEnter={(e) => { if(vistaActiva !== 'taller') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
-                        onMouseLeave={(e) => { if(vistaActiva !== 'taller') e.currentTarget.style.background = 'transparent'; }}
-                    >
-                        <FaTools style={{ color: vistaActiva === 'taller' ? '#FFFFFF' : '#047688' }} /> Taller Técnico
-                    </button>
+                    {/* ACCESO: Administrador, Socio, Soporte */}
+                    {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('taller')} 
+                            style={botonEstilo('taller')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'taller') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'taller') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaTools style={{ color: vistaActiva === 'taller' ? '#FFFFFF' : '#047688' }} /> Taller Técnico
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Ventas */}
+                    {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('cuentas')} 
+                            style={botonEstilo('cuentas')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'cuentas') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'cuentas') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaHandHoldingUsd style={{ color: vistaActiva === 'cuentas' ? '#FFFFFF' : '#047688' }} /> Créditos y Deudas
+                        </button>
+                    )}
                     
-                    {usuario?.rol === 'Admin' && (
+                    {/* ACCESO: Administrador, Socio, Ventas, Soporte */}
+                    {['Administrador', 'Socio', 'Ventas', 'Soporte'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('crm')} 
+                            style={botonEstilo('crm')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'crm') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'crm') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaUserFriends style={{ color: vistaActiva === 'crm' ? '#FFFFFF' : '#047688' }} /> Clientes (CRM)
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Ventas */}
+                    {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('renovaciones')} 
+                            style={botonEstilo('renovaciones')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'renovaciones') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'renovaciones') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaCalendarAlt style={{ color: vistaActiva === 'renovaciones' ? '#FFFFFF' : '#047688' }} /> Renovaciones
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Soporte */}
+                    {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('tickets')} 
+                            style={botonEstilo('tickets')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'tickets') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'tickets') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaExclamationTriangle style={{ color: vistaActiva === 'tickets' ? '#FFFFFF' : '#047688' }} /> Reclamos y Soporte
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Soporte */}
+                    {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('garantias')} 
+                            style={botonEstilo('garantias')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'garantias') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'garantias') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaShieldAlt style={{ color: vistaActiva === 'garantias' ? '#FFFFFF' : '#047688' }} /> Bitácora de Garantías
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Ventas */}
+                    {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('proveedores')} 
+                            style={botonEstilo('proveedores')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'proveedores') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'proveedores') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaTruck style={{ color: vistaActiva === 'proveedores' ? '#FFFFFF' : '#047688' }} /> Proveedores
+                        </button>
+                    )}
+
+                    {/* MÓDULOS EXCLUSIVOS: Administrador y Socio */}
+                    {['Administrador', 'Socio'].includes(rolUsuario) && (
                         <button 
                             onClick={() => setVistaActiva('catalogos')} 
                             style={botonEstilo('catalogos')}
@@ -90,8 +185,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                             <FaBoxOpen style={{ color: vistaActiva === 'catalogos' ? '#FFFFFF' : '#047688' }} /> Catálogos Admin
                         </button>
                     )}
+
+                    {['Administrador', 'Socio'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('contabilidad_caja')} 
+                            style={botonEstilo('contabilidad_caja')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'contabilidad_caja') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'contabilidad_caja') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaChartBar style={{ color: vistaActiva === 'contabilidad_caja' ? '#FFFFFF' : '#047688' }} /> Arqueo y Caja
+                        </button>
+                    )}
+
+                    {['Administrador', 'Socio'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('analitica')} 
+                            style={botonEstilo('analitica')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'analitica') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'analitica') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaChartLine style={{ color: vistaActiva === 'analitica' ? '#FFFFFF' : '#047688' }} /> Analítica
+                        </button>
+                    )}
                     
-                    {usuario?.rol === 'Admin' && (
+                    {['Administrador', 'Socio'].includes(rolUsuario) && (
                         <button 
                             onClick={() => setVistaActiva('reportes')} 
                             style={botonEstilo('reportes')}
@@ -105,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
             </div>
 
             {/* SECCIÓN INFERIOR: PERFIL Y LOGOUT */}
-            <div style={{ borderTop: '1px solid #334155', paddingTop: '15px' }}>
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '15px', marginTop: '20px' }}>
                 <button 
                     onClick={() => setVistaActiva('perfil')}
                     style={{
@@ -140,10 +257,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                     </div>
                     <div style={{ overflow: 'hidden' }}>
                         <div style={{ fontWeight: 'bold', color: '#FFFFFF', fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                            {usuario?.nombre}
+                            {usuario?.nombre || 'Usuario'}
                         </div>
                         <small style={{ color: '#94a3b8', display: 'block', fontWeight: '500' }}>
-                            Rol: {usuario?.rol}
+                            Rol: {usuario?.rol || 'Ninguno'}
                         </small>
                     </div>
                 </button>

@@ -7,9 +7,26 @@ const api = axios.create({
     },
 });
 
-// Interceptor para inyectar datos de sesión si es necesario en el futuro
 api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('nicaplus_token'); // Obtiene el token que guardaremos en el Login
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
+}, (error) => {
+    return Promise.reject(error);
 });
+
+// services/api.ts
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('nicaplus_token');
+            window.location.href = '/login'; // O tu lógica de redirección
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default api;

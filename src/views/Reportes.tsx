@@ -294,21 +294,24 @@ export const Reportes: React.FC = () => {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #10b981', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
-                            <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>TOTAL NETO</small>
-                            <h3 style={{ margin: '4px 0 0 0', color: '#10b981', fontSize: '1.4rem' }}>C$ {datosReporte.finanzas.total.toLocaleString()}</h3>
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #10b981'}}>
+                            <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>BALANCE NETO (CAJA REAL)</small>
+                            <h3 style={{ margin: '4px 0 0 0', color: '#10b981', fontSize: '1.4rem' }}>
+                                {/* Cambiamos finanzas.total por finanzas.balanceCajaReal */}
+                                C$ {(datosReporte?.finanzas?.balanceCajaReal ?? 0).toLocaleString()}
+                            </h3>
                         </div>
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #38bdf8', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>EFECTIVO</small>
-                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {datosReporte.finanzas.efectivo.toLocaleString()}</h3>
+                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {(datosReporte?.finanzas?.efectivo ?? 0).toLocaleString()}</h3>
                         </div>
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #a855f7', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>TRANSFERENCIA</small>
-                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {datosReporte.finanzas.transferencia.toLocaleString()}</h3>
+                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {(datosReporte?.finanzas?.transferencia ?? 0).toLocaleString()}</h3>
                         </div>
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #f59e0b', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>TARJETA</small>
-                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {datosReporte.finanzas.tarjeta.toLocaleString()}</h3>
+                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {(datosReporte?.finanzas?.tarjeta ?? 0).toLocaleString()}</h3>
                         </div>
                     </div>
                 </div>
@@ -357,7 +360,9 @@ export const Reportes: React.FC = () => {
                                     ventasFiltradas.map((v) => (
                                         <tr key={v.id} style={{ borderBottom: '1px solid #334155' }}>
                                             <td style={{ padding: '10px', fontWeight: 'bold', color: '#38bdf8' }}>#000{v.id}</td>
-                                            <td style={{ padding: '10px', color: '#cbd5e1', whiteSpace: 'nowrap' }}>{new Date(v.fecha).toLocaleDateString()}</td>
+                                            <td style={{ padding: '10px', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
+                                                {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
+                                            </td>
                                             <td style={{ padding: '10px' }}>{v.cliente?.nombre || 'Mostrador General'}</td>
                                             <td style={{ padding: '10px' }}>
                                                 <span style={{ padding: '2px 8px', background: '#0f172a', borderRadius: '4px', fontSize: '0.75rem', border: '1px solid #334155' }}>{v.metodoPago}</span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle } from 'react-icons/fa';
 
 interface Producto {
     id: number;
@@ -12,6 +12,7 @@ interface Producto {
     imagenUrl: string;
     esDigital: boolean;
     requiereServicio: boolean;
+    esSuscripcion: boolean;
 }
 
 interface ItemCarrito {
@@ -22,13 +23,18 @@ interface ItemCarrito {
     precioCostoUnitario: number;
     subTotal: number;
     metadataDigital: string;
+    diasSuscripcion: number;
 }
 
 export const imprimirTicketTermico = (datosVenta: any) => {
     const ventanaImpresion = window.open('', '_blank');
-    if (!ventanaImpresion) return;
+    if (!ventanaImpresion) {
+        alert("Permita los elementos emergentes para poder emitir el ticket físico.");
+        return;
+    }
 
     const contenidoTicket = `
+        <!DOCTYPE html>
         <html>
         <head>
             <title>Factura Nicaplus</title>
@@ -71,10 +77,10 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 <tbody>
                     ${datosVenta.detalles.map((item: any) => `
                         <tr>
-                            <td>${item.cantidad}x ${item.nombre.substring(0, 15)}</td>
+                            <td>${item.cantidad}x ${(item.nombre || 'Producto').substring(0, 15)}</td>
                             <td align="right">C$ ${item.subTotal}</td>
                         </tr>
-                        ${item.metadataDigital ? `<tr><td colspan="2" style="font-size:9px; padding-left:10px; color:#555;">ID: ${item.metadataDigital}</td></tr>` : ''}
+                        ${item.metadataDigital ? `<tr><td colspan="2" style="font-size:9px; padding-left:10px; color:#555; word-break: break-all;">${item.metadataDigital}</td></tr>` : ''}
                     `).join('')}
                 </tbody>
             </table>
@@ -87,18 +93,19 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 ¡Gracias por tu preferencia!<br>
                 Soporte y Garantía de Calidad.
             </div>
-            <script>
-                window.onload = function() { 
-                    window.print(); 
-                    setTimeout(function() { window.close(); }, 500); 
-                }
-            </script>
         </body>
         </html>
     `;
 
+    ventanaImpresion.document.open();
     ventanaImpresion.document.write(contenidoTicket);
     ventanaImpresion.document.close();
+
+    ventanaImpresion.focus();
+    ventanaImpresion.setTimeout(() => {
+        ventanaImpresion.print();
+        ventanaImpresion.close();
+    }, 250);
 };
 
 export const Caja: React.FC = () => {
@@ -107,12 +114,21 @@ export const Caja: React.FC = () => {
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
     const [metodoPago, setMetodoPago] = useState('Efectivo');
     const [fechaVenta, setFechaVenta] = useState(new Date().toISOString().split('T')[0]);
+    
+    const [fechaVencimientoCredito, setFechaVencimientoCredito] = useState(
+        new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    );
+
     const [listaClientes, setListaClientes] = useState<any[]>([]);
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
     const [vistaModo, setVistaModo] = useState<'cuadricula' | 'lista'>('cuadricula');
 
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [busquedaCliente, setBusquedaCliente] = useState('');
+
+    // NUEVO: Estados para el control y despacho post-venta interactivo (Impresión / WhatsApp)
+    const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
+    const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
 
     useEffect(() => {
         api.get('/products')
@@ -158,12 +174,12 @@ export const Caja: React.FC = () => {
                 precioUnitario: producto.precioVenta,
                 precioCostoUnitario: producto.precioCosto,
                 subTotal: producto.precioVenta,
-                metadataDigital: ''
+                metadataDigital: '',
+                diasSuscripcion: (producto as any).diasDuracion || 30
             }]);
         }
     };
 
-    // NUEVO: Modificar cantidad de forma manual mediante input numérico
     const cambiarCantidadManual = (idProducto: number, nuevaCantidad: number) => {
         if (nuevaCantidad < 1) return;
 
@@ -172,7 +188,6 @@ export const Caja: React.FC = () => {
 
         if (!itemOriginal || !productoBase) return;
 
-        // Validar stock si el rubro es un artículo físico
         if (!productoBase.esDigital && !productoBase.requiereServicio && productoBase.stockActual < nuevaCantidad) {
             alert(`Acción denegada: El stock disponible para este artículo es de ${productoBase.stockActual} unidades.`);
             return;
@@ -182,10 +197,16 @@ export const Caja: React.FC = () => {
             item.idProducto === idProducto 
                 ? { ...item, cantidad: nuevaCantidad, subTotal: nuevaCantidad * item.precioUnitario }
                 : item
-            ));
+        ));
     };
 
-    // NUEVO: Remover un producto específico de la lista sin limpiar la orden completa
+    const actualizarDiasItemCarrito = (idProducto: number, dias: number) => {
+        if (dias < 1) return;
+        setCarrito(carrito.map(item => 
+            item.idProducto === idProducto ? { ...item, diasSuscripcion: dias } : item
+        ));
+    };
+
     const eliminarDelCarrito = (idProducto: number) => {
         setCarrito(carrito.filter(item => item.idProducto !== idProducto));
     };
@@ -197,6 +218,39 @@ export const Caja: React.FC = () => {
     };
 
     const limpiarCarrito = () => setCarrito([]);
+
+    // LÓGICA: PROCESAR ENVÍO E INYECCIÓN DE TEXTO PARA WHATSAPP
+    const enviarCredencialesWhatsApp = () => {
+        if (!datosUltimaVenta) return;
+
+        const clienteObj = listaClientes.find(c => c.id === idClienteSeleccionado);
+        if (!clienteObj || !clienteObj.telefono) {
+            alert("El cliente seleccionado no dispone de un número de teléfono móvil válido.");
+            return;
+        }
+
+        // Limpiar caracteres del número de teléfono para la URL
+        const telefonoLimpio = clienteObj.telefono.replace(/[^0-9]/g, '');
+
+        // Construir cuerpo del mensaje de forma legible
+        let mensaje = `*NICAPLUS GAMING & TECH*\n`;
+        mensaje += `¡Hola, ${clienteObj.nombre}! Gracias por tu compra.\n`;
+        mensaje += `Aquí tienes los accesos de tus servicios adquiridos:\n\n`;
+
+        datosUltimaVenta.detalles.forEach((item: any, idx: number) => {
+            mensaje += `*${idx + 1}. ${item.nombre}*\n`;
+            if (item.metadataDigital) {
+                // Si el backend inyectó los accesos del PerfilCuenta automático, aquí se añaden planos
+                mensaje += `Acceso: _${item.metadataDigital}_\n`;
+            }
+            mensaje += `---------------------------\n`;
+        });
+
+        mensaje += `\nSoporte Técnico y Garantía Activa. ¡Disfruta tu servicio!`;
+
+        const urlWhatsApp = `https://wa.me/${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`;
+        window.open(urlWhatsApp, '_blank');
+    };
 
     const finalizarVenta = async () => {
         if (carrito.length === 0) return;
@@ -211,13 +265,30 @@ export const Caja: React.FC = () => {
             return;
         }
 
-        const detallesMapeados = carrito.map(item => ({
-            idProducto: item.idProducto,
-            cantidad: item.cantidad,
-            precioUnitario: item.precioUnitario,
-            subTotal: item.subTotal,
-            metadataDigital: item.metadataDigital || ''
-        }));
+        const llevaSuscripcion = carrito.some(item => {
+            const p = productos.find(prod => prod.id === item.idProducto);
+            return p?.esSuscripcion;
+        });
+
+        if ((llevaSuscripcion || metodoPago === "Crédito") && (!idClienteSeleccionado || idClienteSeleccionado === 0)) {
+            alert("Operación Denegada: Las ventas al crédito o configuradas como Suscripción requieren obligatoriamente asociar un cliente real con datos verificables.");
+            return;
+        }
+
+        const detallesMapeados = carrito.map(item => {
+            const p = productos.find(prod => prod.id === item.idProducto);
+            const metaFinal = p?.esSuscripcion 
+                ? `DIAS:${item.diasSuscripcion}|${item.metadataDigital}` 
+                : item.metadataDigital;
+
+            return {
+                idProducto: item.idProducto,
+                cantidad: item.cantidad,
+                precioUnitario: item.precioUnitario,
+                subTotal: item.subTotal,
+                metadataDigital: metaFinal || ''
+            };
+        });
 
         const payload = {
             idUsuario: usuario?.id || 1,
@@ -225,23 +296,46 @@ export const Caja: React.FC = () => {
             metodoPago: metodoPago,
             fechaVenta: new Date(fechaVenta + "T12:00:00"), 
             total: totalVenta,
-            detalles: detallesMapeados
+            detalles: detallesMapeados,
+            fechaVencimientoCreditoManual: metodoPago === "Crédito" ? new Date(fechaVencimientoCredito + "T12:00:00") : null
         };
 
         try {
             const res = await api.post('/ventas', payload);
-            alert("Venta completada con éxito. Stock actualizado.");
             
-            imprimirTicketTermico({ ventaId: res.data.id || res.data.ventaId, detalles: carrito });
+            // Sincronizar nombres mapeados desde estado local de React
+            const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
+                if (!item.nombre) {
+                    const prodOriginal = productos.find(p => p.id === item.idProducto);
+                    return {
+                        ...item,
+                        nombre: prodOriginal ? prodOriginal.nombre : "Producto General"
+                    };
+                }
+                return item;
+            });
+
+            // Almacenamos temporalmente en el estado para el flujo interactivo final
+            setDatosUltimaVenta({
+                ventaId: res.data.id || res.data.ventaId,
+                detalles: detallesParaTicket
+            });
+
+            // Desplegar panel final de despacho
+            setMostrarModalDespacho(true);
+
+            // Limpieza y reseteo regular de la caja POS
             limpiarCarrito();
-            
             const hoy = new Date().toISOString().split('T')[0];
             setFechaVenta(hoy);
+            setFechaVencimientoCredito(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 
             const refreshRes = await api.get('/products');
             setProductos(refreshRes.data);
+
         } catch (err: any) {
-            alert(err.response?.data || "Error al procesar la venta.");
+            console.error(err);
+            alert(err.response?.data || "Error en el servidor al intentar procesar la venta.");
         }
     };
 
@@ -262,7 +356,7 @@ export const Caja: React.FC = () => {
                 {/* PANEL IZQUIERDO: PRODUCTOS */}
                 <div className="productos-panel" style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', minHeight: '450px' }}>
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '10px' }}>
                         <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700 }}>Inventario Disponible</h3>
                         <div style={{ display: 'flex', gap: '4px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
                             <button onClick={() => setVistaModo('cuadricula')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: vistaModo === 'cuadricula' ? '#581c7e' : 'transparent', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
@@ -274,7 +368,6 @@ export const Caja: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Buscador de productos */}
                     <div style={{ position: 'relative', marginBottom: '14px' }}>
                         <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                         <input 
@@ -286,7 +379,6 @@ export const Caja: React.FC = () => {
                         />
                     </div>
 
-                    {/* Contenedor de renderizado con scroll dedicado */}
                     <div style={{ flex: 1, overflowY: 'auto', maxHeight: '550px', paddingRight: '4px' }}>
                         {vistaModo === 'cuadricula' ? (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
@@ -307,12 +399,17 @@ export const Caja: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div style={{ borderTop: '1px solid #223249', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                                        <div style={{ borderTop: '1px solid #223249', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', flexWrap: 'wrap', gap: '4px' }}>
                                             <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', background: p.esDigital ? '#581c7e' : p.requiereServicio ? '#047688' : '#334155', color: '#FFFFFF', fontWeight: 'bold' }}>
                                                 {p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
                                             </span>
+                                            {p.esSuscripcion && (
+                                                <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', background: '#b91c1c', color: '#FFFFFF', fontWeight: 'bold' }}>
+                                                    🔄 Recurrente
+                                                </span>
+                                            )}
                                             {!p.esDigital && !p.requiereServicio && (
-                                                <small style={{ color: p.stockActual <= 3 ? '#ef4444' : '#94a3b8', fontSize: '0.65rem', fontWeight: 'bold' }}>
+                                                <small style={{ color: p.stockActual <= 3 ? '#ef4444' : '#94a3b8', fontSize: '0.65rem', fontWeight: 'bold', width: '100%', marginTop: '2px' }}>
                                                     Cant: {p.stockActual}
                                                 </small>
                                             )}
@@ -334,13 +431,11 @@ export const Caja: React.FC = () => {
                                                 <strong style={{ fontSize: '0.85rem', color: '#FFFFFF', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</strong>
                                                 <small style={{ color: p.esDigital ? '#c084fc' : p.requiereServicio ? '#38bdf8' : '#94a3b8', fontSize: '0.7rem', fontWeight: 'bold' }}>
                                                     {p.esDigital ? "Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
+                                                    {p.esSuscripcion && " | 🔄 Requiere Renovación"}
                                                 </small>
                                             </div>
                                         </div>
-                                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                            <div style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '0.95rem' }}>C$ {p.precioVenta}</div>
-                                            <small style={{ color: '#4ade80', fontWeight: 'bold', fontSize: '0.7rem' }}>+C$ {p.precioVenta - p.precioCosto}</small>
-                                        </div>
+                                        <span style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '0.95rem' }}>C$ {p.precioVenta}</span>
                                     </div>
                                 ))}
                             </div>
@@ -348,22 +443,21 @@ export const Caja: React.FC = () => {
                     </div>
                 </div>
 
-                {/* PANEL DERECHO: CARRITO Y ACCIONES CONTABLES */}
+                {/* PANEL DERECHO: CARRITO Y ACCIONES */}
                 <div className="carrito-panel" style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box', minHeight: '450px' }}>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '45%', minHeight: '180px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '45%', minHeight: '180px', flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px', marginBottom: '8px' }}>
                             <h4 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px', color: '#FFFFFF', fontWeight: 700 }}>
                                 <FaShoppingCart style={{ color: '#38bdf8' }} /> Resumen de Orden
                             </h4>
                             {carrito.length > 0 && (
-                                <button onClick={limpiarCarrito} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                <button onClick={limpiarCarrito} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>
                                     <FaTrashAlt /> Vaciar
                                 </button>
                             )}
                         </div>
                         
-                        {/* Lista Carrito con Scroll Independiente */}
                         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
                             {carrito.length === 0 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', padding: '20px 0' }}>
@@ -372,23 +466,19 @@ export const Caja: React.FC = () => {
                                 </div>
                             )}
                             {carrito.map(item => {
-                                const esDigital = productos.find(p => p.id === item.idProducto)?.esDigital;
+                                const pBase = productos.find(p => p.id === item.idProducto);
                                 return (
                                     <div key={item.idProducto} style={{ padding: '8px 0', borderBottom: '1px solid #0f172a' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                                             
-                                            {/* Sección izquierda de la línea del carrito */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '70%', overflow: 'hidden' }}>
-                                                {/* MEJORA 2: Botón individual para remover este item */}
                                                 <button 
                                                     onClick={() => eliminarDelCarrito(item.idProducto)} 
                                                     style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                                                    title="Quitar artículo"
                                                 >
                                                     <FaTimes size={12} />
                                                 </button>
 
-                                                {/* MEJORA 1: Input numérico directo para editar cantidad */}
                                                 <input 
                                                     type="number" 
                                                     value={item.cantidad} 
@@ -398,16 +488,30 @@ export const Caja: React.FC = () => {
                                                 />
 
                                                 <span style={{ fontSize: '0.85rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {item.nombre}
+                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(🔄)</span>}
                                                 </span>
                                             </div>
 
                                             <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', flexShrink: 0 }}>C$ {item.subTotal}</strong>
                                         </div>
-                                        {esDigital && (
+
+                                        {pBase?.esSuscripcion && (
+                                            <div style={{ marginTop: '6px', paddingLeft: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 'bold' }}>Días vigencia:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min={1} 
+                                                    value={item.diasSuscripcion} 
+                                                    onChange={(e) => actualizarDiasItemCarrito(item.idProducto, Number(e.target.value))}
+                                                    style={{ background: '#0f172a', color: '#fff', border: '1px solid #f43f5e', borderRadius: '4px', width: '55px', padding: '2px', textAlign: 'center', fontSize: '0.8rem', outline: 'none' }} 
+                                                />
+                                            </div>
+                                        )}
+
+                                        {pBase?.esDigital && (
                                             <input 
                                                 type="text" 
-                                                placeholder="ID del Jugador (Obligatorio)" 
+                                                placeholder={pBase.esSuscripcion ? "Referencia/Correo Cuenta (Obligatorio)" : "ID del Jugador (Obligatorio)"} 
                                                 value={item.metadataDigital}
                                                 onChange={(e) => actualizarMetadata(item.idProducto, e.target.value)}
                                                 style={{ marginTop: '6px', width: '100%', padding: '6px 10px', background: '#0f172a', border: '1px solid #ef4444', borderRadius: '6px', color: '#FFFFFF', outline: 'none', fontSize: '0.8rem', boxSizing: 'border-box' }}
@@ -419,7 +523,6 @@ export const Caja: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Métricas e Inyecciones de Venta */}
                     <div style={{ borderTop: '1px solid #334155', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
                         
                         {/* Selector de Cliente */}
@@ -459,8 +562,34 @@ export const Caja: React.FC = () => {
                                 <option value="Efectivo">💵 Efectivo</option>
                                 <option value="Transferencia">🏦 Transferencia Bancaria</option>
                                 <option value="Tarjeta">💳 Tarjeta</option>
+                                <option value="Crédito">🛑 Crédito (Cuenta por Cobrar)</option>
                             </select>
                         </div>
+
+                        {/* INPUT CONDICIONAL: Fecha de Vencimiento de Crédito Manual */}
+                        {metodoPago === "Crédito" && (
+                            <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px', borderRadius: '6px', border: '1px dashed #ef4444' }}>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#f87171', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                    <FaCalendarAlt size={10} /> Vencimiento del Crédito
+                                </label>
+                                <input 
+                                    type="date" 
+                                    value={fechaVencimientoCredito} 
+                                    onChange={e => setFechaVencimientoCredito(e.target.value)} 
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px',
+                                        background: '#0f172a',
+                                        color: '#FFFFFF',
+                                        border: '1px solid #ef4444',
+                                        borderRadius: '6px',
+                                        fontSize: '0.85rem',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }} 
+                                />
+                            </div>
+                        )}
 
                         {/* Fecha de Emisión */}
                         <div>
@@ -471,21 +600,10 @@ export const Caja: React.FC = () => {
                                 type="date" 
                                 value={fechaVenta} 
                                 onChange={e => setFechaVenta(e.target.value)} 
-                                style={{
-                                    width: '100%',
-                                    padding: '8px',
-                                    background: '#0f172a',
-                                    color: '#FFFFFF',
-                                    border: '1px solid #334155',
-                                    borderRadius: '6px',
-                                    fontSize: '0.85rem',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }} 
+                                style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#FFFFFF', border: '1px solid #334155', borderRadius: '6px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} 
                             />
                         </div>
 
-                        {/* Caja de Utilidad Dinámica */}
                         {carrito.length > 0 && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(192, 132, 252, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid #c084fc', fontSize: '0.8rem' }}>
                                 <FaMoneyBillWave style={{ color: '#c084fc', flexShrink: 0 }} />
@@ -493,25 +611,65 @@ export const Caja: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Totales Reales */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0' }}>
                             <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#FFFFFF' }}>Monto Total:</span>
                             <strong style={{ color: '#38bdf8', fontSize: '1.35rem', fontWeight: '900' }}>C$ {totalVenta}</strong>
                         </div>
 
-                        {/* Botón de Acción Principal */}
                         <button 
                             onClick={finalizarVenta} 
                             disabled={carrito.length === 0} 
                             style={{ width: '100%', padding: '12px', backgroundColor: carrito.length === 0 ? '#334155' : '#581c7e', color: carrito.length === 0 ? '#64748b' : '#FFFFFF', border: 'none', borderRadius: '8px', fontSize: '0.9rem', cursor: carrito.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 'bold', transition: 'background 0.2s, transform 0.1s', textTransform: 'uppercase', letterSpacing: '0.5px' }}
-                            onMouseDown={(e) => { if(carrito.length > 0) e.currentTarget.style.transform = 'scale(0.98)'; }}
-                            onMouseUp={(e) => { if(carrito.length > 0) e.currentTarget.style.transform = 'scale(1)'; }}
                         >
                             Procesar Factura
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* MODAL INTERACTIVO FLOTANTE: DESPACHO INTEGRADO POST-VENTA */}
+            {mostrarModalDespacho && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, backdropFilter: 'blur(5px)' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '24px', maxWidth: '420px', width: '90%', textAlign: 'center', boxSizing: 'border-box' }}>
+                        <div style={{ fontSize: '3rem', color: '#4ade80', marginBottom: '10px' }}><FaCheckCircle /></div>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '1.3rem', fontWeight: 'bold' }}>¡Transacción Guardada!</h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px 0', lineHeight: '1.4' }}>
+                            La venta se registró correctamente en el sistema. Selecciona la vía de despacho de credenciales para el cliente.
+                        </p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <button 
+                                onClick={() => {
+                                    imprimirTicketTermico(datosUltimaVenta);
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#38bdf8', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+                            >
+                                <FaPrint /> Imprimir Ticket Físico
+                            </button>
+                            
+                            {idClienteSeleccionado && idClienteSeleccionado !== 0 && (
+                                <button 
+                                    onClick={enviarCredencialesWhatsApp}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#25d366', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+                                >
+                                    <FaWhatsapp size={18} /> Enviar por WhatsApp
+                                </button>
+                            )}
+
+                            <button 
+                                onClick={() => {
+                                    setMostrarModalDespacho(false);
+                                    setDatosUltimaVenta(null);
+                                }}
+                                style={{ width: '100%', padding: '10px', background: '#475569', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '6px' }}
+                            >
+                                Finalizar y Limpiar Caja
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
