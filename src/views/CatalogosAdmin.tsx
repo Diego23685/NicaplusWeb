@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, FaTimes, FaUserPlus, FaSearch, FaSave, FaTruck, FaShieldAlt, FaCheckCircle, FaTv, FaPlus, FaUserShield } from 'react-icons/fa';
+import { FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, FaTimes, FaUserPlus, FaSearch, FaSave, FaTruck, FaShieldAlt, FaCheckCircle, FaTv, FaPlus } from 'react-icons/fa';
 
 // INTERFACES
 interface Producto {
@@ -51,6 +51,12 @@ export const CatalogosAdmin: React.FC = () => {
     const [juegos, setJuegos] = useState<Juego[]>([]);
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [cargando, setCargando] = useState(true);
+
+    const [perfilEditandoId, setPerfilEditandoId] = useState<number | null>(null);
+    const [perfilEditandoDatos, setPerfilEditandoDatos] = useState({ id: 0, idProducto: 0, nombrePerfil: '', pin: '', correoCuenta: '', passwordCuenta: '' });
+
+    const [modoIngreso, setModoIngreso] = useState('individual'); // 'individual' o 'completa'
+    const [cantidadPerfiles, setCantidadPerfiles] = useState(5);
 
     // GESTIÓN DE PERFILES (UI SUB-PANEL EXPANDIBLE)
     const [productoIdPerfilAbierto, setProductoIdPerfilAbierto] = useState<number | null>(null);
@@ -171,6 +177,50 @@ export const CatalogosAdmin: React.FC = () => {
         }
     };
 
+    const comenzarEdicionPerfil = (perfil: PerfilCuenta) => {
+        setPerfilEditandoId(perfil.id);
+        setPerfilEditandoDatos({ ...perfil });
+    };
+
+    // Envía la actualización del PIN o nombre al Backend
+    const guardarCambiosPerfil = async () => {
+        try {
+            // Corrección: Usar 'api.put' en lugar de 'axios.put'
+            await api.put(`/perfilescuentas/${perfilEditandoId}`, perfilEditandoDatos);
+            setPerfilEditandoId(null);
+            alert("Perfil actualizado correctamente.");
+            
+            // Corrección: Recargar usando 'api.get' directo como en el resto de tu código
+            if (productoIdPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
+                setPerfilesActuales(res.data);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error al actualizar los datos del perfil.");
+        }
+    };
+
+    // Quita al cliente asignado al perfil (Liberación por falta de pago)
+    const liberarPerfilCliente = async (idPerfil: number) => {
+        if (!window.confirm("¿Está seguro de quitar a esta persona del perfil? La pantalla volverá a quedar disponible para la venta.")) return;
+        
+        try {
+            // Corrección: Usar 'api.put' en lugar de 'axios.put'
+            const response = await api.put(`/perfilescuentas/${idPerfil}/liberar`);
+            alert(response.data.mensaje || "Perfil liberado con éxito.");
+            
+            // Corrección: Recargar usando 'api.get' directo como en el resto de tu código
+            if (productoIdPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
+                setPerfilesActuales(res.data);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error al liberar el perfil.");
+        }
+    };
+
     const agregarPerfilManual = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!productoIdPerfilAbierto) return;
@@ -270,6 +320,35 @@ export const CatalogosAdmin: React.FC = () => {
         setGarantiaDias(producto.garantiaDias || 0);
         setProveedor(producto.proveedor || '');
         setEstadoProd(producto.estado || 'Activo');
+    };
+
+    const agregarCuentaCompletaManual = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!productoIdPerfilAbierto) return;
+
+        try {
+            // Usamos 'api' en lugar de 'axios' para mantener la configuración de tu servicio base
+            const response = await api.post('/perfilescuentas/cuenta-completa', {
+                idProducto: productoIdPerfilAbierto, 
+                correoCuenta: perfCorreo,
+                passwordCuenta: perfPassword,
+                cantidadPerfiles: cantidadPerfiles // Removido el parseInt innecesario
+            });
+            
+            alert(response.data.mensaje || "Cuenta autogenerada correctamente.");
+            
+            // Limpiar campos y refrescar lista de perfiles
+            setPerfCorreo('');
+            setPerfPassword('');
+            setCantidadPerfiles(5);
+            
+            // Corrección: Usar la función correcta de tu código para recargar la subtabla
+            const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
+            setPerfilesActuales(res.data);
+        } catch (error) {
+            console.error(error);
+            alert("Error al auto-generar la cuenta.");
+        }
     };
 
     const eliminarProducto = async (id: number) => {
@@ -663,65 +742,140 @@ export const CatalogosAdmin: React.FC = () => {
                                                             <button onClick={() => setProductoIdPerfilAbierto(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}><FaTimes /> Cerrar Panel</button>
                                                         </div>
 
-                                                        {/* FORMULARIO DE INYECCIÓN MANUAL */}
-                                                        <form onSubmit={agregarPerfilManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', background: '#1e293b', padding: '12px', borderRadius: '8px', border: '1px solid #233249', marginBottom: '14px' }}>
-                                                            <div>
-                                                                <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Nombre Perfil</label>
-                                                                <input type="text" value={perfNombre} onChange={e => setPerfNombre(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="Ej: Perfil 1" required />
-                                                            </div>
-                                                            <div>
-                                                                <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>PIN Acceso</label>
-                                                                <input type="text" value={perfPin} onChange={e => setPerfPin(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="Ej: 1234" maxLength={6} />
-                                                            </div>
-                                                            <div>
-                                                                <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Correo Cuenta Base</label>
-                                                                <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="user@mail.com" required />
-                                                            </div>
-                                                            <div>
-                                                                <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Password Base</label>
-                                                                <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="Clave123" required />
-                                                            </div>
-                                                            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                                                <button type="submit" style={{ width: '100%', padding: '8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.8rem' }}>
-                                                                    <FaPlus /> Cargar Pantalla
+                                                        {/* FORMULARIO DE INYECCIÓN INTELIGENTE (INDIVIDUAL O CUENTA COMPLETA) */}
+                                                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '8px', border: '1px solid #233249', marginBottom: '14px' }}>
+                                                            <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                                                                <button type="button" onClick={() => setModoIngreso('individual')} style={{ background: modoIngreso === 'individual' ? '#047688' : '#334155', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                                    👤 Perfil Individual
+                                                                </button>
+                                                                <button type="button" onClick={() => setModoIngreso('completa')} style={{ background: modoIngreso === 'completa' ? '#047688' : '#334155', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                                    📺 Cuenta Completa (5 Perfiles)
                                                                 </button>
                                                             </div>
-                                                        </form>
 
-                                                        {/* GRID DE ESTADOS EN TIEMPO REAL */}
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
-                                                            {perfilesActuales.map((perfil) => (
-                                                                <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: '1px solid', borderColor: perfil.ocupado ? '#ef4444' : '#10b981', borderRadius: '6px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                                    <div style={{ minWidth: 0 }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                            <strong style={{ fontSize: '0.85rem' }}>{perfil.nombrePerfil}</strong>
-                                                                            <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: perfil.ocupado ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
-                                                                                {perfil.ocupado ? "Ocupado" : "Libre"}
-                                                                            </span>
-                                                                        </div>
-                                                                        <small style={{ color: '#cbd5e1', display: 'block', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                            ✉️ {perfil.correoCuenta}
-                                                                        </small>
-                                                                        <small style={{ color: '#94a3b8', display: 'block' }}>
-                                                                            🔑 PIN: <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{perfil.pin}</span>
-                                                                        </small>
-                                                                        {perfil.ocupado && (
-                                                                            <small style={{ color: '#fca5a5', display: 'block', fontSize: '0.7rem', marginTop: '2px', fontWeight: '500' }}>
-                                                                                <FaUserShield size={9} /> Asignado a ID Cliente
-                                                                            </small>
-                                                                        )}
+                                                            {modoIngreso === 'individual' ? (
+                                                                /* FORMULARIO INDIVIDUAL ANTERIOR */
+                                                                <form onSubmit={agregarPerfilManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Nombre Perfil</label>
+                                                                        <input type="text" value={perfNombre} onChange={e => setPerfNombre(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="Ej: Perfil 1" required />
                                                                     </div>
-                                                                    <button 
-                                                                        onClick={() => removerPerfilManual(perfil.id)} 
-                                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}
-                                                                        title="Remover Pantalla"
-                                                                    >
-                                                                        <FaTrash size={12} />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>PIN Acceso</label>
+                                                                        <input type="text" value={perfPin} onChange={e => setPerfPin(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="Ej: 1234" maxLength={6} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Correo Cuenta Base</label>
+                                                                        <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="user@mail.com" required />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Password Base</label>
+                                                                        <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="Clave123" required />
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                                                        <button type="submit" style={{ width: '100%', padding: '8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                                                                            <FaPlus /> Cargar Pantalla
+                                                                        </button>
+                                                                    </div>
+                                                                </form>
+                                                            ) : (
+                                                                /* NUEVO FORMULARIO AUTOMÁTICO DE CUENTA COMPLETA */
+                                                                <form onSubmit={agregarCuentaCompletaManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Correo de la Cuenta</label>
+                                                                        <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="netflix@completo.com" required />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Contraseña de la Cuenta</label>
+                                                                        <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} placeholder="PasswordUnico123" required />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cantidad de Perfiles</label>
+                                                                        <input type="number" value={cantidadPerfiles} onChange={e => setCantidadPerfiles(Number(e.target.value))} style={{ ...inputEstilo, marginTop: '2px', padding: '6px 10px' }} min={1} max={10} />
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                                                        <button type="submit" style={{ width: '100%', padding: '8px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                                                                            <FaTv /> Auto-generar Cuenta
+                                                                        </button>
+                                                                    </div>
+                                                                </form>
+                                                            )}
+                                                        </div>
+
+                                                        {/* GRID DE ESTADOS EN TIEMPO REAL CON EDICIÓN Y LIBERACIÓN */}
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                                                            {perfilesActuales.map((perfil) => {
+                                                                const esEditando = perfilEditandoId === perfil.id;
+
+                                                                return (
+                                                                    <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: '1px solid', borderColor: perfil.ocupado ? '#ef4444' : '#10b981', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '8px' }}>
+                                                                        
+                                                                        {/* Cabecera del Perfil */}
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                {esEditando ? (
+                                                                                    <input type="text" value={perfilEditandoDatos.nombrePerfil} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, nombrePerfil: e.target.value})} style={{ background: '#0f172a', border: '1px solid #475569', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', width: '90px' }} />
+                                                                                ) : (
+                                                                                    <strong style={{ fontSize: '0.85rem' }}>{perfil.nombrePerfil}</strong>
+                                                                                )}
+                                                                                <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '4px', background: perfil.ocupado ? '#ef4444' : '#10b981', fontWeight: 'bold', color: '#fff' }}>
+                                                                                    {perfil.ocupado ? "Ocupado" : "Libre"}
+                                                                                </span>
+                                                                            </div>
+                                                                            
+                                                                            {/* Botón Eliminar Físicamente Perfil (Solo si está libre) */}
+                                                                            {!perfil.ocupado && !esEditando && (
+                                                                                <button onClick={() => removerPerfilManual(perfil.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }} title="Eliminar Perfil por completo">
+                                                                                    <FaTrash size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Datos del Perfil */}
+                                                                        <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                                                                            <div style={{ marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                                ✉️ {perfil.correoCuenta}
+                                                                            </div>
+                                                                            
+                                                                            {/* Sección del PIN (Editable) */}
+                                                                            <div>
+                                                                                🔑 PIN: {esEditando ? (
+                                                                                    <input type="text" value={perfilEditandoDatos.pin} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} style={{ background: '#0f172a', border: '1px solid #fb923c', color: '#fb923c', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', width: '60px', fontWeight: 'bold' }} maxLength={6} />
+                                                                                ) : (
+                                                                                    <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{perfil.pin || 'Sin PIN'}</span>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {perfil.ocupado && (
+                                                                                <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '6px', fontWeight: '500', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                                    <span>👤 Cliente ID: {perfil.idClienteAsignado}</span>
+                                                                                    {/* BOTÓN CRÍTICO: QUITAR PERSONA / LIBERAR PERFIL */}
+                                                                                    <button onClick={() => liberarPerfilCliente(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }} title="Quitar cliente por falta de pago">
+                                                                                        Quitar Persona
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Acciones de Edición en el Pie de la Tarjeta */}
+                                                                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                                                            {esEditando ? (
+                                                                                <>
+                                                                                    <button onClick={guardarCambiosPerfil} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>Guardar</button>
+                                                                                    <button onClick={() => setPerfilEditandoId(null)} style={{ background: '#475569', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Cancelar</button>
+                                                                                </>
+                                                                            ) : (
+                                                                                <button onClick={() => comenzarEdicionPerfil(perfil)} style={{ background: '#f59e0b', color: '#000', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                                                    Editar PIN / Info
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+
+                                                                    </div>
+                                                                );
+                                                            })}
                                                             {perfilesActuales.length === 0 && (
-                                                                <small style={{ color: '#64748b', fontStyle: 'italic', padding: '4px' }}>No hay perfiles configurados en esta cuenta. Ingrese los datos arriba para habilitar el despacho automático.</small>
+                                                                <small style={{ color: '#64748b', fontStyle: 'italic', padding: '4px' }}>No hay perfiles configurados. Ingrese los datos arriba.</small>
                                                             )}
                                                         </div>
                                                     </div>
