@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { FaUser, FaPhone, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench } from 'react-icons/fa';
+import { FaUser, FaPhone, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle } from 'react-icons/fa';
 
 interface Orden {
     id: number;
@@ -29,6 +29,12 @@ export const Taller: React.FC = () => {
     const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
     const [herramientasUsadas, setHerramientasUsadas] = useState('');
     const [costoReparacion, setCostoReparacion] = useState<number>(0);
+
+    // 💡 NUEVOS ESTADOS: Para el modal de selección de Avisar / Imprimir
+    const [mostrarModalAccion, setMostrarModalAccion] = useState(false);
+    const [ordenParaAccion, setOrdenParaAccion] = useState<Orden | null>(null);
+    const [tipoAccionContexto, setTipoAccionContexto] = useState<'AlListo' | 'AlEntregar'>('AlListo');
+    const [datosEntregaCache, setDatosEntregaCache] = useState<any>(null);
 
     const cargarOrdenes = () => {
         api.get('/ordenesservicio').then(res => setOrdenes(res.data)).catch(err => console.error(err));
@@ -100,7 +106,6 @@ export const Taller: React.FC = () => {
         ventana.document.close();
     };
 
-    // NUEVO: Generador de Ticket de Salida y Cierre de Caja Técnica
     const imprimirVoucherEntrega = (datosEntrega: any) => {
         const ventana = window.open('', '_blank');
         if (!ventana) return;
@@ -141,9 +146,9 @@ export const Taller: React.FC = () => {
                 
                 <div class="linea"></div>
                 <center><strong>TÉRMINOS DE COBERTURA</strong></center>
-                <small style={{ fontSize: '9px', display: 'block', textAlign: 'justify' }}>
+                <p style="font-size: 9px; text-align: justify;">
                     ${datosEntrega.notasGarantia}
-                </small>
+                </p>
                 <div class="linea"></div>
                 <br><br><br>
                 <div class="center">
@@ -158,6 +163,33 @@ export const Taller: React.FC = () => {
         `;
         ventana.document.write(html);
         ventana.document.close();
+    };
+
+    // 💡 NUEVA FUNCIÓN: Dispara la API de WhatsApp vía Web Link (wa.me) usando variables
+    const abrirEnlaceWhatsApp = (orden: Orden, tipo: 'Listo' | 'Entregado', datosAdicionales?: any) => {
+        if (!orden.cliente?.telefono) {
+            alert("El cliente no tiene un teléfono válido registrado.");
+            return;
+        }
+
+        // Limpiar el número de teléfono
+        let telefono = orden.cliente.telefono.replace(/\s+/g, '').replace(/-/g, '');
+        if (!telefono.startsWith('505')) {
+            telefono = '505' + telefono; // Código de Nicaragua
+        }
+
+        let textoMensaje = "";
+
+        if (tipo === 'Listo') {
+            textoMensaje = `¡Hola *${orden.cliente.nombre}*! 👋 Te saludamos de *NICAPLUS GAMING*. Te notificamos que tu equipo *${orden.dispositivo}* (Orden #${orden.id}) ya se encuentra reparado y listo para ser retirado en tienda. 🛠️✨`;
+        } else {
+            const costo = datosAdicionales?.costoReparacion || 0;
+            textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${orden.cliente.nombre}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${costo.toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
+        }
+
+        // Codificar texto para URL segura
+        const url = `https://wa.me/${telefono}?text=${encodeURIComponent(textoMensaje)}`;
+        window.open(url, '_blank');
     };
 
     const registrarIngresoTaller = async (e: React.FormEvent) => {
@@ -201,16 +233,15 @@ export const Taller: React.FC = () => {
     };
 
     const avanzarEstado = async (id: number, estadoActual: string) => {
+        const orden = ordenes.find(o => o.id === id);
+        if (!orden) return;
+
         if (estadoActual === 'Listo') {
-            // Si está en 'Listo' e intentan avanzar, se abre el modal de auditoría de entrega
-            const orden = ordenes.find(o => o.id === id);
-            if (orden) {
-                setOrdenAEntregar(orden);
-                setDiagnosticoFinal(`Se solucionó la falla original: ${orden.diagnostico}`);
-                setHerramientasUsadas('');
-                setCostoReparacion(0);
-                setMostrarModalEntrega(true);
-            }
+            setOrdenAEntregar(orden);
+            setDiagnosticoFinal(`Se solucionó la falla original: ${orden.diagnostico}`);
+            setHerramientasUsadas('');
+            setCostoReparacion(0);
+            setMostrarModalEntrega(true);
             return;
         }
 
@@ -222,12 +253,18 @@ export const Taller: React.FC = () => {
         try {
             await api.put(`/ordenesservicio/${id}/estado?nuevoEstado=${siguienteEstado}`, "");
             cargarOrdenes();
+
+            // 💡 Si pasó a "Listo", abrimos el nuevo modal de decisión rápida
+            if (siguienteEstado === 'Listo') {
+                setOrdenParaAccion(orden);
+                setTipoAccionContexto('AlListo');
+                setMostrarModalAccion(true);
+            }
         } catch (err) {
             alert("Error al actualizar el estado técnico.");
         }
     };
 
-    // Ejecuta el cierre definitivo y la facturación de la orden
     const ejecutarEntregaFinal = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!ordenAEntregar) return;
@@ -239,12 +276,10 @@ export const Taller: React.FC = () => {
                 costoReparacion: Number(costoReparacion)
             };
 
-            // Llamada al endpoint dedicado a la liquidación técnica
             await api.put(`/ordenesservicio/${ordenAEntregar.id}/entregar`, payload);
             
-            alert("Orden cerrada. Imprimiendo comprobante de liquidación y póliza de garantía activa.");
-            
-            imprimirVoucherEntrega({
+            // Guardamos los datos temporalmente para usarlos si decide imprimir o enviar por Whatsapp
+            const datosImpresion = {
                 ordenId: ordenAEntregar.id,
                 dispositivo: ordenAEntregar.dispositivo,
                 clienteNombre: ordenAEntregar.cliente?.nombre || 'Cliente General',
@@ -253,11 +288,18 @@ export const Taller: React.FC = () => {
                 herramientasUsadas: payload.herramientasUsed,
                 costoReparacion: payload.costoReparacion,
                 notasGarantia
-            });
+            };
 
+            setDatosEntregaCache(datosImpresion);
+            setOrdenParaAccion(ordenAEntregar);
+            setTipoAccionContexto('AlEntregar');
+            
             setMostrarModalEntrega(false);
             setOrdenAEntregar(null);
             cargarOrdenes();
+
+            // 💡 Abrimos el modal de decisión final de ticket/notificación de salida
+            setMostrarModalAccion(true);
         } catch (err) {
             alert("Error al procesar la entrega final del equipo.");
         }
@@ -274,6 +316,21 @@ export const Taller: React.FC = () => {
         boxSizing: 'border-box' as const,
         fontSize: '0.9rem',
         outline: 'none'
+    };
+
+    const estiloBotonAccionRapida = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+        padding: '14px',
+        border: 'none',
+        borderRadius: '8px',
+        fontSize: '1rem',
+        fontWeight: 'bold' as const,
+        cursor: 'pointer',
+        color: '#fff',
+        transition: 'opacity 0.2s'
     };
 
     return (
@@ -345,9 +402,17 @@ export const Taller: React.FC = () => {
                                         <small style={{ color: '#cbd5e1', fontWeight: 600, display: 'block' }}>Cliente: {orden.cliente?.nombre}</small>
                                         <small style={{ color: '#64748b', display: 'block', marginTop: '1px' }}>Tel: {orden.cliente?.telefono}</small>
                                     </div>
-                                    <button onClick={() => avanzarEstado(orden.id, orden.estado)} style={{ width: '100%', marginTop: '4px', padding: '8px', background: '#581c7e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#4c1d95'} onMouseLeave={(e) => e.currentTarget.style.background = '#581c7e'}>
-                                        {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar Estado'} <FaChevronRight size={10} />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                        <button onClick={() => avanzarEstado(orden.id, orden.estado)} style={{ flex: 1, padding: '8px', background: '#581c7e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#4c1d95'} onMouseLeave={(e) => e.currentTarget.style.background = '#581c7e'}>
+                                            {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar Estado'} <FaChevronRight size={10} />
+                                        </button>
+                                        {/* 💡 ACCESO DIRECTO DESDE EL TABLERO: Botón rápido para abrir WhatsApp si la orden ya está Lista */}
+                                        {orden.estado === 'Listo' && (
+                                            <button title="Notificar por WhatsApp de inmediato" onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} style={{ padding: '8px 12px', background: '#25d366', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                <FaWhatsapp size={14} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                             {ordenes.filter(o => o.estado === columna).length === 0 && (
@@ -393,13 +458,78 @@ export const Taller: React.FC = () => {
 
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <button type="submit" style={{ flex: 1, padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                                    Procesar Salida e Imprimir
+                                    Procesar Salida
                                 </button>
                                 <button type="button" onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} style={{ padding: '12px', background: '#475569', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
                                     Cancelar
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* 💡 NUEVO MODAL INTERACTIVO: CENTRO DE ALERTAS, WHATSAPP E IMPRESIÓN RÁPIDA */}
+            {mostrarModalAccion && ordenParaAccion && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(6px)' }}>
+                    <div style={{ background: '#1e293b', padding: '26px', borderRadius: '16px', maxWidth: '460px', width: '90%', border: '2px solid #334155', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
+                        
+                        <FaCheckCircle size={50} color="#10b981" style={{ marginBottom: '14px' }} />
+                        
+                        <h3 style={{ margin: '0 0 6px 0', fontSize: '1.4rem', color: '#f8fafc' }}>
+                            {tipoAccionContexto === 'AlListo' ? '¡Equipo Marcado Como Listo!' : '¡Orden Procesada Exitosamente!'}
+                        </h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 20px 0' }}>
+                            Selecciona las acciones comerciales inmediatas para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo}).
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            
+                            {/* BOTÓN: AVISAR CLIENTE POR WHATSAPP (Abre pestaña externa) */}
+                            <button 
+                                onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)}
+                                style={{ ...estiloBotonAccionRapida, background: '#25d366' }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                                <FaWhatsapp size={18} /> Avisar al Cliente por WhatsApp
+                            </button>
+
+                            {/* BOTÓN: IMPRIMIR TICKET TÉCNICO */}
+                            <button 
+                                onClick={() => {
+                                    if (tipoAccionContexto === 'AlListo') {
+                                        // Imprime el comprobante inicial/revisión rápida
+                                        imprimirDocumentosSoporte(ordenParaAccion.id, {
+                                            dispositivo: ordenParaAccion.dispositivo,
+                                            diagnostico: ordenParaAccion.diagnostico,
+                                            notasGarantia,
+                                            cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '' }
+                                        });
+                                    } else if (datosEntregaCache) {
+                                        // Imprime el comprobante definitivo de entrega con costos
+                                        imprimirVoucherEntrega(datosEntregaCache);
+                                    }
+                                }}
+                                style={{ ...estiloBotonAccionRapida, background: '#3b82f6' }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                                <FaPrint size={18} /> Imprimir Ticket Comercial
+                            </button>
+
+                            {/* BOTÓN DE CIERRE O CONTINUAR */}
+                            <button 
+                                onClick={() => { 
+                                    setMostrarModalAccion(false); 
+                                    setOrdenParaAccion(null); 
+                                    setDatosEntregaCache(null); 
+                                }}
+                                style={{ ...estiloBotonAccionRapida, background: '#475569', marginTop: '10px' }}
+                            >
+                                Listo, Volver al Tablero
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

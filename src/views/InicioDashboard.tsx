@@ -3,7 +3,8 @@ import api from '../services/api';
 import { 
     FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
     FaChartLine, FaPercentage, FaExclamationTriangle, 
-    FaCalendarDay, FaCalendarTimes, FaClipboardList 
+    FaCalendarDay, FaCalendarTimes, FaClipboardList,
+    FaSearch, FaUser, FaTv, FaLock, FaTimes
 } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
@@ -32,11 +33,22 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     });
     const [cargando, setCargando] = useState(true);
 
+    const [indicadores, setIndicadores] = useState<any>(null); // NUEVO ESTADO PARA INDICADORES DE SALUD DEL NEGOCIO
+
+    // NUEVOS ESTADOS: Buscador Universal Integrado
+    const [query, setQuery] = useState('');
+    const [resultados, setResultados] = useState<any>(null);
+    const [buscando, setBuscando] = useState(false);
+
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                const resResumen = await api.get('/reportes/resumen-dashboard');
-                // Sincronización directa con las propiedades mapeadas del backend PascalCase/camelCase
+                // Realizamos ambas peticiones en paralelo para mayor velocidad
+                const [resResumen, resIndicadores] = await Promise.all([
+                    api.get('/reportes/resumen-dashboard'),
+                    api.get('/reportes/indicadores') // ◄ ESTO ES LO QUE FALTABA
+                ]);
+
                 setResumen({
                     ventasDia: resResumen.data.ventasDia ?? 0,
                     ventasSemana: resResumen.data.ventasSemana ?? 0,
@@ -52,6 +64,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     ultimosClientes: resResumen.data.ultimosClientes ?? [],
                     alertas: resResumen.data.alertas ?? []
                 });
+
+                // Guardamos los indicadores de salud
+                setIndicadores(resIndicadores.data);
+
             } catch (err) {
                 console.error("Error al sincronizar métricas del dashboard:", err);
             } finally {
@@ -60,6 +76,29 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
         };
         cargarDatosDashboard();
     }, []);
+
+    // LÓGICA: Ejecutar Búsqueda Universal en Tiempo Real
+    const ejecutarBusqueda = async (valorQuery: string) => {
+        setQuery(valorQuery);
+        if (!valorQuery.trim()) {
+            setResultados(null);
+            setBuscando(false);
+            return;
+        }
+        setBuscando(true);
+        try {
+            const res = await api.get(`/busqueda/universal?query=${valorQuery}`);
+            setResultados(res.data);
+        } catch (err) {
+            console.error("Error en búsqueda universal:", err);
+        }
+    };
+
+    const limpiarBuscador = () => {
+        setQuery('');
+        setResultados(null);
+        setBuscando(false);
+    };
 
     const porcentajeMargen = resumen.ventasMes > 0 ? ((resumen.utilidadMes / resumen.ventasMes) * 100).toFixed(1) : "0";
 
@@ -118,114 +157,193 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 </span>
             </div>
 
-            {/* SECCIÓN 1: KPI CARDS COMPLETADAS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                
-                {/* 1. Ventas del Día */}
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #10b981' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>VENTAS DEL DÍA</small>
-                        <FaMoneyBillWave style={{ color: '#10b981' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h4>
-                </div>
-
-                {/* 2. Ventas de la Semana */}
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #38bdf8' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>VENTAS SEMANALES</small>
-                        <FaChartLine style={{ color: '#38bdf8' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</h4>
-                </div>
-
-                {/* 3. Ingresos Totales del Mes */}
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #a855f7' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>INGRESOS (MES)</small>
-                        <FaPercentage style={{ color: '#a855f7' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</h4>
-                    <small style={{ color: '#94a3b8', fontSize: '0.65rem' }}>Margen: {porcentajeMargen}%</small>
-                </div>
-
-                {/* 4. Utilidad Neta del Mes */}
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #f59e0b' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>UTILIDAD (MES)</small>
-                        <FaChartLine style={{ color: '#f59e0b' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#f59e0b' }}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</h4>
-                </div>
-
-                {/* 5. Renovaciones Hoy (Clickeable con acceso preventivo) */}
-                <div 
-                    onClick={() => setVistaActiva('renovaciones')}
-                    style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #22c55e', cursor: 'pointer', transition: 'transform 0.15s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>RENOVACIONES HOY</small>
-                        <FaCalendarDay style={{ color: '#22c55e' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>{resumen.renovacionesHoy} <span style={{ fontSize: '0.75rem', color: '#22c55e', marginLeft: '4px' }}>→ Revisar</span></h4>
-                </div>
-
-                {/* 6. Renovaciones Vencidas (Clickeable con acceso crítico) */}
-                <div 
-                    onClick={() => setVistaActiva('renovaciones')}
-                    style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #ef4444', cursor: 'pointer', transition: 'transform 0.15s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>RENOVACIONES VENCIDAS</small>
-                        <FaCalendarTimes style={{ color: '#ef4444' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#ef4444' }}>{resumen.renovacionesVencidas} <span style={{ fontSize: '0.75rem', color: '#ef4444', marginLeft: '4px' }}>→ Cobrar</span></h4>
-                </div>
-
-                {/* 7. Tickets Abiertos (Taller) */}
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #ec4899' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>TICKETS ABIERTOS</small>
-                        <FaClipboardList style={{ color: '#ec4899' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem' }}>{resumen.ticketsAbiertos}</h4>
-                </div>
-
-                {/* 8. Clientes Nuevos / Base Registrada */}
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #06b6d4' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>CLIENTES TOTALES</small>
-                        <FaUserPlus style={{ color: '#06b6d4' }} />
-                    </div>
-                    <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem' }}>{resumen.cantidadClientesNuevos}</h4>
-                </div>
-
+            {/* NUEVA BARRA DE BÚSQUEDA UNIVERSAL DIRECTA EN DASHBOARD */}
+            <div style={{ position: 'relative', width: '100%', background: '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #334155', boxSizing: 'border-box' }}>
+                <FaSearch style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '1.1rem' }} />
+                <input 
+                    type="text" 
+                    placeholder="Búsqueda rápida universal: Escribe 'Juan', 'Netflix' o 'Spotify'..." 
+                    value={query}
+                    onChange={e => ejecutarBusqueda(e.target.value)}
+                    style={{ width: '100%', padding: '12px 40px 12px 38px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+                {query && (
+                    <button onClick={limpiarBuscador} style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center' }}>
+                        <FaTimes />
+                    </button>
+                )}
             </div>
 
-            {/* SECCIÓN 2: GRÁFICAS DEL FLUJO */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155', height: '220px', display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ color: '#94a3b8', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>Flujo de Caja Semanal</span>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                        <Line data={datosGraficaLinea} options={opcionesComunes} />
+            {/* SECCIÓN: SALUD DEL NEGOCIO E INDICADORES (Nuevo) */}
+            {indicadores && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+                    <div style={{ background: '#1e293b', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                        <h4 style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '8px' }}>Salud de Clientes</h4>
+                        <div style={{ fontSize: '0.9rem' }}><span style={{ color: '#10b981' }}>✅ {indicadores.clientesActivos} Activos</span> | <span style={{ color: '#ef4444' }}>❌ {indicadores.clientesInactivos} Inactivos</span></div>
+                    </div>
+                    <div style={{ background: '#1e293b', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                        <h4 style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '8px' }}>Mejor Proveedor (Margen)</h4>
+                        <div style={{ color: '#38bdf8', fontWeight: 'bold' }}>{indicadores.proveedorConMayorMargen}</div>
+                    </div>
+                    <div style={{ background: '#1e293b', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                        <h4 style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '8px' }}>Proveedor (Reclamos)</h4>
+                        <div style={{ color: '#ef4444', fontWeight: 'bold' }}>{indicadores.proveedorConMasReclamos}</div>
+                    </div>
+                    <div style={{ background: '#1e293b', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                        <h4 style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '8px' }}>Tasa Renovaciones</h4>
+                        <div style={{ color: '#22c55e', fontWeight: 'bold' }}>{((indicadores.renovacionesExitosas / (indicadores.renovacionesExitosas + indicadores.renovacionesPerdidas || 1)) * 100).toFixed(0)}%</div>
                     </div>
                 </div>
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155', height: '220px', display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ color: '#94a3b8', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>Ventas por Categoría de Rubro</span>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                        <Bar data={datosGraficaBarra} options={opcionesComunes} />
-                    </div>
+            )}
+
+            {/* CONTROL DINÁMICO: SI ESTÁ BUSCANDO RENDERIZA RESULTADOS, SINO MUESTRA EL DASHBOARD */}
+            {buscando ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.2s ease-in-out' }}>
+                    
+                    {/* RESULTADOS DE CLIENTES ("Juan") */}
+                    {resultados?.clientes?.length > 0 && (
+                        <div style={{ background: '#1e293b', padding: '16px', borderRadius: '12px', border: '1px solid #334155' }}>
+                            <h4 style={{ color: '#38bdf8', margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}><FaUser /> Historial de Clientes Encontrados</h4>
+                            {resultados.clientes.map((c: any, idx: number) => (
+                                <div key={idx} style={{ background: '#0f172a', padding: '14px', borderRadius: '8px', marginBottom: '10px', border: '1px solid #233249' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{c.nombre} <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 'normal' }}>— 📱 {c.telefono}</span></div>
+                                    <div style={{ display: 'flex', gap: '15px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '4px 8px', borderRadius: '4px' }}>🛒 Facturas en Historial: {c.historialCompras?.length || 0}</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#a855f7', background: 'rgba(168,85,247,0.1)', padding: '4px 8px', borderRadius: '4px' }}>🔄 Servicios Activos: {c.serviciosActivos?.length || 0}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* RESULTADOS DE CUENTAS / ESPACIOS LIBRES ("Netflix", "Spotify") */}
+                    {resultados?.cuentas?.length > 0 && (
+                        <div style={{ background: '#1e293b', padding: '16px', borderRadius: '12px', border: '1px solid #334155' }}>
+                            <h4 style={{ color: '#a855f7', margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}><FaTv /> Estado de Cuentas y Espacios Libres</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                                {resultados.cuentas.map((cu: any, idx: number) => (
+                                    <div key={idx} style={{ background: '#0f172a', padding: '14px', borderRadius: '8px', border: '1px solid #233249', borderLeft: `4px solid ${cu.ocupado ? '#ef4444' : '#10b981'}` }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                            <strong style={{ fontSize: '0.9rem' }}>{cu.servicio} — {cu.nombrePerfil}</strong>
+                                            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', background: cu.ocupado ? '#7f1d1d' : '#064e3b', color: cu.ocupado ? '#fca5a5' : '#a7f3d0' }}>
+                                                {cu.ocupado ? 'Ocupado' : 'DISPONIBLE'}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: '#cbd5e1', wordBreak: 'break-all' }}>✉️ {cu.correoCuenta}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}><FaLock size={8} /> PIN: <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{cu.pin}</span> | Clave: {cu.clave}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {resultados?.clientes?.length === 0 && resultados?.cuentas?.length === 0 && (
+                        <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', textAlign: 'center', color: '#94a3b8', border: '1px solid #334155' }}>
+                            No se encontraron registros ni perfiles libres que coincidan con la consulta.
+                        </div>
+                    )}
                 </div>
-            </div>
+            ) : (
+                /* FLUJO OPERATIVO POR DEFECTO DEL DASHBOARD */
+                <>
+                    {/* SECCIÓN 1: KPI CARDS */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #10b981' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7_rem' }}>VENTAS DEL DÍA</small>
+                                <FaMoneyBillWave style={{ color: '#10b981' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h4>
+                        </div>
+
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #38bdf8' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>VENTAS SEMANALES</small>
+                                <FaChartLine style={{ color: '#38bdf8' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</h4>
+                        </div>
+
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #a855f7' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>INGRESOS (MES)</small>
+                                <FaPercentage style={{ color: '#a855f7' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</h4>
+                            <small style={{ color: '#94a3b8', fontSize: '0.65rem' }}>Margen: {porcentajeMargen}%</small>
+                        </div>
+
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #f59e0b' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>UTILIDAD (MES)</small>
+                                <FaChartLine style={{ color: '#f59e0b' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#f59e0b' }}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</h4>
+                        </div>
+
+                        <div 
+                            onClick={() => setVistaActiva('renovaciones')}
+                            style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #22c55e', cursor: 'pointer', transition: 'transform 0.15s' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>RENOVACIONES HOY</small>
+                                <FaCalendarDay style={{ color: '#22c55e' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#fff' }}>{resumen.renovacionesHoy} <span style={{ fontSize: '0.75rem', color: '#22c55e', marginLeft: '4px' }}>→ Revisar</span></h4>
+                        </div>
+
+                        <div 
+                            onClick={() => setVistaActiva('renovaciones')}
+                            style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #ef4444', cursor: 'pointer', transition: 'transform 0.15s' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>RENOVACIONES VENCIDAS</small>
+                                <FaCalendarTimes style={{ color: '#ef4444' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem', color: '#ef4444' }}>{resumen.renovacionesVencidas} <span style={{ fontSize: '0.75rem', color: '#ef4444', marginLeft: '4px' }}>→ Cobrar</span></h4>
+                        </div>
+
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #ec4899' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>TICKETS ABIERTOS</small>
+                                <FaClipboardList style={{ color: '#ec4899' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem' }}>{resumen.ticketsAbiertos}</h4>
+                        </div>
+
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderBottom: '3px solid #06b6d4' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <small style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.7rem' }}>CLIENTES TOTALES</small>
+                                <FaUserPlus style={{ color: '#06b6d4' }} />
+                            </div>
+                            <h4 style={{ margin: '8px 0 0 0', fontSize: '1.3rem' }}>{resumen.cantidadClientesNuevos}</h4>
+                        </div>
+                    </div>
+
+                    {/* SECCIÓN 2: GRÁFICAS DEL FLUJO */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155', height: '220px', display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: '#94a3b8', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>Flujo de Caja Semanal</span>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Line data={datosGraficaLinea} options={opcionesComunes} />
+                            </div>
+                        </div>
+                        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155', height: '220px', display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: '#94a3b8', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>Ventas por Categoría de Rubro</span>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Bar data={datosGraficaBarra} options={opcionesComunes} />
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* SECCIÓN 3: COMPONENTES OPERATIVOS Y DETALLES */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-                
-                {/* Productos más vendidos */}
                 <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155' }}>
                     <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '8px' }}><FaBoxOpen /> PRODUCTOS MÁS VENDIDOS</span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -239,7 +357,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     </div>
                 </div>
 
-                {/* Registro de Clientes Recientes */}
                 <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155' }}>
                     <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '8px' }}><FaUserPlus /> ÚLTIMOS CLIENTES REGISTRADOS</span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -252,7 +369,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     </div>
                 </div>
 
-                {/* Alertas Críticas Dinámicas (Stock e Integridad) */}
                 <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', border: '1px solid #334155' }}>
                     <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '8px' }}><FaExclamationTriangle /> ALERTAS DEL SISTEMA</span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -268,13 +384,12 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                         )}
                     </div>
                 </div>
-
             </div>
 
             {/* BARRA INFERIOR DE ACCESOS RÁPIDOS */}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button onClick={() => setVistaActiva('caja')} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Ir a Caja POS</button>
-                <button onClick={() => setVistaActiva('taller')} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Órdenes de Taller ({resumen.ticketsAbiertos})</button>
+                <button onClick={() => setVistaActiva('caja')} style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Ir a Caja POS</button>
+                <button onClick={() => setVistaActiva('taller')} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Órdenes de Taller ({resumen.ticketsAbiertos})</button>
             </div>
 
         </div>

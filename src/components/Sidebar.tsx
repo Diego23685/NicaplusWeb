@@ -4,7 +4,7 @@ import { FaThLarge, FaShoppingCart, FaTools, FaChartBar, FaChartLine, FaBoxOpen,
 
 interface SidebarProps {
     vistaActiva: string;
-    setVistaActiva: (vista: 'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria') => void;
+    setVistaActiva: (vista: 'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria' | 'notificaciones') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva }) => {
@@ -159,6 +159,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                             onMouseLeave={(e) => { if(vistaActiva !== 'garantias') e.currentTarget.style.background = 'transparent'; }}
                         >
                             <FaShieldAlt style={{ color: vistaActiva === 'garantias' ? '#FFFFFF' : '#047688' }} /> Bitácora de Garantías
+                        </button>
+                    )}
+
+                    {/* ACCESO: Administrador, Socio, Soporte */}
+                    {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && (
+                        <button 
+                            onClick={() => setVistaActiva('notificaciones')} 
+                            style={botonEstilo('notificaciones')}
+                            onMouseEnter={(e) => { if(vistaActiva !== 'notificaciones') e.currentTarget.style.background = 'rgba(88, 28, 126, 0.2)'; }}
+                            onMouseLeave={(e) => { if(vistaActiva !== 'notificaciones') e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <FaExclamationTriangle style={{ color: vistaActiva === 'notificaciones' ? '#FFFFFF' : '#047688' }} /> Notificaciones
                         </button>
                     )}
 

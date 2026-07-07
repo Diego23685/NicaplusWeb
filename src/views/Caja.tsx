@@ -126,7 +126,6 @@ export const Caja: React.FC = () => {
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [busquedaCliente, setBusquedaCliente] = useState('');
 
-    // NUEVO: Estados para el control y despacho post-venta interactivo (Impresión / WhatsApp)
     const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
     const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
 
@@ -219,9 +218,8 @@ export const Caja: React.FC = () => {
 
     const limpiarCarrito = () => setCarrito([]);
 
-    // LÓGICA: PROCESAR ENVÍO E INYECCIÓN DE TEXTO PARA WHATSAPP
     const enviarCredencialesWhatsApp = () => {
-        if (!datosUltimaVenta) return;
+        if (!datosUltimaVenta || !datosUltimaVenta.detalles) return;
 
         const clienteObj = listaClientes.find(c => c.id === idClienteSeleccionado);
         if (!clienteObj || !clienteObj.telefono) {
@@ -229,24 +227,62 @@ export const Caja: React.FC = () => {
             return;
         }
 
-        // Limpiar caracteres del número de teléfono para la URL
         const telefonoLimpio = clienteObj.telefono.replace(/[^0-9]/g, '');
+        const esVentaCredito = metodoPago === "Crédito";
 
-        // Construir cuerpo del mensaje de forma legible
+        // 1. Encabezado del Comprobante Digital
         let mensaje = `*NICAPLUS GAMING & TECH*\n`;
-        mensaje += `¡Hola, ${clienteObj.nombre}! Gracias por tu compra.\n`;
-        mensaje += `Aquí tienes los accesos de tus servicios adquiridos:\n\n`;
+        mensaje += `👋 ¡Hola, ${clienteObj.nombre}! Muchas gracias por tu confianza.\n`;
+        mensaje += `🧾 *COMPROBANTE DIGITAL DE COMPRA*\n`;
+        mensaje += `Factura: #000${datosUltimaVenta.ventaId}\n`;
+        mensaje += `Fecha: ${new Date(fechaVenta + "T12:00:00").toLocaleDateString()}\n`;
+        mensaje += `Condición: *${metodoPago.toUpperCase()}*\n`;
+        mensaje += `--------------------------------------\n\n`;
 
+        mensaje += `🔑 *DATOS DE ACCESO Y SERVICIOS*:\n\n`;
+
+        // 2. Desglose recorriendo los datos reales que devolvió el Backend
         datosUltimaVenta.detalles.forEach((item: any, idx: number) => {
-            mensaje += `*${idx + 1}. ${item.nombre}*\n`;
+            mensaje += `*${idx + 1}. ${item.nombre || 'Servicio Digital'}*\n`;
+            mensaje += `🔹 Cantidad: ${item.cantidad}\n`;
+            
             if (item.metadataDigital) {
-                // Si el backend inyectó los accesos del PerfilCuenta automático, aquí se añaden planos
-                mensaje += `Acceso: _${item.metadataDigital}_\n`;
+                // Evaluamos si contiene el formato estructurado de días o credenciales crudas
+                if (item.metadataDigital.includes("DIAS:")) {
+                    // Filtramos el prefijo de días si el backend concatenó los días de la suscripción
+                    const partes = item.metadataDigital.split('|');
+                    const accesosReales = partes.slice(1).join('|');
+                    mensaje += `👤 Acceso/ID: _${accesosReales || 'Asignado en Servidor'}_\n`;
+                } else {
+                    mensaje += `👤 Acceso/ID: _${item.metadataDigital}_\n`;
+                }
             }
-            mensaje += `---------------------------\n`;
+
+            // Recuperar los días de suscripción calculados
+            const diasSuscripcion = item.diasSuscripcion || 30;
+            const fInicio = new Date(fechaVenta + "T12:00:00");
+            const fVence = new Date(fInicio.getTime() + (diasSuscripcion * 24 * 60 * 60 * 1000));
+            
+            mensaje += `📅 Vigencia: ${diasSuscripcion} días\n`;
+            mensaje += `🛑 Vence el: *${fVence.toLocaleDateString()}*\n`;
+            mensaje += `--------------------------------------\n`;
         });
 
-        mensaje += `\nSoporte Técnico y Garantía Activa. ¡Disfruta tu servicio!`;
+        // 3. Totales y Estado de Cuentas
+        mensaje += `\n💰 *RESUMEN FINANCIERO*:\n`;
+        mensaje += `Total Neto: *C$ ${totalVenta}*\n`;
+        
+        if (esVentaCredito) {
+            mensaje += `⚠️ *ESTADO:* Cuenta por cobrar pendiente.\n`;
+            mensaje += `📅 *LÍMITE DE PAGO:* ${new Date(fechaVencimientoCredito + "T12:00:00").toLocaleDateString()}\n`;
+        } else {
+            mensaje += `✅ *ESTADO:* Factura Cancelada / Pagada.\n`;
+        }
+
+        mensaje += `\n📌 *INFORMACIÓN OPERATIVA*:\n`;
+        mensaje += `• Las caídas de perfiles o contraseñas deben reportarse inmediatamente con captura de pantalla.\n`;
+        mensaje += `• Nuestro sistema te enviará un recordatorio automático *7, 3 y 1 día antes* de tu vencimiento para evitar cortes de pantalla.\n\n`;
+        mensaje += `¡Disfruta tu servicio de entretenimiento! 🎮✨`;
 
         const urlWhatsApp = `https://wa.me/${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`;
         window.open(urlWhatsApp, '_blank');
@@ -302,30 +338,25 @@ export const Caja: React.FC = () => {
 
         try {
             const res = await api.post('/ventas', payload);
-            
-            // Sincronizar nombres mapeados desde estado local de React
+
             const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
-                if (!item.nombre) {
-                    const prodOriginal = productos.find(p => p.id === item.idProducto);
-                    return {
-                        ...item,
-                        nombre: prodOriginal ? prodOriginal.nombre : "Producto General"
-                    };
-                }
-                return item;
+                const prodOriginal = productos.find(p => p.id === item.idProducto);
+                const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto);
+                return {
+                    ...item,
+                    nombre: prodOriginal ? prodOriginal.nombre : "Producto General",
+                    diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30
+                };
             });
 
-            // Almacenamos temporalmente en el estado para el flujo interactivo final
             setDatosUltimaVenta({
                 ventaId: res.data.id || res.data.ventaId,
                 detalles: detallesParaTicket
             });
 
-            // Desplegar panel final de despacho
             setMostrarModalDespacho(true);
 
-            // Limpieza y reseteo regular de la caja POS
-            limpiarCarrito();
+            // Limpieza y reseteo regular de la caja POS se mantiene activo tras confirmación
             const hoy = new Date().toISOString().split('T')[0];
             setFechaVenta(hoy);
             setFechaVencimientoCredito(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
@@ -566,7 +597,6 @@ export const Caja: React.FC = () => {
                             </select>
                         </div>
 
-                        {/* INPUT CONDICIONAL: Fecha de Vencimiento de Crédito Manual */}
                         {metodoPago === "Crédito" && (
                             <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px', borderRadius: '6px', border: '1px dashed #ef4444' }}>
                                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#f87171', marginBottom: '4px', textTransform: 'uppercase' }}>
@@ -637,33 +667,37 @@ export const Caja: React.FC = () => {
                             La venta se registró correctamente en el sistema. Selecciona la vía de despacho de credenciales para el cliente.
                         </p>
                         
+                        {/* REEMPLAZADO CON TU BLOQUE LIMPIO AQUÍ */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <button 
-                                onClick={() => {
-                                    imprimirTicketTermico(datosUltimaVenta);
-                                }}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#38bdf8', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
-                            >
-                                <FaPrint /> Imprimir Ticket Físico
-                            </button>
-                            
-                            {idClienteSeleccionado && idClienteSeleccionado !== 0 && (
+                            {idClienteSeleccionado && idClienteSeleccionado !== 0 ? (
                                 <button 
                                     onClick={enviarCredencialesWhatsApp}
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#25d366', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#25d366', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
                                 >
-                                    <FaWhatsapp size={18} /> Enviar por WhatsApp
+                                    <FaWhatsapp size={18} /> Enviar Comprobante y Accesos (WhatsApp)
                                 </button>
+                            ) : (
+                                <div style={{ background: '#334155', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                                    Venta genérica de mostrador: No vinculada a número de WhatsApp para envío directo.
+                                </div>
                             )}
+                            
+                            <button 
+                                onClick={() => imprimirTicketTermico(datosUltimaVenta)}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '10px', background: '#38bdf8', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
+                            >
+                                <FaPrint /> Imprimir Copia Física (Ticketera)
+                            </button>
 
                             <button 
                                 onClick={() => {
                                     setMostrarModalDespacho(false);
                                     setDatosUltimaVenta(null);
+                                    limpiarCarrito(); // Asegurar limpieza total del estado local
                                 }}
-                                style={{ width: '100%', padding: '10px', background: '#475569', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '6px' }}
+                                style={{ width: '100%', padding: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '6px', fontWeight: 'bold' }}
                             >
-                                Finalizar y Limpiar Caja
+                                Cerrar Caja POS y Siguiente Venta
                             </button>
                         </div>
                     </div>

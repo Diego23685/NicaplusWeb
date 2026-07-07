@@ -19,12 +19,13 @@ import { GarantiasCRM } from './views/GarantiasCRM';
 import { ContabilidadCaja } from './views/ContabilidadCaja';
 import { Analitica } from './views/Analitica';
 import { Auditoria } from './views/Auditoria';
+import { Notificaciones } from './views/Notificaciones'; // Importación de la vista de notificaciones
 
 const PanelLayout: React.FC = () => {
     const { usuario } = useAuth();
     
     // ◄ 2. ACTUALIZACIÓN DEL TIPO DE ESTADO (Añadido 'cuentas' y 'garantias')
-    const [vistaActiva, setVistaActiva] = useState<'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria'>('inicio');
+    const [vistaActiva, setVistaActiva] = useState<'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria' | 'notificaciones'>('inicio');
     const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
     if (!usuario) {
@@ -119,6 +120,7 @@ const PanelLayout: React.FC = () => {
                     {vistaActiva === 'contabilidad_caja' && <ContabilidadCaja />}
                     {vistaActiva === 'analitica' && <Analitica />}
                     {vistaActiva === 'auditoria' && <Auditoria />}
+                    {vistaActiva === 'notificaciones' && <Notificaciones />} {/* ◄ 5. ENRUTAMIENTO DE LA VISTA NOTIFICACIONES */}
                 </main>
             </div>
         </div>
