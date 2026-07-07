@@ -29,6 +29,7 @@ interface PerfilCuenta {
     passwordCuenta: string;
     ocupado: boolean;
     idClienteAsignado: number | null;
+    nombreCliente?: string;
 }
 
 interface Categoria { id: number; nombre: string; imagenUrl: string; }
@@ -848,9 +849,9 @@ export const CatalogosAdmin: React.FC = () => {
 
                                                                             {perfil.ocupado && (
                                                                                 <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '6px', fontWeight: '500', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                                    <span>👤 Cliente ID: {perfil.idClienteAsignado}</span>
+                                                                                    <span>👤 Cliente: {perfil.nombreCliente || `ID: ${perfil.idClienteAsignado}`}</span>
                                                                                     {/* BOTÓN CRÍTICO: QUITAR PERSONA / LIBERAR PERFIL */}
-                                                                                    <button onClick={() => liberarPerfilCliente(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }} title="Quitar cliente por falta de pago">
+                                                                                    <button onClick={() => liberarPerfilCliente(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }} title="Quitar cliente por falta de pago">
                                                                                         Quitar Persona
                                                                                     </button>
                                                                                 </div>
