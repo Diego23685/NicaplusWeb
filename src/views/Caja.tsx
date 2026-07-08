@@ -219,37 +219,45 @@ export const Caja: React.FC = () => {
     const limpiarCarrito = () => setCarrito([]);
 
     const enviarCredencialesWhatsApp = () => {
-        if (!datosUltimaVenta || !datosUltimaVenta.detalles) return;
+        if (!datosUltimaVenta || !datosUltimaVenta.detalles) {
+            alert("No hay datos de una venta reciente para enviar.");
+            return;
+        }
 
-        const clienteObj = listaClientes.find(c => c.id === idClienteSeleccionado);
+        // 🔍 Leemos el cliente guardado en la foto fija de la venta exitosa
+        const clienteObj = datosUltimaVenta.cliente;
+        
+        // Si el objeto cliente no existe o no tiene teléfono
         if (!clienteObj || !clienteObj.telefono) {
-            alert("El cliente seleccionado no dispone de un número de teléfono móvil válido.");
+            alert("Venta genérica de mostrador: No hay un cliente con número de WhatsApp vinculado a esta venta.");
             return;
         }
 
         const telefonoLimpio = clienteObj.telefono.replace(/[^0-9]/g, '');
-        const esVentaCredito = metodoPago === "Crédito";
+        
+        // 🔍 Leemos los datos financieros congelados de la venta para evitar incoherencias
+        const metodoUsado = datosUltimaVenta.metodoPagoCongelado;
+        const totalReal = datosUltimaVenta.totalCongelado;
+        const esVentaCredito = metodoUsado === "Crédito";
 
         // 1. Encabezado del Comprobante Digital
         let mensaje = `*NICAPLUS GAMING & TECH*\n`;
         mensaje += `👋 ¡Hola, ${clienteObj.nombre}! Muchas gracias por tu confianza.\n`;
         mensaje += `🧾 *COMPROBANTE DIGITAL DE COMPRA*\n`;
         mensaje += `Factura: #000${datosUltimaVenta.ventaId}\n`;
-        mensaje += `Fecha: ${new Date(fechaVenta + "T12:00:00").toLocaleDateString()}\n`;
-        mensaje += `Condición: *${metodoPago.toUpperCase()}*\n`;
+        mensaje += `Fecha: ${new Date().toLocaleDateString()}\n`; // Usamos la fecha del día del envío
+        mensaje += `Condición: *${metodoUsado.toUpperCase()}*\n`;
         mensaje += `--------------------------------------\n\n`;
 
         mensaje += `🔑 *DATOS DE ACCESO Y SERVICIOS*:\n\n`;
 
-        // 2. Desglose recorriendo los datos reales que devolvió el Backend
+        // 2. Desglose recorriendo los datos reales
         datosUltimaVenta.detalles.forEach((item: any, idx: number) => {
             mensaje += `*${idx + 1}. ${item.nombre || 'Servicio Digital'}*\n`;
             mensaje += `🔹 Cantidad: ${item.cantidad}\n`;
             
             if (item.metadataDigital) {
-                // Evaluamos si contiene el formato estructurado de días o credenciales crudas
                 if (item.metadataDigital.includes("DIAS:")) {
-                    // Filtramos el prefijo de días si el backend concatenó los días de la suscripción
                     const partes = item.metadataDigital.split('|');
                     const accesosReales = partes.slice(1).join('|');
                     mensaje += `👤 Acceso/ID: _${accesosReales || 'Asignado en Servidor'}_\n`;
@@ -258,9 +266,8 @@ export const Caja: React.FC = () => {
                 }
             }
 
-            // Recuperar los días de suscripción calculados
             const diasSuscripcion = item.diasSuscripcion || 30;
-            const fInicio = new Date(fechaVenta + "T12:00:00");
+            const fInicio = new Date();
             const fVence = new Date(fInicio.getTime() + (diasSuscripcion * 24 * 60 * 60 * 1000));
             
             mensaje += `📅 Vigencia: ${diasSuscripcion} días\n`;
@@ -268,13 +275,15 @@ export const Caja: React.FC = () => {
             mensaje += `--------------------------------------\n`;
         });
 
-        // 3. Totales y Estado de Cuentas
+        // 3. Totales y Estado de Cuentas usando datos históricos
         mensaje += `\n💰 *RESUMEN FINANCIERO*:\n`;
-        mensaje += `Total Neto: *C$ ${totalVenta}*\n`;
+        mensaje += `Total Neto: *C$ ${totalReal}*\n`;
         
         if (esVentaCredito) {
             mensaje += `⚠️ *ESTADO:* Cuenta por cobrar pendiente.\n`;
-            mensaje += `📅 *LÍMITE DE PAGO:* ${new Date(fechaVencimientoCredito + "T12:00:00").toLocaleDateString()}\n`;
+            if (datosUltimaVenta.fechaVencimientoCreditoCongelado) {
+                mensaje += `📅 *LÍMITE DE PAGO:* ${new Date(datosUltimaVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString()}\n`;
+            }
         } else {
             mensaje += `✅ *ESTADO:* Factura Cancelada / Pagada.\n`;
         }
@@ -349,14 +358,27 @@ export const Caja: React.FC = () => {
                 };
             });
 
+            // 🔍 CORRECCIÓN: Buscamos con '==' para evitar conflictos de tipo (string vs number)
+            const clienteFacturado = listaClientes.find(c => c.id == idClienteSeleccionado);
+            
             setDatosUltimaVenta({
                 ventaId: res.data.id || res.data.ventaId,
-                detalles: detallesParaTicket
+                detalles: detallesParaTicket,
+                cliente: clienteFacturado || null, // Si no se encuentra, queda como null
+                totalCongelado: totalVenta, 
+                metodoPagoCongelado: metodoPago, 
+                fechaVencimientoCreditoCongelado: fechaVencimientoCredito 
             });
 
             setMostrarModalDespacho(true);
 
-            // Limpieza y reseteo regular de la caja POS se mantiene activo tras confirmación
+            // Limpieza absoluta de la caja POS para el siguiente cliente
+            setCarrito([]); 
+            setIdClienteSeleccionado(null); 
+            setBusquedaCliente(''); 
+            setBusquedaProducto(''); 
+            setMetodoPago('Efectivo'); 
+            
             const hoy = new Date().toISOString().split('T')[0];
             setFechaVenta(hoy);
             setFechaVencimientoCredito(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
@@ -669,7 +691,7 @@ export const Caja: React.FC = () => {
                         
                         {/* REEMPLAZADO CON TU BLOQUE LIMPIO AQUÍ */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {idClienteSeleccionado && idClienteSeleccionado !== 0 ? (
+                            {datosUltimaVenta && datosUltimaVenta.cliente && datosUltimaVenta.cliente.id !== 0 ? (
                                 <button 
                                     onClick={enviarCredencialesWhatsApp}
                                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '12px', background: '#25d366', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
