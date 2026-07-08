@@ -1,0 +1,451 @@
+.heroWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: radial-gradient(circle at 80% 20%, rgba(109, 40, 217, 0.15), transparent 45%),
+              radial-gradient(circle at 20% 80%, rgba(14, 165, 233, 0.12), transparent 45%),
+              #050816;
+  padding: 60px 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ANIMACIONES DE ENTRADA NATIVAS */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* SECCIÓN ENCABEZADO */
+.heroHeader {
+  text-align: center;
+  max-width: 900px;
+  margin-bottom: 60px;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.titulo {
+  font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+  font-size: 3.8rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  text-transform: uppercase;
+}
+
+.subtitulo {
+  font-size: 1.25rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  max-width: 700px;
+  margin: 0 auto 35px auto;
+}
+
+.btnGroup {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #6d28d9 0%, #6d28d9 100%);
+  color: #ffffff;
+  border: none;
+  padding: 16px 36px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 10px 25px rgba(109, 40, 217, 0.3);
+}
+
+.btnPrimary:hover {
+  transform: scale(1.03);
+  box-shadow: 0 15px 30px rgba(109, 40, 217, 0.5);
+}
+
+.btnSecondary {
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 36px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* FILA DE ESTADÍSTICAS */
+.statsRow {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 30px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.statBox {
+  text-align: center;
+}
+
+.statNum {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #6d28d9;
+  display: block;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* TARJETA PRODUCTO DESTACADO (ESTILO APPLE/ROGER) */
+.destacadoSection {
+  width: 100%;
+  max-width: 1200px;
+  margin-bottom: 70px;
+  animation: fadeInScale 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  opacity: 0;
+}
+
+.destacadoTitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.heroProductCard {
+  background: rgba(13, 21, 39, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 40px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: center;
+  gap: 40px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
+.productMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tagDestacado {
+  color: #6d28d9;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.productName {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.productDesc {
+  color: #94a3b8;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.productPrice {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 10px 0 0 0;
+}
+
+.stockBadge {
+  font-size: 0.8rem;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.btnBuy {
+  background: #ffffff;
+  color: #050816;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  width: fit-content;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btnBuy:hover {
+  background: #e2e8f0;
+  transform: translateY(-2px);
+}
+
+.productImgContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.productImg {
+  max-width: 100%;
+  max-height: 350px;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+}
+
+/* SECCIÓN CATEGORÍAS POPULARES (TAGS ESTILO MINIMALISTA) */
+.sectionContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin-bottom: 60px;
+  text-align: left;
+}
+
+.sectionHeading {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tagsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tagItem {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tagItem:hover {
+  background: #6d28d9;
+  color: #ffffff;
+  transform: scale(1.05);
+  border-color: #6d28d9;
+  box-shadow: 0 10px 20px rgba(109, 40, 217, 0.3);
+}
+
+/* SLIDER DE JUEGOS POPULARES */
+.sliderWrapper {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 10px 0 25px 0;
+  scrollbar-width: none;
+}
+
+.sliderWrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.gameCard {
+  flex: 0 0 220px;
+  background: #111625;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.gameCard:hover {
+  border-color: #6d28d9;
+  transform: translateY(-4px);
+}
+
+.gameIcon {
+  font-size: 1.5rem;
+}
+
+.gameName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.gameMeta {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.gameBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  margin-top: auto;
+}
+
+/* RESPONSIVE */
+@media (max-width: 968px) {
+  .heroProductCard {
+    grid-template-columns: 1fr;
+    padding: 30px;
+  }
+  .productImgContainer {
+    order: -1;
+  }
+  .titulo {
+    font-size: 2.5rem;
+  }
+  .statsRow {
+    gap: 30px;
+    flex-wrap: wrap;
+  }
+}
+
+.gameCard {
+  flex: 0 0 220px;
+  background: #111625;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  min-height: 200px; /* Asegura un alto consistente */
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.gameBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.gameOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(17, 22, 37, 0.4) 0%, rgba(5, 8, 22, 0.9) 100%);
+  z-index: 2;
+}
+
+.gameContent {
+  position: relative;
+  z-index: 3; /* Por encima de la imagen y el overlay */
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tagItem {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 32px; /* Un poco más de padding para dar espacio a la imagen */
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tagBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.tagOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(11, 15, 25, 0.75); /* Oscurece la imagen para que el texto resalte */
+  z-index: 2;
+  transition: background 0.2s ease;
+}
+
+.tagText {
+  position: relative;
+  z-index: 3;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* EFECTOS HOVER PREMIUM */
+.tagItem:hover {
+  transform: scale(1.05);
+  border-color: #6d28d9;
+  box-shadow: 0 10px 25px rgba(109, 40, 217, 0.4);
+}
+
+.tagItem:hover .tagBackground {
+  transform: scale(1.1); /* Efecto zoom sutil en la imagen al pasar el mouse */
+}
+
+.tagItem:hover .tagOverlay {
+  background: rgba(109, 40, 217, 0.4); /* Cambia el tinte oscuro por el morado del diseño */
+}

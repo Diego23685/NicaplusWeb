@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import styles from '../components/catalogo/Catalogo.module.css';
 import { 
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
     FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags 
@@ -54,10 +55,26 @@ export const Catalogo: React.FC = () => {
 
     const WHATSAPP_NUMERO = "50557379929"; 
 
+    // Interceptor de movimiento para manipulación de coordenadas por hardware (CSS Variables)
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        const { currentTarget, clientX, clientY } = e;
+        currentTarget.style.setProperty('--mouse-x', `${clientX}px`);
+        currentTarget.style.setProperty('--mouse-y', `${clientY}px`);
+    };
+
     useEffect(() => {
-        api.get('/products/catalogo').then(res => setProductos(res.data)).catch(err => console.error(err));
-        api.get('/categorias').then(res => setCategorias(res.data)).catch(err => console.error(err));
-        api.get('/juegos').then(res => setJuegos(res.data)).catch(err => console.error(err));
+        // Ejecución en paralelo óptima de endpoints utilizando nombres exactos de controladores
+        Promise.all([
+            api.get('/products/catalogo'),
+            api.get('/Categorias'),
+            api.get('/juegos')
+        ])
+        .then(([p, c, j]) => {
+            setProductos(p.data || []);
+            setCategorias(c.data || []);
+            setJuegos(j.data || []);
+        })
+        .catch(err => console.error("Error cargando base de datos comercial:", err));
     }, []);
 
     const agregarAlCarrito = (producto: Producto) => {
@@ -101,52 +118,25 @@ export const Catalogo: React.FC = () => {
     const totalCarritoItems = carrito.reduce((sum, i) => sum + i.cantidad, 0);
 
     return (
-        <div style={{ fontFamily: "'Segoe UI', Roboto, sans-serif", background: '#080c14', color: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div className={styles.mainWrapper} onMouseMove={handleMouseMove}>
             
-            {/* INYECCIÓN DE MEDIA QUERIES ULTRA-RESPONSIVAS */}
-            <style>{`
-                .nav-header-container { display: grid; grid-template-columns: auto 1fr auto; max-width: 1400px; margin: 0 auto; padding: 0 20px; alignItems: center; height: 65px; gap: 20px; }
-                .main-layout-grid { display: grid; grid-template-columns: 1fr; gap: 24px; width: 100%; }
-                .selector-scroll-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; WebkitOverflowScrolling: touch; }
-                .selector-card-item { flex: 0 0 145px; height: 80px; background: #121826; border: 1px solid #1f293d; border-radius: 8px; cursor: pointer; position: relative; overflow: hidden; display: flex; alignItems: center; justifyContent: center; transition: all 0.2s ease; }
-                .cart-floating-btn-mobile { display: none; }
-                
-                @media (min-width: 1024px) {
-                    .main-layout-grid.with-cart { grid-template-columns: 1.4fr 400px !important; }
-                }
-
-                @media (max-width: 1023px) {
-                    .nav-header-container { grid-template-columns: 1fr; height: auto; padding: 15px; text-align: center; gap: 12px; }
-                    .header-brand-block { display: flex; justify-content: space-between; width: 100%; align-items: center; }
-                    .header-navigation { width: 100%; justify-content: center; overflow-x: auto; padding-bottom: 4px; }
-                    .header-search-block { width: 100%; max-width: none !important; }
-                    .cart-floating-btn-mobile { display: flex !important; }
-                    .cart-desktop-btn { display: none !important; }
-                    .selector-card-item { flex: 0 0 120px; height: 70px; }
-                }
-            `}</style>
-
-            {/* NAVBAR RESPONSIVE NATIVO */}
-            <header style={{ background: 'rgba(17, 22, 34, 0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid #1e293b', position: 'sticky', top: 0, zIndex: 1000 }}>
-                <div className="nav-header-container">
+            {/* NAVBAR */}
+            <header className={styles.navbar}>
+                <div className={styles.navContainer}>
                     
-                    {/* Logotipo y Carrito Móvil */}
-                    <div className="header-brand-block">
-                        <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} onClick={() => setSeccionActiva('inicio')}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00ffd1', boxShadow: '0 0 10px #00ffd1' }} />
-                            <span style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 900, letterSpacing: '1px' }}>NICAPLUS</span>
-                        </div>
-                        <button 
-                            className="cart-floating-btn-mobile"
-                            onClick={() => setVerCarrito(!verCarrito)} 
-                            style={{ background: '#581c7e', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
-                        >
-                            <FaShoppingCart size={13} /> ({totalCarritoItems})
-                        </button>
+                    <div className={styles.brandBlock} onClick={() => setSeccionActiva('inicio')}>
+                        <div className={styles.brandIndicator} />
+                        <span className={styles.brandText}>NICAPLUS</span>
                     </div>
 
-                    {/* Menú de Navegación */}
-                    <nav className="header-navigation" style={{ display: 'flex', gap: '4px', height: '100%', alignItems: 'center' }}>
+                    <button 
+                        className={styles.cartBtnMobile}
+                        onClick={() => setVerCarrito(!verCarrito)} 
+                    >
+                        <FaShoppingCart size={13} /> ({totalCarritoItems})
+                    </button>
+
+                    <nav className={styles.navigation}>
                         {([
                             { id: 'inicio', label: 'Inicio', icon: <FaHome /> },
                             { id: 'nosotros', label: 'Nosotros', icon: <FaInfoCircle /> },
@@ -157,22 +147,19 @@ export const Catalogo: React.FC = () => {
                                 key={tab.id}
                                 onClick={() => { setSeccionActiva(tab.id); if (tab.id === 'inicio') { setIdCatSeleccionada(null); setIdJuegoSeleccionado(null); } }} 
                                 style={{
-                                    background: 'transparent', border: 'none',
                                     color: seccionActiva === tab.id ? '#00ffd1' : '#94a3b8',
-                                    fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', padding: '0 12px',
-                                    height: '45px', borderBottom: seccionActiva === tab.id ? '3px solid #047688' : '3px solid transparent',
-                                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
+                                    borderBottom: seccionActiva === tab.id ? '3px solid #047688' : '3px solid transparent'
                                 }}
+                                className={styles.navTab}
                             >
                                 {tab.icon} {tab.label}
                             </button>
                         ))}
                     </nav>
 
-                    {/* Buscador y Carrito Escritorio */}
-                    <div className="header-search-block" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-                            <FaSearch style={{ position: 'absolute', left: '14px', color: '#64748b', fontSize: '0.85rem' }} />
+                    <div className={styles.searchAndCartBlock}>
+                        <div className={styles.searchWrapper}>
+                            <FaSearch className={styles.searchIcon} />
                             <input 
                                 type="text" 
                                 placeholder="Buscar en la tienda..."
@@ -181,13 +168,12 @@ export const Catalogo: React.FC = () => {
                                     setBusqueda(e.target.value);
                                     if(seccionActiva !== 'productos') setSeccionActiva('productos');
                                 }}
-                                style={{ width: '100%', padding: '10px 14px 10px 38px', background: '#0b0f19', border: '1px solid #1e293b', borderRadius: '6px', color: '#fff', fontSize: '0.85rem', outline: 'none' }}
+                                className={styles.searchInput}
                             />
                         </div>
                         <button 
-                            className="cart-desktop-btn"
+                            className={styles.cartBtnDesktop}
                             onClick={() => setVerCarrito(!verCarrito)} 
-                            style={{ background: '#581c7e', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                         >
                             <FaShoppingCart size={13} /> Carrito ({totalCarritoItems})
                         </button>
@@ -196,11 +182,10 @@ export const Catalogo: React.FC = () => {
                 </div>
             </header>
 
-            {/* CUERPO DE TRABAJO */}
-            <main style={{ maxWidth: '1400px', width: '100%', margin: '0 auto', padding: '20px', flex: 1, boxSizing: 'border-box' }}>
-                <div className={`main-layout-grid ${verCarrito ? 'with-cart' : ''}`}>
+            {/* CONTENEDOR PRINCIPAL */}
+            <main className={styles.mainContent}>
+                <div className={`${styles.mainLayoutGrid} ${verCarrito ? styles.withCart : ''}`}>
                     
-                    {/* VISTAS DE NAVEGACIÓN */}
                     <div style={{ width: '100%', minWidth: 0 }}>
                         {seccionActiva === 'inicio' && <HeroInicio setSeccionActiva={setSeccionActiva} />}
                         {seccionActiva === 'nosotros' && <VistaNosotros />}
@@ -208,65 +193,94 @@ export const Catalogo: React.FC = () => {
                         
                         {seccionActiva === 'productos' && (
                             <div>
-                                {/* CATEGORÍAS */}
+                                {/* SECTOR CATEGORÍAS */}
                                 <div style={{ marginBottom: '24px' }}>
-                                    <h4 style={{ color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaTags /> Categorías de Inventario</h4>
-                                    <div className="selector-scroll-row">
-                                        <div onClick={() => setIdCatSeleccionada(null)} className="selector-card-item" style={{ border: idCatSeleccionada === null ? '2px solid #00ffd1' : '1px solid #1f293d' }}>
-                                            <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'rgba(0,0,0,0.75)', zIndex: 1 }} />
-                                            <span style={{ zIndex: 2, fontSize: '0.8rem', fontWeight: 'bold', color: '#00ffd1' }}>⭐ Ver Todo</span>
+                                    <h4 className={styles.sectionTitle}><FaTags /> Categorías de Inventario</h4>
+                                    <div className={styles.selectorScrollRow}>
+                                        <div 
+                                            onClick={() => setIdCatSeleccionada(null)} 
+                                            className={styles.selectorCardItem} 
+                                            style={{ borderColor: idCatSeleccionada === null ? '#00ffd1' : 'rgba(255,255,255,0.05)' }}
+                                        >
+                                            <div className={styles.cardOverlay} style={{ background: 'rgba(0,0,0,0.85)' }} />
+                                            <span className={styles.cardText} style={{ color: '#00ffd1' }}>⭐ Ver Todo</span>
                                         </div>
                                         {categorias.map(c => (
-                                            <div key={c.id} onClick={() => setIdCatSeleccionada(c.id)} className="selector-card-item" style={{ border: idCatSeleccionada === c.id ? '2px solid #00ffd1' : '1px solid #1f293d' }}>
-                                                {c.imagenUrl && <img src={c.imagenUrl} alt={c.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                                <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'rgba(11, 15, 25, 0.75)', zIndex: 1 }} />
-                                                <span style={{ zIndex: 2, fontSize: '0.75rem', fontWeight: 'bold', textAlign: 'center', padding: '0 6px' }}>{c.nombre}</span>
+                                            <div 
+                                                key={c.id} 
+                                                onClick={() => setIdCatSeleccionada(c.id)} 
+                                                className={styles.selectorCardItem} 
+                                                style={{ borderColor: idCatSeleccionada === c.id ? '#00ffd1' : 'rgba(255,255,255,0.05)' }}
+                                            >
+                                                {c.imagenUrl && <img src={c.imagenUrl} alt={c.nombre} className={styles.cardImage} />}
+                                                <div className={styles.cardOverlay} />
+                                                <span className={styles.cardText}>{c.nombre}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* VIDEOJUEGOS */}
+                                {/* SECTOR JUEGOS */}
                                 <div style={{ marginBottom: '24px' }}>
-                                    <h4 style={{ color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaGamepad /> Filtrar por Videojuego</h4>
-                                    <div className="selector-scroll-row">
-                                        <div onClick={() => setIdJuegoSeleccionado(null)} className="selector-card-item" style={{ border: idJuegoSeleccionado === null ? '2px solid #00ffd1' : '1px solid #1f293d' }}>
-                                            <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'rgba(0,0,0,0.75)', zIndex: 1 }} />
-                                            <span style={{ zIndex: 2, fontSize: '0.8rem', fontWeight: 'bold', color: '#00ffd1' }}>🎮 Todos</span>
+                                    <h4 className={styles.sectionTitle}><FaGamepad /> Filtrar por Videojuego</h4>
+                                    <div className={styles.selectorScrollRow}>
+                                        <div 
+                                            onClick={() => setIdJuegoSeleccionado(null)} 
+                                            className={styles.selectorCardItem} 
+                                            style={{ borderColor: idJuegoSeleccionado === null ? '#00ffd1' : 'rgba(255,255,255,0.05)' }}
+                                        >
+                                            <div className={styles.cardOverlay} style={{ background: 'rgba(0,0,0,0.85)' }} />
+                                            <span className={styles.cardText} style={{ color: '#00ffd1' }}>🎮 Todos</span>
                                         </div>
                                         {juegos.map(j => (
-                                            <div key={j.id} onClick={() => setIdJuegoSeleccionado(j.id)} className="selector-card-item" style={{ border: idJuegoSeleccionado === j.id ? '2px solid #00ffd1' : '1px solid #1f293d' }}>
-                                                {j.imagenUrl && <img src={j.imagenUrl} alt={j.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                                <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'rgba(11, 15, 25, 0.7)', zIndex: 1 }} />
-                                                <span style={{ zIndex: 2, fontSize: '0.75rem', fontWeight: 'bold', textAlign: 'center', padding: '0 6px' }}>{j.nombre}</span>
+                                            <div 
+                                                key={j.id} 
+                                                onClick={() => setIdJuegoSeleccionado(j.id)} 
+                                                className={styles.selectorCardItem} 
+                                                style={{ borderColor: idJuegoSeleccionado === j.id ? '#00ffd1' : 'rgba(255,255,255,0.05)' }}
+                                            >
+                                                {j.imagenUrl && <img src={j.imagenUrl} alt={j.nombre} className={styles.cardImage} />}
+                                                <div className={styles.cardOverlay} />
+                                                <span className={styles.cardText}>{j.nombre}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* CONTEO */}
-                                <div style={{ borderBottom: '1px solid #1e293b', paddingBottom: '10px', marginBottom: '20px' }}>
-                                    <h2 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', color: '#047688', margin: 0 }}>
+                                <div className={styles.productsHeader}>
+                                    <h2 className={styles.productsHeaderTitle}>
                                         Productos Disponibles ({productosFiltrados.length})
                                     </h2>
                                 </div>
                                 
-                                {/* GRID DE PRODUCTOS */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+                                {/* GRID DE TARJETAS */}
+                                <div className={styles.productsGrid}>
                                     {productosFiltrados.map(p => (
-                                        <div key={p.id} style={{ background: '#111622', border: '1px solid #1e293b', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
-                                            <div style={{ width: '100%', height: '200px', background: '#090d16', position: 'relative', borderBottom: '1px solid #1e293b' }}>
-                                                {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '0.75rem', color: '#4b5563' }}>SIN IMAGEN</div>}
-                                                <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '0.6rem', padding: '3px 6px', background: p.esDigital ? '#581c7e' : '#047688', borderRadius: '4px', fontWeight: 'bold' }}>{p.esDigital ? "DIGITAL" : "FÍSICO"}</span>
+                                        <div key={p.id} className={styles.productCard}>
+                                            <div className={styles.imageContainer}>
+                                                {p.imagenUrl ? (
+                                                    <img src={p.imagenUrl} alt={p.nombre} className={styles.productImage} />
+                                                ) : (
+                                                    <div className={styles.noImage}>SIN IMAGEN</div>
+                                                )}
+                                                <span 
+                                                    className={styles.badge}
+                                                    style={{ 
+                                                        background: p.esDigital ? '#581c7e' : '#047688',
+                                                        color: '#ffffff'
+                                                    }}
+                                                >
+                                                    {p.esDigital ? "DIGITAL" : "FÍSICO"}
+                                                </span>
                                             </div>
-                                            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1, gap: '12px' }}>
+                                            <div className={styles.cardContent}>
                                                 <div>
-                                                    <h3 style={{ fontSize: '0.9rem', margin: '0 0 4px 0', fontWeight: 'bold', color: '#f8fafc' }}>{p.nombre}</h3>
-                                                    <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: 0, height: '32px', overflow: 'hidden', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.descripcion}</p>
+                                                    <h3 className={styles.productTitle}>{p.nombre}</h3>
+                                                    <p className={styles.productDescription}>{p.descripcion}</p>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', marginTop: 'auto' }}>
-                                                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fff' }}>C$ {p.precioVenta}</span>
-                                                    <button onClick={() => agregarAlCarrito(p)} style={{ background: 'transparent', color: '#00ffd1', border: '1px solid #047688', padding: '5px 10px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.75rem' }}>+ Añadir</button>
+                                                <div className={styles.priceRow}>
+                                                    <span className={styles.price}>C$ {p.precioVenta}</span>
+                                                    <button onClick={() => agregarAlCarrito(p)} className={styles.addBtn}>+ Añadir</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -276,9 +290,9 @@ export const Catalogo: React.FC = () => {
                         )}
                     </div>
 
-                    {/* PANEL CARRITO (MUTABLE GRID) */}
+                    {/* SIDEBAR DEL CARRITO */}
                     {verCarrito && (
-                        <div style={{ background: '#111622', borderRadius: '8px', padding: '20px', border: '1px solid #1e293b', height: 'fit-content', boxSizing: 'border-box', position: 'sticky', top: '85px' }}>
+                        <div className={styles.cartPanel}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '10px', marginBottom: '16px' }}>
                                 <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8' }}><FaShoppingCart /> Tu Orden</h3>
                                 <button onClick={() => setVerCarrito(false)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
@@ -318,7 +332,7 @@ export const Catalogo: React.FC = () => {
             </main>
 
             {/* FOOTER */}
-            <footer style={{ background: '#111622', borderTop: '1px solid #1e293b', padding: '20px', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
+            <footer className={styles.footer}>
                 &copy; {new Date().getFullYear()} Nicaplus Gaming & Tech. Todos los derechos reservados.<br />
                 <span style={{ color: '#475569' }}>León, Nicaragua.</span>
             </footer>

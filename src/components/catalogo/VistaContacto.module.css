@@ -1,0 +1,244 @@
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 60px auto;
+  background: radial-gradient(circle at top left, rgba(109, 40, 217, 0.15), transparent 45%),
+              radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 45%),
+              rgba(13, 21, 39, 0.25);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 60px 40px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Lienzo de partículas dinámicas */
+.canvasBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.contentWrapper {
+  position: relative;
+  z-index: 2; /* Por encima de las partículas */
+}
+
+.subtitle {
+  color: #0ea5e9;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.title {
+  font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin: 0 0 40px 0;
+  text-transform: uppercase;
+}
+
+.titleGradient {
+  background: linear-gradient(135deg, #6d28d9 0%, #bf99fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.flexLayout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.infoColumn {
+  flex: 1 1 45%;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.infoBlock {
+  background: rgba(255, 255, 255, 0.01);
+  border-left: 3px solid rgba(255, 255, 255, 0.05);
+  padding-left: 20px;
+  transition: border-color 0.3s ease;
+}
+
+.infoBlock:hover {
+  border-color: #00ffd1;
+}
+
+.blockLabel {
+  color: #ffffff;
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.blockText {
+  color: #94a3b8;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* TARJETA DE DESPACHOS CENTRALIZADA */
+.dispatchCard {
+  flex: 1 1 45%;
+  min-height: 300px;
+  background: rgba(9, 15, 29, 0.6);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dispatchCard:hover {
+  border-color: rgba(225, 29, 72, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(225, 29, 72, 0.1);
+}
+
+.mapIcon {
+  color: #e11d48;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 10px rgba(225, 29, 72, 0.5));
+  animation: pulseIcon 2s infinite ease-in-out;
+}
+
+.cardTitle {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cardText {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@keyframes pulseIcon {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(225, 29, 72, 0.5)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(225, 29, 72, 0.8)); }
+}
+
+@media (max-width: 868px) {
+  .container {
+    padding: 40px 20px;
+  }
+  .title {
+    font-size: 2.5rem;
+  }
+  .infoColumn, .dispatchCard {
+    flex: 1 1 100%;
+  }
+}
+
+/* ... Conserva tus estilos anteriores intactos ... */
+
+.flexLayout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.infoColumn {
+  flex: 1 1 45%;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* CONTENEDOR DERECHO: CONVERTIDO EN GRID VERTICAL PARA AGREGAR EL MAPA */
+.rightColumn {
+  flex: 1 1 45%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dispatchCard {
+  width: 100%;
+  background: rgba(9, 15, 29, 0.6);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 35px;
+  text-align: center;
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dispatchCard:hover {
+  border-color: rgba(225, 29, 72, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(225, 29, 72, 0.1);
+}
+
+/* CONTENEDOR DEL MAPA ESTILO OSCURO AMBIENTAL */
+.mapContainer {
+  width: 100%;
+  height: 250px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s;
+}
+
+.mapContainer:hover {
+  border-color: #00ffd1;
+}
+
+/* Filtro matemático para forzar el mapa de Google a Modo Oscuro Neón */
+.mapIframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  filter: grayscale(100%) invert(92%) contrast(120%) hue-rotate(190deg);
+  opacity: 0.75;
+  transition: opacity 0.3s;
+}
+
+.mapContainer:hover .mapIframe {
+  opacity: 0.9;
+}
+
+/* ... Conserva el resto de tus estilos y media-queries ... */
+@media (max-width: 868px) {
+  .infoColumn, .rightColumn {
+    flex: 1 1 100%;
+  }
+}

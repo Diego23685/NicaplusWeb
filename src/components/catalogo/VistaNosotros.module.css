@@ -1,0 +1,162 @@
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 60px auto;
+  background: radial-gradient(circle at top left, rgba(109, 40, 217, 0.2), transparent 40%),
+              radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.15), transparent 40%),
+              rgba(13, 21, 39, 0.3);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 60px 40px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* SUBTÍTULO EN NEÓN */
+.subtitle {
+  color: #0ea5e9;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+  display: block;
+}
+
+/* TÍTULO ENORME BRUTAL */
+.title {
+  font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin: 0 0 35px 0;
+  text-transform: uppercase;
+}
+
+.titleGradient {
+  background: linear-gradient(135deg, #6d28d9 0%, #00ffd1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.introText {
+  font-size: 1.25rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  max-width: 900px;
+  margin-bottom: 25px;
+}
+
+.introText strong {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+/* CUADRÍCULA ASIMÉTRICA PARA MISIÓN Y VISIÓN (TIPO GLASSHOUSE) */
+.mvGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin: 50px 0;
+}
+
+.mvCard {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 35px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mvCard:hover {
+  background: rgba(109, 40, 217, 0.08);
+  border-color: rgba(109, 40, 217, 0.4);
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(109, 40, 217, 0.15);
+}
+
+.mvCard h3 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 15px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mvCard p {
+  color: #cbd5e1;
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* FILA DE PILARES DE GARANTÍA */
+.benefitsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 50px;
+}
+
+.benefitCard {
+  background: #090f1d;
+  padding: 30px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.benefitCard:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Luces de Neon Dinámicas en bordes */
+.benefitCard:nth-child(1):hover { border-color: #6d28d9; box-shadow: 0 0 30px rgba(109, 40, 217, 0.2); }
+.benefitCard:nth-child(2):hover { border-color: #0ea5e9; box-shadow: 0 0 30px rgba(14, 165, 233, 0.2); }
+.benefitCard:nth-child(3):hover { border-color: #00ffd1; box-shadow: 0 0 30px rgba(0, 255, 209, 0.2); }
+
+.cardHeader {
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cardHeader.purple { color: #6d28d9; }
+.cardHeader.blue { color: #0ea5e9; }
+.cardHeader.cyan { color: #00ffd1; }
+
+.benefitCard small {
+  color: #94a3b8;
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* RESPONSIVE */
+@media (max-width: 968px) {
+  .container {
+    padding: 40px 20px;
+  }
+  .title {
+    font-size: 2.5rem;
+  }
+  .mvGrid {
+    grid-template-columns: 1fr;
+  }
+}
