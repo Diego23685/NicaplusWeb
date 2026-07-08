@@ -333,7 +333,7 @@ export const Catalogo: React.FC = () => {
 
             {/* FOOTER */}
             <footer className={styles.footer}>
-                &copy; {new Date().getFullYear()} Nicaplus Gaming & Tech. Todos los derechos reservados.<br />
+                &copy; {new Date().getFullYear()} Venta de Celulares y Accesorios Nicaplus Gaming. Todos los derechos reservados.<br />
                 <span style={{ color: '#475569' }}>León, Nicaragua.</span>
             </footer>
         </div>
