@@ -128,18 +128,19 @@ const PanelLayout: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const params = new URLSearchParams(window.location.search);
-    const esCatalogo = params.get('view') === 'catalogo';
+    const hostname = window.location.hostname;
 
-    if (esCatalogo) {
-        return <Catalogo />;
+    // Si la URL contiene "administration.", mostramos estrictamente el ERP
+    if (hostname.startsWith('administration.')) {
+        return (
+            <AuthProvider>
+                <PanelLayout />
+            </AuthProvider>
+        );
     }
 
-    return (
-        <AuthProvider>
-            <PanelLayout />
-        </AuthProvider>
-    );
+    // Por defecto (nicaplusgaming.online o www.), mostramos el catálogo limpio para clientes
+    return <Catalogo />;
 };
 
 export default App;
