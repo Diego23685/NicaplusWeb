@@ -313,17 +313,22 @@ export const Reportes: React.FC = () => {
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #10b981'}}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>BALANCE NETO (CAJA REAL)</small>
                             <h3 style={{ margin: '4px 0 0 0', color: '#10b981', fontSize: '1.4rem' }}>
-                                {/* Cambiamos finanzas.total por finanzas.balanceCajaReal */}
-                                C$ {(datosReporte?.finanzas?.balanceCajaReal ?? 0).toLocaleString()}
+                                {/* Sumamos directamente el total inmutable de las transacciones devueltas por el API */}
+                                C$ {datosReporte.transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
                             </h3>
                         </div>
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #38bdf8', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>EFECTIVO</small>
-                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {(datosReporte?.finanzas?.efectivo ?? 0).toLocaleString()}</h3>
+                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>
+                                C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
+                            </h3>
                         </div>
+
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #a855f7', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>TRANSFERENCIA</small>
-                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>C$ {(datosReporte?.finanzas?.transferencia ?? 0).toLocaleString()}</h3>
+                            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>
+                                C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
+                            </h3>
                         </div>
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #f59e0b', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>TARJETA</small>
