@@ -392,7 +392,7 @@ export const Caja: React.FC = () => {
             setMetodoPago('Efectivo'); 
             setDiasCredito(15);
             
-            const hoy = new Date().toISOString().split('T')[0];
+            //const hoy = new Date().toISOString().split('T')[0];
             setFechaVenta(obtenerFechaLocalISO());
             setFechaVencimientoCredito(obtenerFechaLocalISO(15));
 
