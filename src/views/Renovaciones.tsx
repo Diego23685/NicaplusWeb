@@ -103,7 +103,7 @@ export const Renovaciones: React.FC = () => {
             `Puedes realizar tu depósito o transferencia para procesar tu renovación y evitar la caída o corte de tu perfil.\n\n` +
             `¡Gracias por tu preferencia!`;
 
-        window.open(`https://wa.me/${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        window.open(`https://wa.me/505${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
     const abrirHistorial = async (suscripcion: Suscripcion) => {
