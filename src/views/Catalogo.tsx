@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 import styles from '../components/catalogo/Catalogo.module.css';
 import { 
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
-    FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, FaArrowLeft, FaMinus, FaPlus
+    FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
+    FaArrowLeft, FaMinus, FaPlus, FaBars, FaTimes
 } from 'react-icons/fa';
 
 import { HeroInicio } from '../components/catalogo/HeroInicio';
@@ -48,11 +49,105 @@ export const Catalogo: React.FC = () => {
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
     const [seccionActiva, setSeccionActiva] = useState<Seccion>('inicio');
     const [busqueda, setBusqueda] = useState('');
+    const [menuAbierto, setMenuAbierto] = useState(false); // Estado para el Sidebar Móvil
 
     const [idCatSeleccionada, setIdCatSeleccionada] = useState<number | null>(null);
     const [idJuegoSeleccionado, setIdJuegoSeleccionado] = useState<number | null>(null);
 
     const WHATSAPP_NUMERO = "50557379929"; 
+
+    // --- EFECTO INTERACTIVO DE PARTICULAS (CURSOR RATÓN) ---
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        let ancho = (canvas.width = window.innerWidth);
+        let alto = (canvas.height = window.innerHeight);
+
+        const mouse = { x: ancho / 2, y: alto / 2, targetX: ancho / 2, targetY: alto / 2 };
+        const particulas: Array<{ x: number; y: number; vx: number; vy: number; alpha: number; size: number; color: string }> = [];
+        const colores = ['#b002c2', '#047688', '#a855f7', '#0e7490'];
+
+        const manejarRedimension = () => {
+            if (!canvas) return;
+            ancho = canvas.width = window.innerWidth;
+            alto = canvas.height = window.innerHeight;
+        };
+
+        const manejarMovimiento = (e: MouseEvent) => {
+            mouse.targetX = e.clientX;
+            mouse.targetY = e.clientY;
+        };
+
+        window.addEventListener('resize', manejarRedimension);
+        window.addEventListener('mousemove', manejarMovimiento);
+
+        let idAnimacion: number;
+
+        const animar = () => {
+            ctx.clearRect(0, 0, ancho, alto);
+
+            mouse.x += (mouse.targetX - mouse.x) * 0.1;
+            mouse.y += (mouse.targetY - mouse.y) * 0.1;
+
+            if (Math.random() < 0.35) {
+                particulas.push({
+                    x: mouse.x,
+                    y: mouse.y,
+                    vx: (Math.random() - 0.5) * 1.8,
+                    vy: (Math.random() - 0.5) * 1.8,
+                    alpha: 1,
+                    size: Math.random() * 2.5 + 1,
+                    color: colores[Math.floor(Math.random() * colores.length)]
+                });
+            }
+
+            for (let i = particulas.length - 1; i >= 0; i--) {
+                const p = particulas[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.016;
+
+                if (p.alpha <= 0) {
+                    particulas.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = p.color;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            const gradiente = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 100);
+            gradiente.addColorStop(0, 'rgba(176, 2, 194, 0.06)');
+            gradiente.addColorStop(0.6, 'rgba(4, 118, 136, 0.02)');
+            gradiente.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradiente;
+            ctx.beginPath();
+            ctx.arc(mouse.x, mouse.y, 100, 0, Math.PI * 2);
+            ctx.fill();
+
+            idAnimacion = requestAnimationFrame(animar);
+        };
+
+        animar();
+
+        return () => {
+            window.removeEventListener('resize', manejarRedimension);
+            window.removeEventListener('mousemove', manejarMovimiento);
+            cancelAnimationFrame(idAnimacion);
+        };
+    }, []);
 
     useEffect(() => {
         Promise.all([
@@ -79,7 +174,7 @@ export const Catalogo: React.FC = () => {
                 item.producto.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
             ));
         } else {
-            setCarrito([...carrito, { producto, cantidad: 1 }]);
+            setCarrito([...carrito, { producto, carrot: 1, cantidad: 1 }]);
         }
     };
 
@@ -124,50 +219,85 @@ export const Catalogo: React.FC = () => {
     const totalCarritoItems = carrito.reduce((sum, i) => sum + i.cantidad, 0);
     const totalPagar = carrito.reduce((sum, item) => sum + (item.cantidad * item.producto.precioVenta), 0);
 
+    // Array de navegación reutilizable tanto en Desktop como en Sidebar móvil
+    const itemsNavegacion = [
+        { id: 'inicio', label: 'Inicio', icon: <FaHome /> },
+        { id: 'nosotros', label: 'Nosotros', icon: <FaInfoCircle /> },
+        { id: 'productos', label: 'Tienda', icon: <FaStore /> },
+        { id: 'contacto', label: 'Ubicación', icon: <FaMapMarkerAlt /> }
+    ] as const;
+
+    const cambiarSeccion = (id: Seccion) => {
+        setSeccionActiva(id);
+        if (id === 'inicio') {
+            setIdCatSeleccionada(null);
+            setIdJuegoSeleccionado(null);
+        }
+        setMenuAbierto(false); // Cierra automáticamente el sidebar al cambiar de vista
+    };
+
     return (
         <div className={styles.mainWrapper}>
             
+            <canvas ref={canvasRef} className={styles.canvasBackground} />
+
+            {/* SIDEBAR MÓVIL */}
+            <div className={`${styles.sidebarOverlay} ${menuAbierto ? styles.sidebarOverlayVisible : ''}`} onClick={() => setMenuAbierto(false)} />
+            <aside className={`${styles.sidebarMobile} ${menuAbierto ? styles.sidebarMobileAbierto : ''}`}>
+                <div className={styles.sidebarHeader}>
+                    <span className={styles.brandText}>MENÚ</span>
+                    <button className={styles.closeMenuBtn} onClick={() => setMenuAbierto(false)}>
+                        <FaTimes size={20} />
+                    </button>
+                </div>
+                <nav className={styles.sidebarNavList}>
+                    {itemsNavegacion.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => cambiarSeccion(tab.id)}
+                            className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
+                        >
+                            {tab.icon} <span>{tab.label}</span>
+                        </button>
+                    ))}
+                </nav>
+            </aside>
+
             {/* NAVBAR */}
             <header className={styles.navbar}>
                 <div className={styles.navContainer}>
                     
-                    <div className={styles.brandBlock} onClick={() => setSeccionActiva('inicio')}>
+                    <div className={styles.brandBlock} onClick={() => cambiarSeccion('inicio')}>
                         <div className={styles.brandIndicator} />
-                        <span className={styles.brandText}>NICAPLUS</span>
+                        <span className={styles.brandText}>NICAPLUS GAMING</span>
                     </div>
 
-                    <button 
-                        className={`${styles.cartBtnMobile} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
-                        onClick={() => setSeccionActiva('carrito')} 
-                    >
-                        <FaShoppingCart size={14} /> 
-                        <span className={styles.cartBadgeCount}>{totalCarritoItems}</span>
-                    </button>
+                    {/* CONTROLES MÓVILES (CARRITO + HAMBURGUESA) */}
+                    <div className={styles.mobileActionsBlock}>
+                        <button 
+                            className={`${styles.cartBtnMobile} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
+                            onClick={() => cambiarSeccion('carrito')} 
+                        >
+                            <FaShoppingCart size={14} /> 
+                            <span className={styles.cartBadgeCount}>{totalCarritoItems}</span>
+                        </button>
+                        
+                        <button className={styles.hamburgerBtn} onClick={() => setMenuAbierto(true)}>
+                            <FaBars size={18} />
+                        </button>
+                    </div>
 
+                    {/* NAVEGACIÓN DESKTOP */}
                     <nav className={styles.navigation}>
-                        {([
-                            { id: 'inicio', label: 'Inicio', icon: <FaHome /> },
-                            { id: 'nosotros', label: 'Nosotros', icon: <FaInfoCircle /> },
-                            { id: 'productos', label: 'Tienda', icon: <FaStore /> },
-                            { id: 'contacto', label: 'Ubicación', icon: <FaMapMarkerAlt /> }
-                        ] as const).map(tab => {
-                            const isActivo = seccionActiva === tab.id;
-                            return (
-                                <button 
-                                    key={tab.id}
-                                    onClick={() => { 
-                                        setSeccionActiva(tab.id); 
-                                        if (tab.id === 'inicio') { 
-                                            setIdCatSeleccionada(null); 
-                                            setIdJuegoSeleccionado(null); 
-                                        } 
-                                    }} 
-                                    className={`${styles.navTab} ${isActivo ? styles.navTabActivo : ''}`}
-                                >
-                                    {tab.icon} <span>{tab.label}</span>
-                                </button>
-                            );
-                        })}
+                        {itemsNavegacion.map(tab => (
+                            <button 
+                                key={tab.id}
+                                onClick={() => cambiarSeccion(tab.id)} 
+                                className={`${styles.navTab} ${seccionActiva === tab.id ? styles.navTabActivo : ''}`}
+                            >
+                                {tab.icon} <span>{tab.label}</span>
+                            </button>
+                        ))}
                     </nav>
 
                     <div className={styles.searchAndCartBlock}>
@@ -186,7 +316,7 @@ export const Catalogo: React.FC = () => {
                         </div>
                         <button 
                             className={`${styles.cartBtnDesktop} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
-                            onClick={() => setSeccionActiva('carrito')} 
+                            onClick={() => cambiarSeccion('carrito')} 
                         >
                             <FaShoppingCart size={14} /> 
                             <span>Carrito</span>
@@ -204,10 +334,9 @@ export const Catalogo: React.FC = () => {
                     {seccionActiva === 'nosotros' && <VistaNosotros />}
                     {seccionActiva === 'contacto' && <VistaContacto />}
                     
-                    {/* VISTA CATÁLOGO/TIENDA */}
+                    {/* VISTA TIENDA */}
                     {seccionActiva === 'productos' && (
                         <div className={styles.fadeEntrance}>
-                            {/* SECTOR CATEGORÍAS */}
                             <div className={styles.filterSection}>
                                 <h4 className={styles.sectionTitle}><FaTags /> Categorías de Inventario</h4>
                                 <div className={styles.selectorScrollRow}>
@@ -232,7 +361,6 @@ export const Catalogo: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* SECTOR JUEGOS */}
                             <div className={styles.filterSection}>
                                 <h4 className={styles.sectionTitle}><FaGamepad /> Filtrar por Videojuego</h4>
                                 <div className={styles.selectorScrollRow}>
@@ -265,29 +393,20 @@ export const Catalogo: React.FC = () => {
                             
                             <div className={styles.productsGrid}>
                                 {productosFiltrados.map(p => {
-                                    // Verificamos si este producto específico ya se encuentra en el carrito
                                     const itemEnCarrito = carrito.find(item => item.producto.id === p.id);
-
                                     return (
                                         <div key={p.id} className={styles.productCard}>
-                                            {/* Foto clickeable que añade directo al carrito */}
                                             <div 
                                                 className={styles.imageContainer} 
                                                 onClick={() => agregarAlCarrito(p)}
                                                 style={{ cursor: 'pointer' }}
-                                                title="Haga clic en la imagen para añadir al carrito"
                                             >
                                                 {p.imagenUrl ? (
                                                     <img src={p.imagenUrl} alt={p.nombre} className={styles.productImage} />
                                                 ) : (
                                                     <div className={styles.noImage}>SIN IMAGEN</div>
                                                 )}
-                                                <span 
-                                                    className={styles.badge}
-                                                    style={{ 
-                                                        background: p.esDigital ? '#581c7e' : '#047688',
-                                                    }}
-                                                >
+                                                <span className={styles.badge} style={{ background: p.esDigital ? '#581c7e' : '#047688' }}>
                                                     {p.esDigital ? "DIGITAL" : "FÍSICO"}
                                                 </span>
                                             </div>
@@ -298,20 +417,9 @@ export const Catalogo: React.FC = () => {
                                                 </div>
                                                 <div className={styles.priceRow}>
                                                     <span className={styles.price}>C$ {p.precioVenta}</span>
-                                                    
-                                                    {/* Control dinámico de botones: Selector si ya existe, botón simple si no */}
                                                     {itemEnCarrito ? (
                                                         <div className={styles.cartQtyControls} style={{ margin: 0 }}>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    if (itemEnCarrito.cantidad === 1) {
-                                                                        removerDelCarrito(p.id);
-                                                                    } else {
-                                                                        cambiarCantidad(p.id, -1);
-                                                                    }
-                                                                }} 
-                                                                className={styles.qtyBtn}
-                                                            >
+                                                            <button onClick={() => itemEnCarrito.cantidad === 1 ? removerDelCarrito(p.id) : cambiarCantidad(p.id, -1)} className={styles.qtyBtn}>
                                                                 {itemEnCarrito.cantidad === 1 ? <FaTrashAlt size={10} style={{ color: '#ef4444' }} /> : <FaMinus size={10} />}
                                                             </button>
                                                             <span className={styles.qtyValue}>{itemEnCarrito.cantidad}</span>
@@ -331,100 +439,55 @@ export const Catalogo: React.FC = () => {
                         </div>
                     )}
 
-                    {/* VISTA DEL CARRITO COMPLETO */}
+                    {/* VISTA DEL CARRITO */}
                     {seccionActiva === 'carrito' && (
-                        <div className={`${styles.cartViewContainer} styles.fadeEntrance`}>
+                        <div className={`${styles.cartViewContainer} ${styles.fadeEntrance}`}>
                             <div className={styles.cartViewHeader}>
-                                <button className={styles.backToStoreBtn} onClick={() => setSeccionActiva('productos')}>
+                                <button className={styles.backToStoreBtn} onClick={() => cambiarSeccion('productos')}>
                                     <FaArrowLeft /> Volver a la tienda
                                 </button>
                                 <h2 className={styles.cartViewTitle}>Tu Carrito de Compras</h2>
-                                <p className={styles.cartViewSubtitle}>Revisa tus artículos antes de procesar el pedido mediante WhatsApp.</p>
                             </div>
 
                             {carrito.length === 0 ? (
                                 <div className={styles.emptyCartView}>
-                                    <div className={styles.emptyIconCircle}>
-                                        <FaShoppingCart size={32} />
-                                    </div>
+                                    <div className={styles.emptyIconCircle}><FaShoppingCart size={32} /></div>
                                     <h3>Tu carrito está vacío</h3>
-                                    <p>Parece que aún no has añadido productos a tu orden.</p>
-                                    <button className={styles.exploreBtn} onClick={() => setSeccionActiva('productos')}>
-                                        Explorar Productos
-                                    </button>
+                                    <button className={styles.exploreBtn} onClick={() => cambiarSeccion('productos')}>Explorar Productos</button>
                                 </div>
                             ) : (
                                 <div className={styles.cartMainGrid}>
-                                    
-                                    {/* LISTA DE ITEMS */}
                                     <div className={styles.cartItemsContainer}>
                                         {carrito.map(item => (
                                             <div key={item.producto.id} className={styles.cartItemCard}>
                                                 <div className={styles.cartItemImgThum}>
-                                                    {item.producto.imagenUrl ? (
-                                                        <img src={item.producto.imagenUrl} alt={item.producto.nombre} />
-                                                    ) : (
-                                                        <div className={styles.cartNoImg}>🎮</div>
-                                                    )}
+                                                    {item.producto.imagenUrl ? <img src={item.producto.imagenUrl} alt={item.producto.nombre} /> : <div className={styles.cartNoImg}>🎮</div>}
                                                 </div>
-                                                
                                                 <div className={styles.cartItemDetails}>
                                                     <div className={styles.cartItemMeta}>
                                                         <h4>{item.producto.nombre}</h4>
-                                                        <span className={item.producto.esDigital ? styles.tagDig : styles.tagFis}>
-                                                            {item.producto.esDigital ? "Digital" : "Físico"}
-                                                        </span>
+                                                        <span className={item.producto.esDigital ? styles.tagDig : styles.tagFis}>{item.producto.esDigital ? "Digital" : "Físico"}</span>
                                                     </div>
                                                     <p className={styles.cartItemPriceUnit}>Precio unitario: C$ {item.producto.precioVenta}</p>
                                                 </div>
-
-                                                {/* CONTROLADOR DE CANTIDADES EN LA VISTA COMPLETA */}
                                                 <div className={styles.cartQtyControls}>
-                                                    <button onClick={() => cambiarCantidad(item.producto.id, -1)} className={styles.qtyBtn}>
-                                                        <FaMinus size={10} />
-                                                    </button>
+                                                    <button onClick={() => cambiarCantidad(item.producto.id, -1)} className={styles.qtyBtn}><FaMinus size={10} /></button>
                                                     <span className={styles.qtyValue}>{item.cantidad}</span>
-                                                    <button onClick={() => cambiarCantidad(item.producto.id, 1)} className={styles.qtyBtn}>
-                                                        <FaPlus size={10} />
-                                                    </button>
+                                                    <button onClick={() => cambiarCantidad(item.producto.id, 1)} className={styles.qtyBtn}><FaPlus size={10} /></button>
                                                 </div>
-
-                                                <div className={styles.cartItemSubtotalBlock}>
-                                                    <span className={styles.itemSubtotalText}>C$ {item.cantidad * item.producto.precioVenta}</span>
-                                                </div>
-
-                                                <button onClick={() => removerDelCarrito(item.producto.id)} className={styles.deleteItemBtn} title="Eliminar producto">
-                                                    <FaTrashAlt size={14} />
-                                                </button>
+                                                <div className={styles.cartItemSubtotalBlock}><span className={styles.itemSubtotalText}>C$ {item.cantidad * item.producto.precioVenta}</span></div>
+                                                <button onClick={() => removerDelCarrito(item.producto.id)} className={styles.deleteItemBtn}><FaTrashAlt size={14} /></button>
                                             </div>
                                         ))}
                                     </div>
 
-                                    {/* RESUMEN DE PAGO */}
                                     <div className={styles.cartSummaryCard}>
                                         <h3>Resumen de Pedido</h3>
-                                        <div className={styles.summaryRow}>
-                                            <span>Subtotal productos</span>
-                                            <span>C$ {totalPagar}</span>
-                                        </div>
-                                        <div className={styles.summaryRow}>
-                                            <span>Método de entrega</span>
-                                            <span className={styles.deliveryHighlight}>Coordinación Directa</span>
-                                        </div>
+                                        <div className={styles.summaryRow}><span>Subtotal</span><span>C$ {totalPagar}</span></div>
                                         <div className={styles.dividerSummary} />
-                                        <div className={`${styles.summaryRow} ${styles.totalRowView}`}>
-                                            <span>Total Estimado:</span>
-                                            <span className={styles.totalColor}>C$ {totalPagar}</span>
-                                        </div>
-
-                                        <button onClick={enviarAWhatsApp} className={styles.finalCheckoutBtn}>
-                                            <FaWhatsapp size={18} /> Procesar Pedido vía WhatsApp
-                                        </button>
-                                        <p className={styles.checkoutDisclaimer}>
-                                            Serás redirigido a WhatsApp para validar disponibilidad de stock y coordinar el pago / entrega con un asesor.
-                                        </p>
+                                        <div className={`${styles.summaryRow} ${styles.totalRowView}`}><span>Total:</span><span className={styles.totalColor}>C$ {totalPagar}</span></div>
+                                        <button onClick={enviarAWhatsApp} className={styles.finalCheckoutBtn}><FaWhatsapp size={18} /> Procesar vía WhatsApp</button>
                                     </div>
-
                                 </div>
                             )}
                         </div>
@@ -432,7 +495,6 @@ export const Catalogo: React.FC = () => {
                 </div>
             </main>
 
-            {/* FOOTER */}
             <footer className={styles.footer}>
                 <div>&copy; {new Date().getFullYear()} Nicaplus Gaming. Todos los derechos reservados.</div>
                 <div className={styles.footerLocation}>León, Nicaragua.</div>
