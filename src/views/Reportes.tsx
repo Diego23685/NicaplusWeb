@@ -389,7 +389,8 @@ export const Reportes: React.FC = () => {
                                                 ))}
                                             </td>
                                             <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#10b981' }}>
-                                                C$ {v.detalles?.reduce((s: number, i: any) => s + i.subTotal, 0).toLocaleString()}
+                                                {/* Cambia el reduce por el total directo del registro */}
+                                                C$ {(v.total ?? 0).toLocaleString()}
                                             </td>
                                             <td style={{ padding: '10px', textAlign: 'center' }}>
                                                 <button onClick={() => abrirEditorVenta(v)} style={{ background: '#f59e0b', border: 'none', color: '#000', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}>
