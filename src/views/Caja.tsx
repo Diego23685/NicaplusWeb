@@ -26,6 +26,20 @@ interface ItemCarrito {
     diasSuscripcion: number;
 }
 
+const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => {
+    // Si pasas una fechaBase (ej: "2026-07-08"), creamos el objeto Date con esa fecha en hora local
+    const d = fechaBaseStr ? new Date(fechaBaseStr + "T00:00:00") : new Date();
+    
+    if (offsetDias !== 0) {
+        d.setDate(d.getDate() + offsetDias);
+    }
+    
+    const opciones = { timeZone: 'America/Managua', year: 'numeric' as const, month: '2-digit' as const, day: '2-digit' as const };
+    const formateador = new Intl.DateTimeFormat('fr-CA', opciones);
+    
+    return formateador.format(d);
+};
+
 export const imprimirTicketTermico = (datosVenta: any) => {
     const ventanaImpresion = window.open('', '_blank');
     if (!ventanaImpresion) {
@@ -113,11 +127,8 @@ export const Caja: React.FC = () => {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
     const [metodoPago, setMetodoPago] = useState('Efectivo');
-    const [fechaVenta, setFechaVenta] = useState(new Date().toISOString().split('T')[0]);
-    
-    const [fechaVencimientoCredito, setFechaVencimientoCredito] = useState(
-        new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    );
+    const [fechaVenta, setFechaVenta] = useState(obtenerFechaLocalISO());    
+    const [fechaVencimientoCredito, setFechaVencimientoCredito] = useState(obtenerFechaLocalISO(15));
 
     const [listaClientes, setListaClientes] = useState<any[]>([]);
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
@@ -151,6 +162,7 @@ export const Caja: React.FC = () => {
     const totalVenta = carrito.reduce((sum, item) => sum + item.subTotal, 0);
     const totalCostoVenta = carrito.reduce((sum, item) => sum + (item.precioCostoUnitario * item.cantidad), 0);
     const margenGananciaTotal = totalVenta - totalCostoVenta;
+    const [diasCredito, setDiasCredito] = useState(15);
 
     const agregarAlCarrito = (producto: Producto) => {
         const existe = carrito.find(item => item.idProducto === producto.id);
@@ -339,10 +351,10 @@ export const Caja: React.FC = () => {
             idUsuario: usuario?.id || 1,
             idCliente: idClienteSeleccionado === 0 ? null : idClienteSeleccionado, 
             metodoPago: metodoPago,
-            fechaVenta: new Date(fechaVenta + "T12:00:00"), 
+            fechaVenta: new Date(fechaVenta + "T00:00:00"), // Cambiado a T00:00:00
             total: totalVenta,
             detalles: detallesMapeados,
-            fechaVencimientoCreditoManual: metodoPago === "Crédito" ? new Date(fechaVencimientoCredito + "T12:00:00") : null
+            fechaVencimientoCreditoManual: metodoPago === "Crédito" ? new Date(fechaVencimientoCredito + "T00:00:00") : null // Cambiado a T00:00:00
         };
 
         try {
@@ -378,10 +390,11 @@ export const Caja: React.FC = () => {
             setBusquedaCliente(''); 
             setBusquedaProducto(''); 
             setMetodoPago('Efectivo'); 
+            setDiasCredito(15);
             
             const hoy = new Date().toISOString().split('T')[0];
-            setFechaVenta(hoy);
-            setFechaVencimientoCredito(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            setFechaVenta(obtenerFechaLocalISO());
+            setFechaVencimientoCredito(obtenerFechaLocalISO(15));
 
             const refreshRes = await api.get('/products');
             setProductos(refreshRes.data);
@@ -620,26 +633,38 @@ export const Caja: React.FC = () => {
                         </div>
 
                         {metodoPago === "Crédito" && (
-                            <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px', borderRadius: '6px', border: '1px dashed #ef4444' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#f87171', marginBottom: '4px', textTransform: 'uppercase' }}>
-                                    <FaCalendarAlt size={10} /> Vencimiento del Crédito
-                                </label>
-                                <input 
-                                    type="date" 
-                                    value={fechaVencimientoCredito} 
-                                    onChange={e => setFechaVencimientoCredito(e.target.value)} 
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px',
-                                        background: '#0f172a',
-                                        color: '#FFFFFF',
-                                        border: '1px solid #ef4444',
-                                        borderRadius: '6px',
-                                        fontSize: '0.85rem',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }} 
-                                />
+                            <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px', borderRadius: '6px', border: '1px dashed #ef4444', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                                
+                                {/* 2. Modifica el input de PLAZO DEL CRÉDITO para que calcule pasándole la "fechaVenta" como base */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#f87171', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                        Plazo del Crédito (Días)
+                                    </label>
+                                    <input 
+                                        type="number" 
+                                        min="1"
+                                        value={diasCredito} 
+                                        onChange={e => {
+                                            const dias = Number(e.target.value);
+                                            setDiasCredito(dias);
+                                            // Pasamos "fechaVenta" para que cuente los días desde el día que elegiste arriba
+                                            setFechaVencimientoCredito(obtenerFechaLocalISO(dias, fechaVenta)); 
+                                        }} 
+                                        style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#FFFFFF', border: '1px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} 
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#f87171', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                        <FaCalendarAlt size={10} /> Fecha de Vencimiento
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        value={fechaVencimientoCredito} 
+                                        onChange={e => setFechaVencimientoCredito(e.target.value)} 
+                                        style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#FFFFFF', border: '1px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} 
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -651,7 +676,12 @@ export const Caja: React.FC = () => {
                             <input 
                                 type="date" 
                                 value={fechaVenta} 
-                                onChange={e => setFechaVenta(e.target.value)} 
+                                onChange={e => {
+                                    const nuevaFechaVenta = e.target.value;
+                                    setFechaVenta(nuevaFechaVenta);
+                                    // El vencimiento ahora toma como base la nueva fecha de venta seleccionada
+                                    setFechaVencimientoCredito(obtenerFechaLocalISO(diasCredito, nuevaFechaVenta)); 
+                                }} 
                                 style={{ width: '100%', padding: '8px', background: '#0f172a', color: '#FFFFFF', border: '1px solid #334155', borderRadius: '6px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} 
                             />
                         </div>
