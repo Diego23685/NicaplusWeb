@@ -54,7 +54,7 @@ export const Catalogo: React.FC = () => {
     const [idCatSeleccionada, setIdCatSeleccionada] = useState<number | null>(null);
     const [idJuegoSeleccionado, setIdJuegoSeleccionado] = useState<number | null>(null);
 
-    const WHATSAPP_NUMERO = "50557379929"; 
+    const WHATSAPP_NUMERO = "50587870821"; // Número de WhatsApp para enviar el pedido
 
     // --- EFECTO INTERACTIVO DE PARTICULAS (CURSOR RATÓN) ---
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
