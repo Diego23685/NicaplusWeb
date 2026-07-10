@@ -4,7 +4,7 @@ import styles from '../components/catalogo/Catalogo.module.css';
 import { 
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
     FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
-    FaArrowLeft, FaMinus, FaPlus, FaBars, FaTimes
+    FaArrowLeft, FaMinus, FaPlus, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave
 } from 'react-icons/fa';
 
 import { HeroInicio } from '../components/catalogo/HeroInicio';
@@ -49,12 +49,19 @@ export const Catalogo: React.FC = () => {
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
     const [seccionActiva, setSeccionActiva] = useState<Seccion>('inicio');
     const [busqueda, setBusqueda] = useState('');
-    const [menuAbierto, setMenuAbierto] = useState(false); // Estado para el Sidebar Móvil
+    const [menuAbierto, setMenuAbierto] = useState(false);
 
     const [idCatSeleccionada, setIdCatSeleccionada] = useState<number | null>(null);
     const [idJuegoSeleccionado, setIdJuegoSeleccionado] = useState<number | null>(null);
 
-    const WHATSAPP_NUMERO = "50587870821"; // Número de WhatsApp para enviar el pedido
+    // --- ESTADOS PARA FACTURACIÓN Y ENVÍO ---
+    const [nombreCliente, setNombreCliente] = useState('');
+    const [telefonoCliente, setTelefonoCliente] = useState('');
+    const [direccionCliente, setDireccionCliente] = useState('');
+    const [tipoEntrega, setTipoEntrega] = useState('Envío a domicilio');
+    const [metodoPago, setMetodoPago] = useState('Transferencia Bancaria');
+
+    const WHATSAPP_NUMERO = "50587870821";
 
     // --- EFECTO INTERACTIVO DE PARTICULAS (CURSOR RATÓN) ---
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -197,15 +204,44 @@ export const Catalogo: React.FC = () => {
         setCarrito(carrito.filter(item => item.producto.id !== id));
     };
 
-    const enviarAWhatsApp = () => {
+    // --- ENVIAR A WHATSAPP CON INFORMACIÓN EXTENDIDA ---
+    const enviarAWhatsApp = (e: React.FormEvent) => {
+        e.preventDefault(); // Previene recarga si se maneja desde el evento onSubmit
+
         if (carrito.length === 0) return;
+        
+        // Validación básica de campos requeridos
+        if (!nombreCliente.trim() || !telefonoCliente.trim()) {
+            alert("Por favor ingresa tu nombre y teléfono para procesar el pedido.");
+            return;
+        }
+        if (tipoEntrega === 'Envío a domicilio' && !direccionCliente.trim()) {
+            alert("Por favor ingresa tu dirección para realizar el envío.");
+            return;
+        }
+
         let mensaje = `✨ *NUEVA ORDEN - NICAPLUS GAMING* ✨\n\n`;
+        
+        // Sección de Cliente
+        mensaje += `👤 *DATOS DEL CLIENTE*\n`;
+        mensaje += `▪️ *Nombre:* ${nombreCliente.trim()}\n`;
+        mensaje += `▪️ *Teléfono:* ${telefonoCliente.trim()}\n`;
+        mensaje += `▪️ *Tipo de Entrega:* ${tipoEntrega}\n`;
+        if (tipoEntrega === 'Envío a domicilio') {
+            mensaje += `📍 *Dirección:* ${direccionCliente.trim()}\n`;
+        }
+        mensaje += `💳 *Método de Pago:* ${metodoPago}\n\n`;
+
+        // Sección de Productos
+        mensaje += `🛒 *DETALLE DEL PEDIDO*\n`;
         carrito.forEach(item => {
             mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre}\n` +
                        `   Precio Unit: C$ ${item.producto.precioVenta} | Subtotal: C$ ${item.cantidad * item.producto.precioVenta}\n\n`;
         });
+
         const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.producto.precioVenta), 0);
         mensaje += `💰 *TOTAL A PAGAR: C$ ${total}*\n`;
+        
         window.open(`https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
@@ -219,7 +255,6 @@ export const Catalogo: React.FC = () => {
     const totalCarritoItems = carrito.reduce((sum, i) => sum + i.cantidad, 0);
     const totalPagar = carrito.reduce((sum, item) => sum + (item.cantidad * item.producto.precioVenta), 0);
 
-    // Array de navegación reutilizable tanto en Desktop como en Sidebar móvil
     const itemsNavegacion = [
         { id: 'inicio', label: 'Inicio', icon: <FaHome /> },
         { id: 'nosotros', label: 'Nosotros', icon: <FaInfoCircle /> },
@@ -233,7 +268,7 @@ export const Catalogo: React.FC = () => {
             setIdCatSeleccionada(null);
             setIdJuegoSeleccionado(null);
         }
-        setMenuAbierto(false); // Cierra automáticamente el sidebar al cambiar de vista
+        setMenuAbierto(false);
     };
 
     return (
@@ -243,7 +278,7 @@ export const Catalogo: React.FC = () => {
 
             {/* SIDEBAR MÓVIL */}
             <div className={`${styles.sidebarOverlay} ${menuAbierto ? styles.sidebarOverlayVisible : ''}`} onClick={() => setMenuAbierto(false)} />
-            <aside className={`${styles.sidebarMobile} ${menuAbierto ? styles.sidebarMobileAbierto : ''}`}>
+            <aside className={`${styles.sidebarMobile} ${menuAbierto ? styles.sidebarMobileAbisOpen : ''}`}>
                 <div className={styles.sidebarHeader}>
                     <span className={styles.brandText}>MENÚ</span>
                     <button className={styles.closeMenuBtn} onClick={() => setMenuAbierto(false)}>
@@ -272,7 +307,6 @@ export const Catalogo: React.FC = () => {
                         <span className={styles.brandText}>NICAPLUS GAMING</span>
                     </div>
 
-                    {/* CONTROLES MÓVILES (CARRITO + HAMBURGUESA) */}
                     <div className={styles.mobileActionsBlock}>
                         <button 
                             className={`${styles.cartBtnMobile} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
@@ -287,7 +321,6 @@ export const Catalogo: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* NAVEGACIÓN DESKTOP */}
                     <nav className={styles.navigation}>
                         {itemsNavegacion.map(tab => (
                             <button 
@@ -481,12 +514,78 @@ export const Catalogo: React.FC = () => {
                                         ))}
                                     </div>
 
+                                    {/* RESUMEN DE COMPRA Y FORMULARIO */}
                                     <div className={styles.cartSummaryCard}>
                                         <h3>Resumen de Pedido</h3>
                                         <div className={styles.summaryRow}><span>Subtotal</span><span>C$ {totalPagar}</span></div>
                                         <div className={styles.dividerSummary} />
-                                        <div className={`${styles.summaryRow} ${styles.totalRowView}`}><span>Total:</span><span className={styles.totalColor}>C$ {totalPagar}</span></div>
-                                        <button onClick={enviarAWhatsApp} className={styles.finalCheckoutBtn}><FaWhatsapp size={18} /> Procesar vía WhatsApp</button>
+                                        
+                                        {/* FORMULARIO DE FACTURACIÓN INTERNO */}
+                                        <form onSubmit={enviarAWhatsApp} className={styles.billingForm}>
+                                            <h4 className={styles.formTitle}>Datos de Entrega</h4>
+                                            
+                                            <div className={styles.inputGroup}>
+                                                <label><FaUser /> Nombre Completo *</label>
+                                                <input 
+                                                    type="text" 
+                                                    required 
+                                                    placeholder="Ej: Juan Pérez" 
+                                                    value={nombreCliente} 
+                                                    onChange={(e) => setNombreCliente(e.target.value)} 
+                                                />
+                                            </div>
+
+                                            <div className={styles.inputGroup}>
+                                                <label><FaPhone /> Teléfono de Contacto *</label>
+                                                <input 
+                                                    type="tel" 
+                                                    required 
+                                                    placeholder="Ej: 88888888" 
+                                                    value={telefonoCliente} 
+                                                    onChange={(e) => setTelefonoCliente(e.target.value)} 
+                                                />
+                                            </div>
+
+                                            <div className={styles.inputGroup}>
+                                                <label><FaTruck /> Tipo de Entrega</label>
+                                                <select value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
+                                                    <option value="Envío a domicilio">Envío a domicilio</option>
+                                                    <option value="Retiro en sucursal (León)">Retiro en tienda (León)</option>
+                                                    <option value="Envío digital (Email/WhatsApp)">Entrega Inmediata (Digital)</option>
+                                                </select>
+                                            </div>
+
+                                            {tipoEntrega === "Envío a domicilio" && (
+                                                <div className={styles.inputGroup}>
+                                                    <label><FaMapMarkerAlt /> Dirección de Envío *</label>
+                                                    <textarea 
+                                                        required
+                                                        placeholder="Dirección exacta de tu casa u oficina..." 
+                                                        value={direccionCliente} 
+                                                        onChange={(e) => setDireccionCliente(e.target.value)} 
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div className={styles.inputGroup}>
+                                                <label><FaMoneyBillWave /> Método de Pago</label>
+                                                <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+                                                    <option value="Transferencia Bancaria">Transferencia (LAFISE / BANPRO)</option>
+                                                    <option value="Efectivo">Efectivo (Contra Entrega)</option>
+                                                    <option value="Billetera Digital">Puntos BAC / KASH / Tigo Money</option>
+                                                </select>
+                                            </div>
+
+                                            <div className={styles.dividerSummary} />
+                                            <div className={`${styles.summaryRow} ${styles.totalRowView}`}>
+                                                <span>Total:</span>
+                                                <span className={styles.totalColor}>C$ {totalPagar}</span>
+                                            </div>
+
+                                            <button type="submit" className={styles.finalCheckoutBtn}>
+                                                <FaWhatsapp size={18} /> Procesar vía WhatsApp
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             )}

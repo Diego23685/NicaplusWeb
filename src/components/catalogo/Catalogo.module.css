@@ -934,3 +934,66 @@
   font-weight: 800;
   box-shadow: 0 0 15px rgba(176, 2, 194, 0.1);
 }
+
+.billingForm {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+}
+
+.formTitle {
+    font-size: 1.1rem;
+    color: #047688;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    padding-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.inputGroup label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inputGroup input,
+.inputGroup select,
+.inputGroup textarea {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(176, 2, 194, 0.4);
+    border-radius: 6px;
+    padding: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.inputGroup input:focus,
+.inputGroup select:focus,
+.inputGroup textarea:focus {
+    outline: none;
+    border-color: #b002c2;
+    box-shadow: 0 0 8px rgba(176, 2, 194, 0.4);
+}
+
+.inputGroup textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.inputGroup select option {
+    background: #111;
+    color: #fff;
+}
