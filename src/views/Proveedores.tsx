@@ -130,7 +130,6 @@ export const Proveedores: React.FC = () => {
     e.preventDefault();
 
     const payload = {
-      id: editando,
       razonSocial,
       ruc,
       telefono,
@@ -139,15 +138,20 @@ export const Proveedores: React.FC = () => {
 
     try {
       if (editando === null) {
-        await api.post('/proveedores', payload);
+        await api.post("/proveedores", payload);
         alert("Proveedor registrado correctamente.");
       } else {
-        await api.put(`/proveedores/${editando}`, payload);
+        await api.put(`/proveedores/${editando}`, {
+          id: editando,
+          ...payload
+        });
         alert("Proveedor actualizado correctamente.");
       }
+
       limpiarFormularioProveedor();
       await cargarDatos();
-    } catch {
+    } catch (error) {
+      console.error(error);
       alert("Ocurrió un error al guardar.");
     }
   };
