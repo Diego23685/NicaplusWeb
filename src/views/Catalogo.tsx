@@ -174,7 +174,7 @@ export const Catalogo: React.FC = () => {
                 item.producto.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
             ));
         } else {
-            setCarrito([...carrito, { producto, carrot: 1, cantidad: 1 }]);
+            setCarrito([...carrito, { producto, cantidad: 1 }]);
         }
     };
 
