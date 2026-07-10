@@ -24,6 +24,8 @@ interface ItemCarrito {
     subTotal: number;
     metadataDigital: string;
     diasSuscripcion: number;
+    descuento?: number; // Nuevo campo para el descuento aplicado a este item
+    idCombo?: number; // Nuevo campo para el ID del combo si aplica
 }
 
 const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => {
@@ -186,37 +188,47 @@ export const Caja: React.FC = () => {
                 precioCostoUnitario: producto.precioCosto,
                 subTotal: producto.precioVenta,
                 metadataDigital: '',
-                diasSuscripcion: (producto as any).diasDuracion || 30
+                diasSuscripcion: (producto as any).diasDuracion || 30,
+                descuento: 0, // Inicializamos el descuento en 0
             }]);
         }
     };
 
-    const cambiarCantidadManual = (idProducto: number, nuevaCantidad: number) => {
-        if (nuevaCantidad < 1) return;
-
-        const itemOriginal = carrito.find(item => item.idProducto === idProducto);
-        const productoBase = productos.find(p => p.id === idProducto);
-
-        if (!itemOriginal || !productoBase) return;
-
-        if (!productoBase.esDigital && !productoBase.requiereServicio && productoBase.stockActual < nuevaCantidad) {
-            alert(`Acción denegada: El stock disponible para este artículo es de ${productoBase.stockActual} unidades.`);
-            return;
-        }
-
-        setCarrito(carrito.map(item => 
-            item.idProducto === idProducto 
-                ? { ...item, cantidad: nuevaCantidad, subTotal: nuevaCantidad * item.precioUnitario }
-                : item
-        ));
+    const cambiarDescuentoManual = (idProducto: number, descuento: number) => {
+        setCarrito(prev => prev.map(item => {
+            if (item.idProducto === idProducto) {
+                // El subtotal ahora resta el descuento por unidad antes de multiplicar por la cantidad
+                const precioConDescuento = item.precioUnitario - descuento;
+                return {
+                    ...item,
+                    descuento: descuento,
+                    subTotal: precioConDescuento * item.cantidad
+                };
+            }
+            return item;
+        }));
     };
 
-    const actualizarDiasItemCarrito = (idProducto: number, dias: number) => {
-        if (dias < 1) return;
-        setCarrito(carrito.map(item => 
-            item.idProducto === idProducto ? { ...item, diasSuscripcion: dias } : item
-        ));
+    const cambiarCantidadManual = (idProducto: number, cantidad: number) => {
+        setCarrito(prev => prev.map(item => {
+            if (item.idProducto === idProducto) {
+                const desc = item.descuento || 0;
+                return {
+                    ...item,
+                    cantidad: cantidad,
+                    subTotal: (item.precioUnitario - desc) * cantidad // Multiplica cantidad por el precio ya rebajado
+                };
+            }
+            return item;
+        }));
     };
+
+        const actualizarDiasItemCarrito = (idProducto: number, dias: number) => {
+            if (dias < 1) return;
+            setCarrito(carrito.map(item => 
+                item.idProducto === idProducto ? { ...item, diasSuscripcion: dias } : item
+            ));
+        };
 
     const eliminarDelCarrito = (idProducto: number) => {
         setCarrito(carrito.filter(item => item.idProducto !== idProducto));
@@ -341,8 +353,11 @@ export const Caja: React.FC = () => {
             return {
                 idProducto: item.idProducto,
                 cantidad: item.cantidad,
-                precioUnitario: item.precioUnitario,
-                subTotal: item.subTotal,
+                // precioUnitario debe ser el precio REAL final (precio original menos el descuento)
+                precioUnitario: item.precioUnitario - (item.descuento || 0),
+                // subTotal debe reflejar el precio con descuento multiplicado por la cantidad
+                subTotal: (item.precioUnitario - (item.descuento || 0)) * item.cantidad,
+                descuento: item.descuento || 0, // <-- NUEVA COLUMNA ENVIADA AL BACKEND
                 metadataDigital: metaFinal || ''
             };
         });
@@ -558,7 +573,22 @@ export const Caja: React.FC = () => {
                                                 </span>
                                             </div>
 
+                                            {/* El subtotal ya se renderiza calculado con el descuento */}
                                             <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', flexShrink: 0 }}>C$ {item.subTotal}</strong>
+                                        </div>
+
+                                        {/* NUEVO: Fila para aplicar Descuento Manual por unidad */}
+                                        <div style={{ marginTop: '6px', paddingLeft: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#eab308', fontWeight: 'bold' }}>Descuento (C$):</span>
+                                            <input 
+                                                type="number" 
+                                                min={0}
+                                                max={item.precioUnitario} // Evita que el descuento sea mayor que el precio
+                                                value={item.descuento || 0} 
+                                                onChange={(e) => cambiarDescuentoManual(item.idProducto, Number(e.target.value))}
+                                                style={{ background: '#0f172a', color: '#fff', border: '1px solid #eab308', borderRadius: '4px', width: '55px', padding: '2px', textAlign: 'center', fontSize: '0.8rem', outline: 'none' }} 
+                                            />
+                                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Base: C$ {item.precioUnitario}</span>
                                         </div>
 
                                         {pBase?.esSuscripcion && (
