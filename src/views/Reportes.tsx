@@ -33,19 +33,35 @@ export const Reportes: React.FC = () => {
 
     const aplicarRangoRapido = (tipo: 'hoy' | 'semana' | 'mes' | 'ano') => {
         const hoy = new Date();
-        let fInicio = new Date();
+        
+        // Forzamos la zona horaria comercial de Nicaragua para extraer año, mes y día limpios
+        const opciones = { timeZone: 'America/Managua', year: 'numeric' as const, month: '2-digit' as const, day: '2-digit' as const };
+        const [year, month, day] = new Intl.DateTimeFormat('fr-CA', opciones).format(hoy).split('-');
+        
+        // Creamos las fechas base fijadas en hora cero local (T00:00:00)
+        let fInicio = new Date(`${year}-${month}-${day}T00:00:00`);
+        let fFin = new Date(`${year}-${month}-${day}T00:00:00`);
 
         if (tipo === 'semana') {
-            fInicio.setDate(hoy.getDate() - hoy.getDay());
+            // Corregimos el cálculo de la semana: si es domingo (0), lo tratamos como el día 7 de la semana
+            const diaSemana = fInicio.getDay() === 0 ? 7 : fInicio.getDay();
+            fInicio.setDate(fInicio.getDate() - (diaSemana - 1)); // Lunes de la semana actual
         } else if (tipo === 'mes') {
-            fInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fInicio = new Date(Number(year), Number(month) - 1, 1); // Primer día del mes actual
         } else if (tipo === 'ano') {
-            fInicio = new Date(hoy.getFullYear(), 0, 1);
+            fInicio = new Date(Number(year), 0, 1); // 1 de Enero del año actual
         }
 
-        const formatear = (d: Date) => d.toISOString().split('T')[0];
-        setDesde(formatear(fInicio));
-        setHasta(formatear(hoy));
+        // Función auxiliar para formatear localmente como YYYY-MM-DD sin usar toISOString()
+        const formatearLocal = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${dia}`;
+        };
+
+        setDesde(formatearLocal(fInicio));
+        setHasta(formatearLocal(fFin));
     };
 
     const ConsultarReporte = async () => {
