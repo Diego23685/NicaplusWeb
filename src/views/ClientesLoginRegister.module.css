@@ -1,0 +1,257 @@
+/* Contenedor principal de la página completa */
+.authBody {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #0b0713;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, sans-serif;
+  position: relative;
+}
+
+/* Fondo decorativo con gradiente y cuadrícula gaming */
+.heroSection {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, #1e0933 0%, #0b0713 80%);
+  z-index: 1;
+}
+
+.decorativeGrid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), 
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Envoltura interna del layout */
+.authMain {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 75rem;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+/* Botón flotante para regresar */
+.btnVolver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+.btnVolver:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: #047688;
+  transform: translateX(-2px);
+}
+
+/* --- TARJETA CONTENEDORA DE DOS COLUMNAS --- */
+.authGridCard {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(145deg, #161026, #110b1e);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  min-height: 550px;
+}
+
+@media (min-width: 850px) {
+  .authGridCard {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* --- COLUMNA INFORMATIVA (ESTILO HERO) --- */
+.infoColumn {
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(30, 9, 51, 0.6) 0%, rgba(11, 7, 19, 0.8) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@media (min-width: 850px) {
+  .infoColumn {
+    border-bottom: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 4rem;
+  }
+}
+
+.badgeSubli {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(176, 2, 194, 0.3);
+  background: rgba(88, 28, 126, 0.2);
+  padding: 0.5rem 1.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e9bcff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tituloInfo {
+  margin-top: 1.5rem;
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.textGradient {
+  background: linear-gradient(90deg, #b002c2, #6d28d9, #047688);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtituloInfo {
+  margin-top: 1.2rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #a49ebd;
+}
+
+.toggleContainer {
+  margin-top: 2.5rem;
+}
+
+.btnToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #6d28d9, #581c7e);
+  padding: 0.9rem 1.8rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(109, 40, 217, 0.4);
+  transition: all 0.3s ease;
+}
+
+.btnToggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(176, 2, 194, 0.5);
+}
+
+/* --- COLUMNA DINÁMICA DEL FORMULARIO --- */
+.formColumn {
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+@media (min-width: 850px) {
+  .formColumn {
+    padding: 4rem;
+  }
+}
+
+.formBox {
+  width: 100%;
+  animation: fadeEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.formTitle {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+
+.formSubtitle {
+  font-size: 0.9rem;
+  color: #928bb0;
+  margin-bottom: 2rem;
+}
+
+/* Inputs con diseño estilizado */
+.inputGroup {
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.inputField {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: #0b0713;
+  color: #ffffff;
+  font-size: 0.95rem;
+  border-radius: 0.75rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.inputField:focus {
+  border-color: #b002c2;
+  box-shadow: 0 0 0 2px rgba(176, 2, 194, 0.2);
+  background-color: #110b1e;
+}
+
+/* Botón de Envió Principal */
+.btnSubmit {
+  width: 100%;
+  border-radius: 0.75rem;
+  background-color: #047688;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.9rem;
+  border: none;
+  cursor: pointer;
+  margin-top: 1rem;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.btnSubmit:hover {
+  background-color: #058fa4;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(4, 118, 136, 0.3);
+}
+
+/* Animación suave de entrada de formularios */
+@keyframes fadeEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

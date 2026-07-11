@@ -1,15 +1,18 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+// Estructura adaptada para ambos tipos de usuario
 interface UsuarioSesion {
     id: number;
     nombre: string;
-    username: string;
-    rol: string;
+    email?: string;
+    username?: string;
+    rol?: string;
+    tipoUsuario: 'Staff' | 'Cliente'; // Para saber qué paneles mostrar en el Front
 }
 
 interface AuthContextType {
     usuario: UsuarioSesion | null;
-    login: (token: string) => void; // Cambiado de UsuarioSesion a string
+    login: (token: string) => void;
     logout: () => void;
     cargando: boolean;
 }
@@ -20,19 +23,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
     const [cargando, setCargando] = useState(true);
 
+    // Función auxiliar para parsear el JWT de forma segura
+    const mapearUsuarioDesdeToken = (token: string): UsuarioSesion | null => {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            
+            // Leemos tu claim personalizado del backend
+            const tipoUsuario = payload["TipoUsuario"] || 'Staff'; 
+            const id = parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]);
+            const nombre = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"];
+
+            if (tipoUsuario === 'Cliente') {
+                return {
+                    id,
+                    nombre,
+                    email: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"],
+                    tipoUsuario: 'Cliente'
+                };
+            } else {
+                return {
+                    id,
+                    nombre,
+                    username: nombre,
+                    rol: payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
+                    tipoUsuario: 'Staff'
+                };
+            }
+        } catch (e) {
+            return null;
+        }
+    };
+
     useEffect(() => {
         const token = localStorage.getItem('nicaplus_token');
         if (token) {
-            try {
-                // Decodificar token para restaurar sesión al recargar
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                setUsuario({
-                    id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]),
-                    nombre: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
-                    username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"], // Ajusta si el nombre de usuario es distinto
-                    rol: payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
-                });
-            } catch (e) {
+            const usuarioMapeado = mapearUsuarioDesdeToken(token);
+            if (usuarioMapeado) {
+                setUsuario(usuarioMapeado);
+            } else {
                 localStorage.removeItem('nicaplus_token');
             }
         }
@@ -41,14 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = (token: string) => {
         localStorage.setItem('nicaplus_token', token);
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        
-        setUsuario({
-            id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]),
-            nombre: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
-            username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
-            rol: payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
-        });
+        const usuarioMapeado = mapearUsuarioDesdeToken(token);
+        setUsuario(usuarioMapeado);
     };
 
     const logout = () => {

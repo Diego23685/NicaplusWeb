@@ -4,7 +4,7 @@ import styles from '../components/catalogo/Catalogo.module.css';
 import { 
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
     FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
-    FaArrowLeft, FaMinus, FaPlus, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave
+    FaArrowLeft, FaMinus, FaPlus, FaSignOutAlt, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave, FaSignInAlt
 } from 'react-icons/fa';
 
 import { HeroInicio } from '../components/catalogo/HeroInicio';
@@ -42,7 +42,14 @@ interface ItemCarrito {
 
 type Seccion = 'inicio' | 'nosotros' | 'productos' | 'contacto' | 'carrito';
 
-export const Catalogo: React.FC = () => {
+interface CatalogoProps {
+    alIrAlLogin: () => void;
+    cliente: any;
+    alCerrarSesion: () => void;
+    alIrAMiCuenta?: () => void;
+}
+
+export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerrarSesion, alIrAMiCuenta }) => {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [juegos, setJuegos] = useState<Juego[]>([]);
@@ -278,7 +285,7 @@ export const Catalogo: React.FC = () => {
 
             {/* SIDEBAR MÓVIL */}
             <div className={`${styles.sidebarOverlay} ${menuAbierto ? styles.sidebarOverlayVisible : ''}`} onClick={() => setMenuAbierto(false)} />
-            <aside className={`${styles.sidebarMobile} ${menuAbierto ? styles.sidebarMobileAbisOpen : ''}`}>
+            <aside className={`${styles.sidebarMobile} ${menuAbierto ? styles.sidebarMobileAbierto : ''}`}>
                 <div className={styles.sidebarHeader}>
                     <span className={styles.brandText}>MENÚ</span>
                     <button className={styles.closeMenuBtn} onClick={() => setMenuAbierto(false)}>
@@ -286,16 +293,36 @@ export const Catalogo: React.FC = () => {
                     </button>
                 </div>
                 <nav className={styles.sidebarNavList}>
-                    {itemsNavegacion.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => cambiarSeccion(tab.id)}
-                            className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
-                        >
-                            {tab.icon} <span>{tab.label}</span>
+                {itemsNavegacion.map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => cambiarSeccion(tab.id)}
+                        className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
+                    >
+                        {tab.icon} <span>{tab.label}</span>
+                    </button>
+                ))}
+
+                {/* --- BLOQUE DE AUTENTICACIÓN MÓVIL (DENTRO DEL SIDEBAR) --- */}
+                <div className={styles.sidebarAuthDivider} style={{ margin: '15px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+                
+                {cliente ? (
+                    <div className={styles.sidebarUserBlock}>
+                        <button onClick={() => { alIrAMiCuenta?.(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
+                            👤 <span>{cliente.nombre || cliente.Nombre || 'Mi Cuenta'}</span>
                         </button>
-                    ))}
-                </nav>
+                        <button onClick={() => { alCerrarSesion(); setMenuAbierto(false); }} className={`${styles.sidebarNavTab} ${styles.sidebarBtnSalir}`}>
+                            <FaSignOutAlt /> <span>Cerrar Sesión</span>
+                        </button>
+                    </div>
+                ) : (
+                    <button onClick={() => { alIrAlLogin(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
+                        <FaSignInAlt /> <span>Iniciar Sesión / Registrarse</span>
+                    </button>
+                )}
+                
+                
+            </nav>
             </aside>
 
             {/* NAVBAR */}
@@ -347,6 +374,7 @@ export const Catalogo: React.FC = () => {
                                 className={styles.searchInput}
                             />
                         </div>
+                        
                         <button 
                             className={`${styles.cartBtnDesktop} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
                             onClick={() => cambiarSeccion('carrito')} 
@@ -355,6 +383,24 @@ export const Catalogo: React.FC = () => {
                             <span>Carrito</span>
                             <span className={styles.cartBadgeCount}>{totalCarritoItems}</span>
                         </button>
+
+                        {/* --- BOTÓN DE LOGIN ESCRITORIO --- */}
+                        {cliente ? (
+                            <div className={styles.userAuthContainer}>
+                                <button onClick={alIrAMiCuenta} className={styles.btnPerfilCliente}>
+                                    👤 {cliente.nombre || cliente.Nombre || 'Mi Cuenta'}
+                                </button>
+                                <button onClick={alCerrarSesion} className={styles.btnSalir}>
+                                    Salir
+                                </button>
+                            </div>
+                        ) : (
+                            <div className={styles.userAuthContainer}>
+                                <button onClick={alIrAlLogin} className={styles.btnIngresar}>
+                                    Ingresar
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                 </div>

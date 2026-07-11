@@ -997,3 +997,135 @@
     background: #111;
     color: #fff;
 }
+
+/* Estilos base opcionales para acoplar al look neon/gaming de tu app */
+.authDesktopButtons button {
+    transition: all 0.3s ease;
+}
+
+.authDesktopButtons button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 12px rgba(176, 2, 194, 0.4);
+}
+
+/* Botón de Ingresar (Estado inicial / Escritorio) */
+.btnIngresar {
+    background-color: #b002c2;
+    color: #ffffff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btnIngresar:hover {
+    background-color: #9302a3;
+}
+
+/* Botón de Salir (Escritorio) */
+.btnSalir {
+    background-color: #f87171;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 5px;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btnSalir:hover {
+    background-color: #ef4444;
+}
+
+/* ==========================================================================
+   MEDIA QUERIES - RESPONSIVE PARA DISPOSITIVOS MÓVILES (Menos de 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .userAuthContainer {
+        gap: 8px; /* Espaciado más cerrado en móviles */
+    }
+
+    /* Reducimos el padding del botón ingresar para que no empuje el layout */
+    .btnIngresar {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+
+    /* Ocultamos el texto "Hola," y dejamos solo el nombre o un formato compacto */
+    .btnPerfilCliente {
+        font-size: 14px;
+        max-width: 120px; /* Evita que nombres larguísimos rompan el Navbar */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Si el nombre es muy largo, añade "..." */
+    }
+
+    /* Hacemos el botón de salir más compacto */
+    .btnSalir {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+}
+
+/* OPTATIVO: Para pantallas extremadamente pequeñas (Smartphones de menos de 480px) */
+@media (max-width: 480px) {
+    .userAuthContainer {
+        gap: 5px;
+    }
+    
+    /* Si el espacio es crítico, recortamos aún más el ancho máximo del nombre */
+    .btnPerfilCliente {
+        max-width: 80px;
+    }
+}
+
+/* Contenedor del perfil del usuario dentro del menú móvil */
+.sidebarUserBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Variación de color para el botón de salir en el menú lateral móvil */
+.sidebarBtnSalir {
+    color: #f87171 !important;
+}
+
+.sidebarBtnSalir:hover {
+    background-color: rgba(248, 113, 113, 0.1) !important;
+}
+
+/* ==========================================
+   ESTILOS EXISTENTES DEL BOTÓN DE ESCRITORIO
+   ========================================== */
+.userAuthContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btnPerfilCliente {
+    background: transparent;
+    border: none;
+    color: #38bdf8;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.btnPerfilCliente:hover {
+    color: #0ea5e9;
+    text-decoration: underline;
+}
+
+/* Ocultar el bloque de autenticación de escritorio cuando estemos en móviles */
+@media (max-width: 768px) {
+    .searchAndCartBlock .userAuthContainer {
+        display: none !important;
+    }
+}
