@@ -303,7 +303,7 @@ export const Caja: React.FC = () => {
         const totalReal = datosUltimaVenta.totalCongelado;
         const esVentaCredito = metodoUsado === "Crédito";
         
-        const separador = "----------------------------------";
+        const separador = "--------------------------------------------------------------------";
 
         const getEmojiSeguro = (codigoWeb: string) => {
             try {
