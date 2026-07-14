@@ -4,12 +4,14 @@ import styles from '../components/catalogo/Catalogo.module.css';
 import { 
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
     FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
-    FaArrowLeft, FaMinus, FaPlus, FaSignOutAlt, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave, FaSignInAlt
+    FaArrowLeft, FaMinus, FaPlus, FaSignOutAlt, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave, FaSignInAlt,
+    FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 
 import { HeroInicio } from '../components/catalogo/HeroInicio';
 import { VistaNosotros } from '../components/catalogo/VistaNosotros';
 import { VistaContacto } from '../components/catalogo/VistaContacto';
+import { Terminos } from './Terminos';
 
 interface Producto {
     id: number;
@@ -58,6 +60,9 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const [busqueda, setBusqueda] = useState('');
     const [menuAbierto, setMenuAbierto] = useState(false);
 
+    const [aceptoTerminos, setAceptoTerminos] = useState(false);
+    const [verModalTerminos, setVerModalTerminos] = useState(false);
+
     const [idCatSeleccionada, setIdCatSeleccionada] = useState<number | null>(null);
     const [idJuegoSeleccionado, setIdJuegoSeleccionado] = useState<number | null>(null);
 
@@ -70,7 +75,9 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
     const WHATSAPP_NUMERO = "50587870821";
 
-    // --- EFECTO INTERACTIVO DE PARTICULAS (CURSOR RATÓN) ---
+    // --- REFS PARA LOS DESPLAZAMIENTOS HORIZONTALES ---
+    const catRowRef = useRef<HTMLDivElement | null>(null);
+    const juegoRowRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     useEffect(() => {
@@ -177,6 +184,17 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         .catch(err => console.error("Error cargando base de datos comercial:", err));
     }, []);
 
+    const scrollRow = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+        if (ref.current) {
+            const { scrollLeft, clientWidth } = ref.current;
+            const scrollAmount = clientWidth * 0.7;
+            ref.current.scrollTo({
+                left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
     const agregarAlCarrito = (producto: Producto) => {
         const existe = carrito.find(item => item.producto.id === producto.id);
         if (existe) {
@@ -211,25 +229,26 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         setCarrito(carrito.filter(item => item.producto.id !== id));
     };
 
-    // --- ENVIAR A WHATSAPP CON INFORMACIÓN EXTENDIDA ---
     const enviarAWhatsApp = (e: React.FormEvent) => {
-        e.preventDefault(); // Previene recarga si se maneja desde el evento onSubmit
-
+        e.preventDefault();
         if (carrito.length === 0) return;
-        
-        // Validación básica de campos requeridos
+
+        if (!aceptoTerminos) {
+            alert("Debes aceptar los Términos y Condiciones antes de confirmar tu pedido.");
+            return;
+        }
+
         if (!nombreCliente.trim() || !telefonoCliente.trim()) {
             alert("Por favor ingresa tu nombre y teléfono para procesar el pedido.");
             return;
         }
+        
         if (tipoEntrega === 'Envío a domicilio' && !direccionCliente.trim()) {
             alert("Por favor ingresa tu dirección para realizar el envío.");
             return;
         }
 
         let mensaje = `✨ *NUEVA ORDEN - NICAPLUS GAMING* ✨\n\n`;
-        
-        // Sección de Cliente
         mensaje += `👤 *DATOS DEL CLIENTE*\n`;
         mensaje += `▪️ *Nombre:* ${nombreCliente.trim()}\n`;
         mensaje += `▪️ *Teléfono:* ${telefonoCliente.trim()}\n`;
@@ -239,7 +258,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
         mensaje += `💳 *Método de Pago:* ${metodoPago}\n\n`;
 
-        // Sección de Productos
         mensaje += `🛒 *DETALLE DEL PEDIDO*\n`;
         carrito.forEach(item => {
             mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre}\n` +
@@ -293,36 +311,33 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     </button>
                 </div>
                 <nav className={styles.sidebarNavList}>
-                {itemsNavegacion.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => cambiarSeccion(tab.id)}
-                        className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
-                    >
-                        {tab.icon} <span>{tab.label}</span>
-                    </button>
-                ))}
+                    {itemsNavegacion.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => cambiarSeccion(tab.id)}
+                            className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
+                        >
+                            {tab.icon} <span>{tab.label}</span>
+                        </button>
+                    ))}
 
-                {/* --- BLOQUE DE AUTENTICACIÓN MÓVIL (DENTRO DEL SIDEBAR) --- */}
-                <div className={styles.sidebarAuthDivider} style={{ margin: '15px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
-                
-                {cliente ? (
-                    <div className={styles.sidebarUserBlock}>
-                        <button onClick={() => { alIrAMiCuenta?.(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
-                            👤 <span>{cliente.nombre || cliente.Nombre || 'Mi Cuenta'}</span>
+                    <div className={styles.sidebarAuthDivider} style={{ margin: '15px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+                    
+                    {cliente ? (
+                        <div className={styles.sidebarUserBlock}>
+                            <button onClick={() => { alIrAMiCuenta?.(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
+                                👤 <span>{cliente.nombre || cliente.Nombre || 'Mi Cuenta'}</span>
+                            </button>
+                            <button onClick={() => { alCerrarSesion(); setMenuAbierto(false); }} className={`${styles.sidebarNavTab} ${styles.sidebarBtnSalir}`}>
+                                <FaSignOutAlt /> <span>Cerrar Sesión</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <button onClick={() => { alIrAlLogin(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
+                            <FaSignInAlt /> <span>Iniciar Sesión / Registrarse</span>
                         </button>
-                        <button onClick={() => { alCerrarSesion(); setMenuAbierto(false); }} className={`${styles.sidebarNavTab} ${styles.sidebarBtnSalir}`}>
-                            <FaSignOutAlt /> <span>Cerrar Sesión</span>
-                        </button>
-                    </div>
-                ) : (
-                    <button onClick={() => { alIrAlLogin(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
-                        <FaSignInAlt /> <span>Iniciar Sesión / Registrarse</span>
-                    </button>
-                )}
-                
-                
-            </nav>
+                    )}
+                </nav>
             </aside>
 
             {/* NAVBAR */}
@@ -384,7 +399,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                             <span className={styles.cartBadgeCount}>{totalCarritoItems}</span>
                         </button>
 
-                        {/* --- BOTÓN DE LOGIN ESCRITORIO --- */}
                         {cliente ? (
                             <div className={styles.userAuthContainer}>
                                 <button onClick={alIrAMiCuenta} className={styles.btnPerfilCliente}>
@@ -416,51 +430,72 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     {/* VISTA TIENDA */}
                     {seccionActiva === 'productos' && (
                         <div className={styles.fadeEntrance}>
+                            
+                            {/* CATEGORÍAS POPULARES CON CONTROLES */}
                             <div className={styles.filterSection}>
-                                <h4 className={styles.sectionTitle}><FaTags /> Categorías de Inventario</h4>
-                                <div className={styles.selectorScrollRow}>
-                                    <div 
-                                        onClick={() => setIdCatSeleccionada(null)} 
-                                        className={`${styles.selectorCardItem} ${idCatSeleccionada === null ? styles.selectorActivo : ''}`}
-                                    >
-                                        <div className={`${styles.cardOverlay} ${styles.allOverlay}`} />
-                                        <span className={styles.cardTextActive}>⭐ Ver Todo</span>
+                                <div className={styles.filterSectionHeader}>
+                                    <h4 className={styles.sectionTitle}><FaTags /> Categorías de Inventario</h4>
+                                    <div className={styles.filterSliderControls}>
+                                        <button type="button" className={styles.filterControlBtn} onClick={() => scrollRow(catRowRef, 'left')}><FaChevronLeft size={12} /></button>
+                                        <button type="button" className={styles.filterControlBtn} onClick={() => scrollRow(catRowRef, 'right')}><FaChevronRight size={12} /></button>
                                     </div>
-                                    {categorias.map(c => (
+                                </div>
+                                <div className={styles.filterOuterContainer}>
+                                    <div className={styles.selectorScrollRow} ref={catRowRef}>
                                         <div 
-                                            key={c.id} 
-                                            onClick={() => setIdCatSeleccionada(c.id)} 
-                                            className={`${styles.selectorCardItem} ${idCatSeleccionada === c.id ? styles.selectorActivo : ''}`}
+                                            onClick={() => setIdCatSeleccionada(null)} 
+                                            className={`${styles.selectorCardItem} ${idCatSeleccionada === null ? styles.selectorActivo : ''}`}
                                         >
-                                            {c.imagenUrl && <img src={c.imagenUrl} alt={c.nombre} className={styles.cardImage} />}
-                                            <div className={styles.cardOverlay} />
-                                            <span className={styles.cardText}>{c.nombre}</span>
+                                            <div className={`${styles.cardOverlay} ${styles.allOverlay}`} />
+                                            <span className={styles.cardTextActive}>⭐ Ver Todo</span>
                                         </div>
-                                    ))}
+                                        {categorias.map(c => (
+                                            <div 
+                                                key={c.id} 
+                                                onClick={() => setIdCatSeleccionada(c.id)} 
+                                                className={`${styles.selectorCardItem} ${idCatSeleccionada === c.id ? styles.selectorActivo : ''}`}
+                                            >
+                                                {c.imagenUrl && <img src={c.imagenUrl} alt={c.nombre} className={styles.cardImage} />}
+                                                <div className={styles.cardOverlay} />
+                                                <span className={styles.cardText}>{c.nombre}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className={styles.filterFade} />
                                 </div>
                             </div>
 
+                            {/* FILTRAR POR VIDEOJUEGO CON CONTROLES */}
                             <div className={styles.filterSection}>
-                                <h4 className={styles.sectionTitle}><FaGamepad /> Filtrar por Videojuego</h4>
-                                <div className={styles.selectorScrollRow}>
-                                    <div 
-                                        onClick={() => setIdJuegoSeleccionado(null)} 
-                                        className={`${styles.selectorCardItem} ${idJuegoSeleccionado === null ? styles.selectorActivo : ''}`}
-                                    >
-                                        <div className={`${styles.cardOverlay} ${styles.allOverlay}`} />
-                                        <span className={styles.cardTextActive}>🎮 Todos</span>
+                                <div className={styles.filterSectionHeader}>
+                                    <h4 className={styles.sectionTitle}><FaGamepad /> Filtrar por Videojuego</h4>
+                                    <div className={styles.filterSliderControls}>
+                                        <button type="button" className={styles.filterControlBtn} onClick={() => scrollRow(juegoRowRef, 'left')}><FaChevronLeft size={12} /></button>
+                                        <button type="button" className={styles.filterControlBtn} onClick={() => scrollRow(juegoRowRef, 'right')}><FaChevronRight size={12} /></button>
                                     </div>
-                                    {juegos.map(j => (
+                                </div>
+                                <div className={styles.filterOuterContainer}>
+                                    <div className={styles.selectorScrollRow} ref={juegoRowRef}>
                                         <div 
-                                            key={j.id} 
-                                            onClick={() => setIdJuegoSeleccionado(j.id)} 
-                                            className={`${styles.selectorCardItem} ${idJuegoSeleccionado === j.id ? styles.selectorActivo : ''}`}
+                                            onClick={() => setIdJuegoSeleccionado(null)} 
+                                            className={`${styles.selectorCardItem} ${idJuegoSeleccionado === null ? styles.selectorActivo : ''}`}
                                         >
-                                            {j.imagenUrl && <img src={j.imagenUrl} alt={j.nombre} className={styles.cardImage} />}
-                                            <div className={styles.cardOverlay} />
-                                            <span className={styles.cardText}>{j.nombre}</span>
+                                            <div className={`${styles.cardOverlay} ${styles.allOverlay}`} />
+                                            <span className={styles.cardTextActive}>🎮 Todos</span>
                                         </div>
-                                    ))}
+                                        {juegos.map(j => (
+                                            <div 
+                                                key={j.id} 
+                                                onClick={() => setIdJuegoSeleccionado(j.id)} 
+                                                className={`${styles.selectorCardItem} ${idJuegoSeleccionado === j.id ? styles.selectorActivo : ''}`}
+                                            >
+                                                {j.imagenUrl && <img src={j.imagenUrl} alt={j.nombre} className={styles.cardImage} />}
+                                                <div className={styles.cardOverlay} />
+                                                <span className={styles.cardText}>{j.nombre}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className={styles.filterFade} />
                                 </div>
                             </div>
 
@@ -560,13 +595,11 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         ))}
                                     </div>
 
-                                    {/* RESUMEN DE COMPRA Y FORMULARIO */}
                                     <div className={styles.cartSummaryCard}>
                                         <h3>Resumen de Pedido</h3>
                                         <div className={styles.summaryRow}><span>Subtotal</span><span>C$ {totalPagar}</span></div>
                                         <div className={styles.dividerSummary} />
                                         
-                                        {/* FORMULARIO DE FACTURACIÓN INTERNO */}
                                         <form onSubmit={enviarAWhatsApp} className={styles.billingForm}>
                                             <h4 className={styles.formTitle}>Datos de Entrega</h4>
                                             
@@ -628,6 +661,28 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                 <span className={styles.totalColor}>C$ {totalPagar}</span>
                                             </div>
 
+                                            {/* CASILLA DE TÉRMINOS Y CONDICIONES */}
+                                            <div className={styles.termsCheckboxGroup} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '15px 0' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    id="term_check"
+                                                    checked={aceptoTerminos}
+                                                    onChange={(e) => setAceptoTerminos(e.target.checked)}
+                                                    style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#b002c2' }}
+                                                />
+                                                <label htmlFor="term_check" style={{ fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer', lineHeight: '1.3' }}>
+                                                    Acepto los {' '}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setVerModalTerminos(true)}
+                                                        style={{ background: 'transparent', border: 'none', color: '#b002c2', padding: 0, font: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}
+                                                    >
+                                                        términos y condiciones
+                                                    </button>
+                                                    {' '} de Nicaplus Gaming.
+                                                </label>
+                                            </div>
+
                                             <button type="submit" className={styles.finalCheckoutBtn}>
                                                 <FaWhatsapp size={18} /> Procesar vía WhatsApp
                                             </button>
@@ -644,6 +699,11 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 <div>&copy; {new Date().getFullYear()} Nicaplus Gaming. Todos los derechos reservados.</div>
                 <div className={styles.footerLocation}>León, Nicaragua.</div>
             </footer>
+
+            {/* MODAL DE TÉRMINOS Y CONDICIONES CORREGIDO */}
+            {verModalTerminos && (
+                <Terminos alCerrar={() => setVerModalTerminos(false)} />
+            )}
         </div>
     );
 };

@@ -1,4 +1,7 @@
-/* Contenedor general */
+/* ==========================================================================
+   1. CONTENEDORES GENERALES Y HERO
+   ========================================================================== */
+
 .heroWrapper {
   overflow: hidden;
   background-color: #0b0713;
@@ -7,7 +10,6 @@
   padding-bottom: 5rem;
 }
 
-/* --- HERO PRINCIPAL DE DOS COLUMNAS --- */
 .heroSection {
   position: relative;
   min-height: 90vh;
@@ -44,7 +46,10 @@
   }
 }
 
-/* --- TEXTOS E IZQUIERDA --- */
+/* ==========================================================================
+   2. TEXTOS, BOTONES Y MÉTRICAS (COLUMNA IZQUIERDA)
+   ========================================================================== */
+
 .heroHeader {
   display: flex;
   flex-direction: column;
@@ -140,7 +145,6 @@
   border-color: #047688;
 }
 
-/* --- MÉTRICAS EN FILA HORIZONTAL --- */
 .statsRow {
   margin-top: 4rem;
   display: flex;
@@ -166,7 +170,10 @@
   margin-top: 0.25rem;
 }
 
-/* --- TARJETA DE PRODUCTO DESTACADO (DERECHA) --- */
+/* ==========================================================================
+   3. TARJETA DE PRODUCTO DESTACADO (COLUMNA DERECHA)
+   ========================================================================== */
+
 .destacadoSection {
   display: flex;
   flex-direction: column;
@@ -282,7 +289,10 @@
   transform: translateY(-2px);
 }
 
-/* --- SECCIONES GRIDS SECUNDARIAS --- */
+/* ==========================================================================
+   4. SECCIÓN DE SECCIONES SECUNDARIAS (ESTILOS COMPARTIDOS)
+   ========================================================================== */
+
 .sectionContainer {
   margin: 0 auto;
   max-width: 80rem;
@@ -298,23 +308,23 @@
   gap: 0.75rem;
 }
 
-/* --- CATEGORÍAS EN CUADRÍCULA PROFESIONAL --- */
+/* ==========================================================================
+   5. CATEGORÍAS EN CUADRÍCULA (TAGS GRID)
+   ========================================================================== */
+
 .tagsGrid {
   display: grid;
   gap: 1.25rem;
-  /* Por defecto en celulares: 2 columnas */
   grid-template-columns: repeat(2, minmax(0, 1fr)); 
 }
 
 @media (min-width: 640px) {
-  /* En tablets: 3 columnas */
   .tagsGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
-  /* En computadoras: 4 columnas exactas para que queden alineadas en una sola fila */
   .tagsGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -322,7 +332,7 @@
 
 .tagItem {
   position: relative;
-  height: 7rem; /* Reducimos la altura para que sea más estilizado y compacto */
+  height: 7rem;
   border-radius: 1rem;
   overflow: hidden;
   display: flex;
@@ -346,7 +356,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.6; /* Un toque de transparencia para que combine mejor con el fondo gaming */
+  opacity: 0.6;
   transition: transform 0.5s ease;
 }
 
@@ -377,29 +387,94 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
 }
 
-/* --- SLIDER JUEGOS POPULARES --- */
+/* ==========================================================================
+   6. CONTROLES Y CABECERA DEL SLIDER DE JUEGOS POPULARES
+   ========================================================================== */
+
+.sectionHeaderWithControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+
+.sectionHeadingNoMargin {
+  font-size: 1.8rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.sliderControls {
+  display: none;
+  gap: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .sliderControls {
+    display: flex;
+  }
+}
+
+.controlBtn {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.controlBtn:hover {
+  background-color: #047688;
+  border-color: #047688;
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   7. SLIDER DE JUEGOS POPULARES (VISTA DE FILA DESLIZABLE OPTIMIZADA)
+   ========================================================================== */
+
+.sliderOuterContainer {
+  position: relative;
+  width: 100%;
+}
+
+.sliderFade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 1.5rem;
+  width: 4rem;
+  background: linear-gradient(to right, transparent, #0b0713);
+  pointer-events: none;
+  z-index: 5;
+}
+
 .sliderWrapper {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
   overflow-x: auto;
   padding-bottom: 1.5rem;
   scroll-behavior: smooth;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* Oculta barra en Firefox */
 }
 
 .sliderWrapper::-webkit-scrollbar {
-  height: 6px;
-}
-
-.sliderWrapper::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  display: none; /* Oculta barra en Chrome/Safari */
 }
 
 .gameCard {
   position: relative;
-  flex: 0 0 16rem;
-  height: 22rem;
+  flex: 0 0 14.5rem; /* Ajustado para cortar intencionalmente la siguiente tarjeta en móvil */
+  height: 20rem;
   border-radius: 1.25rem;
   overflow: hidden;
   cursor: pointer;
@@ -407,8 +482,16 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 1.5rem;
+  padding: 1.25rem;
   transition: all 0.4s ease;
+}
+
+@media (min-width: 768px) {
+  .gameCard {
+    flex: 0 0 16rem;
+    height: 22rem;
+    padding: 1.5rem;
+  }
 }
 
 .gameCard:hover {

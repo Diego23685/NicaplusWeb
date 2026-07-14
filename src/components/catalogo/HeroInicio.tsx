@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 import styles from './HeroInicio.module.css';
 
@@ -33,6 +33,9 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [juegos, setJuegos] = useState<Juego[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  // Referencia para controlar el scroll del slider de juegos
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     Promise.all([
@@ -51,6 +54,19 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Función para mover el scroll horizontalmente
+  const scroll = (direction: 'left' | 'right') => {
+    if (sliderRef.current) {
+      const { scrollLeft, clientWidth } = sliderRef.current;
+      // Desplazar el 80% del ancho visible para mantener contexto de la última tarjeta
+      const scrollAmount = clientWidth * 0.8; 
+      sliderRef.current.scrollTo({
+        left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <div className={styles.heroWrapper}>
       
@@ -58,7 +74,6 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
         <div className={styles.decorativeGrid} />
 
         <div className={styles.heroGrid}>
-          
           {/* LADO IZQUIERDO: TEXTOS Y MÉTRICAS HORIZONTALES */}
           <header className={styles.heroHeader}>
             <div className={styles.badgeSubli}>
@@ -85,7 +100,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
               </button>
             </div>
 
-            {/* MÉTRICAS EN FILA (PSICOLOGÍA DE COMPRA ANTES DEL SCROLL) */}
+            {/* MÉTRICAS EN FILA */}
             <div className={styles.statsRow}>
               <div className={styles.statBox}>
                 <span className={styles.statNum}>500+</span>
@@ -140,11 +155,10 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
               </>
             )}
           </div>
-
         </div>
       </section>
 
-      {/* SECCIÓN CATEGORÍAS COMPLETAS CON SU IMAGEN DE FONDO */}
+      {/* SECCIÓN CATEGORÍAS (Se mantiene en cuadrícula que no requiere scroll) */}
       {categorias.length > 0 && (
         <section className={styles.sectionContainer}>
           <h3 className={styles.sectionHeading}>
@@ -173,37 +187,61 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
         </section>
       )}
 
-      {/* SECCIÓN JUEGOS POPULARES DEVUELTA CON TODO SU ESTILO */}
+      {/* SECCIÓN JUEGOS POPULARES MEJORADA */}
       {juegos.length > 0 && (
         <section className={styles.sectionContainer}>
-          <h3 className={styles.sectionHeading}>
-            <Gamepad2 style={{ color: '#b002c2', height: '1.3rem', width: '1.3rem' }} />
-            Juegos Populares
-          </h3>
-          <div className={styles.sliderWrapper}>
-            {juegos.map(juego => (
-              <div
-                key={juego.id}
-                className={styles.gameCard}
-                onClick={() => setSeccionActiva('productos')}
+          <div className={styles.sectionHeaderWithControls}>
+            <h3 className={styles.sectionHeadingNoMargin}>
+              <Gamepad2 style={{ color: '#b002c2', height: '1.3rem', width: '1.3rem' }} />
+              Juegos Populares
+            </h3>
+            {/* Controles de navegación visibles solo en pantallas grandes */}
+            <div className={styles.sliderControls}>
+              <button 
+                className={styles.controlBtn} 
+                onClick={() => scroll('left')} 
+                aria-label="Anterior"
               >
-                {juego.imagenUrl && (
-                  <img
-                    src={juego.imagenUrl}
-                    alt={juego.nombre}
-                    className={styles.gameBackground}
-                  />
-                )}
-                <div className={styles.gameOverlay} />
-                
-                <div className={styles.gameContent}>
-                  <span className={styles.gameIcon}>🎮</span>
-                  <h4 className={styles.gameName}>{juego.nombre}</h4>
-                  <span className={styles.gameMeta}>Items e insignias</span>
-                  <div className={styles.gameBtn}>Ver productos →</div>
+                <ChevronLeft size={18} />
+              </button>
+              <button 
+                className={styles.controlBtn} 
+                onClick={() => scroll('right')} 
+                aria-label="Siguiente"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.sliderOuterContainer}>
+            <div className={styles.sliderWrapper} ref={sliderRef}>
+              {juegos.map(juego => (
+                <div
+                  key={juego.id}
+                  className={styles.gameCard}
+                  onClick={() => setSeccionActiva('productos')}
+                >
+                  {juego.imagenUrl && (
+                    <img
+                      src={juego.imagenUrl}
+                      alt={juego.nombre}
+                      className={styles.gameBackground}
+                    />
+                  )}
+                  <div className={styles.gameOverlay} />
+                  
+                  <div className={styles.gameContent}>
+                    <span className={styles.gameIcon}>🎮</span>
+                    <h4 className={styles.gameName}>{juego.nombre}</h4>
+                    <span className={styles.gameMeta}>Items e insignias</span>
+                    <div className={styles.gameBtn}>Ver productos →</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            {/* Gradiente sutil al final para denotar que hay más contenido */}
+            <div className={styles.sliderFade} />
           </div>
         </section>
       )}
