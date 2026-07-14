@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, FaTimes, FaUserPlus, FaSearch, FaSave, FaTruck, FaShieldAlt, FaCheckCircle, FaTv, FaPlus } from 'react-icons/fa';
+import { FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, FaTimes, FaUserPlus, FaSearch, FaSave, FaTruck, FaShieldAlt, FaCheckCircle, FaTv, FaPlus, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
 // INTERFACES
 interface Producto {
@@ -45,6 +45,10 @@ interface Cliente {
 export const CatalogosAdmin: React.FC = () => {
     // Control de Pestañas Activas
     const [pestanaActiva, setPestanaActiva] = useState<'inventario' | 'clientes'>('inventario');
+    
+    // Controles de Visibilidad para simplificar la UX
+    const [mostrarFormularioProducto, setMostrarFormularioProducto] = useState(false);
+    const [mostrarEstructurasSecundarias, setMostrarEstructurasSecundarias] = useState(false);
 
     // ESTADOS GLOBALES DE DATA
     const [productos, setProductos] = useState<Producto[]>([]);
@@ -54,9 +58,9 @@ export const CatalogosAdmin: React.FC = () => {
     const [cargando, setCargando] = useState(true);
 
     const [perfilEditandoId, setPerfilEditandoId] = useState<number | null>(null);
-    const [perfilEditandoDatos, setPerfilEditandoDatos] = useState({ id: 0, idProducto: 0, nombrePerfil: '', pin: '', correoCuenta: '', passwordCuenta: '' });
+    const [perfilEditandoDatos, setPerfilEditandoDatos] = useState({ id: 0, idProducto: 0, ExtNombrePerfil: '', pin: '', correoCuenta: '', passwordCuenta: '' });
 
-    const [modoIngreso, setModoIngreso] = useState('individual'); // 'individual' o 'completa'
+    const [modoIngreso, setModoIngreso] = useState('individual'); 
     const [cantidadPerfiles, setCantidadPerfiles] = useState(5);
 
     // GESTIÓN DE PERFILES (UI SUB-PANEL EXPANDIBLE)
@@ -120,13 +124,13 @@ export const CatalogosAdmin: React.FC = () => {
                 api.get('/categorias'),
                 api.get('/juegos'),
                 api.get('/clientes'),
-                api.get('/proveedores') // ◄ CARGA DE PROVEEDORES
+                api.get('/proveedores')
             ]);
             setProductos(resProd.data);
             setCategorias(resCat.data);
             setJuegos(resJue.data);
             setClientes(resCli.data);
-            setListaProveedores(resProv.data); // ◄ ASIGNACIÓN
+            setListaProveedores(resProv.data);
         } catch (err) { 
             console.error("Error al sincronizar catálogos del sistema:", err); 
         } finally {
@@ -158,7 +162,6 @@ export const CatalogosAdmin: React.FC = () => {
             return;
         }
         setProductoIdPerfilAbierto(producto.id);
-        // Fallback dinámico de precarga para agilizar la entrada manual
         setPerfNombre(`Perfil ${((producto as any).perfilesCount ?? 0) + 1}`);
         setPerfPin('');
         
@@ -180,18 +183,17 @@ export const CatalogosAdmin: React.FC = () => {
 
     const comenzarEdicionPerfil = (perfil: PerfilCuenta) => {
         setPerfilEditandoId(perfil.id);
-        setPerfilEditandoDatos({ ...perfil });
+        setPerfilEditandoDatos({ ...perfil, ExtNombrePerfil: perfil.nombrePerfil });
     };
 
-    // Envía la actualización del PIN o nombre al Backend
     const guardarCambiosPerfil = async () => {
         try {
-            // Corrección: Usar 'api.put' en lugar de 'axios.put'
-            await api.put(`/perfilescuentas/${perfilEditandoId}`, perfilEditandoDatos);
+            await api.put(`/perfilescuentas/${perfilEditandoId}`, {
+                ...perfilEditandoDatos,
+                nombrePerfil: perfilEditandoDatos.ExtNombrePerfil
+            });
             setPerfilEditandoId(null);
             alert("Perfil actualizado correctamente.");
-            
-            // Corrección: Recargar usando 'api.get' directo como en el resto de tu código
             if (productoIdPerfilAbierto) {
                 const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
                 setPerfilesActuales(res.data);
@@ -202,16 +204,11 @@ export const CatalogosAdmin: React.FC = () => {
         }
     };
 
-    // Quita al cliente asignado al perfil (Liberación por falta de pago)
     const liberarPerfilCliente = async (idPerfil: number) => {
         if (!window.confirm("¿Está seguro de quitar a esta persona del perfil? La pantalla volverá a quedar disponible para la venta.")) return;
-        
         try {
-            // Corrección: Usar 'api.put' en lugar de 'axios.put'
             const response = await api.put(`/perfilescuentas/${idPerfil}/liberar`);
             alert(response.data.mensaje || "Perfil liberado con éxito.");
-            
-            // Corrección: Recargar usando 'api.get' directo como en el resto de tu código
             if (productoIdPerfilAbierto) {
                 const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
                 setPerfilesActuales(res.data);
@@ -240,7 +237,6 @@ export const CatalogosAdmin: React.FC = () => {
             await api.post('/perfilescuentas', payload);
             alert('Pantalla/Perfil inyectado con éxito al pool de la cuenta.');
             setPerfPin('');
-            // Recargar sub-lista
             const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
             setPerfilesActuales(res.data);
             setPerfNombre(`Perfil ${res.data.length + 1}`);
@@ -295,6 +291,7 @@ export const CatalogosAdmin: React.FC = () => {
                 alert('Producto insertado en inventario.');
             }
             limpiarFormularioProducto();
+            setMostrarFormularioProducto(false);
             cargarSincronizacionMaster();
         } catch { alert('Error de red al procesar el producto.'); }
     };
@@ -321,6 +318,10 @@ export const CatalogosAdmin: React.FC = () => {
         setGarantiaDias(producto.garantiaDias || 0);
         setProveedor(producto.proveedor || '');
         setEstadoProd(producto.estado || 'Activo');
+        
+        // Forzar scroll y visualización del formulario en edición
+        setMostrarFormularioProducto(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const agregarCuentaCompletaManual = async (e: React.FormEvent) => {
@@ -328,22 +329,18 @@ export const CatalogosAdmin: React.FC = () => {
         if (!productoIdPerfilAbierto) return;
 
         try {
-            // Usamos 'api' en lugar de 'axios' para mantener la configuración de tu servicio base
             const response = await api.post('/perfilescuentas/cuenta-completa', {
                 idProducto: productoIdPerfilAbierto, 
                 correoCuenta: perfCorreo,
                 passwordCuenta: perfPassword,
-                cantidadPerfiles: cantidadPerfiles // Removido el parseInt innecesario
+                cantidadPerfiles: cantidadPerfiles 
             });
             
             alert(response.data.mensaje || "Cuenta autogenerada correctamente.");
-            
-            // Limpiar campos y refrescar lista de perfiles
             setPerfCorreo('');
             setPerfPassword('');
             setCantidadPerfiles(5);
             
-            // Corrección: Usar la función correcta de tu código para recargar la subtabla
             const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
             setPerfilesActuales(res.data);
         } catch (error) {
@@ -431,14 +428,10 @@ export const CatalogosAdmin: React.FC = () => {
             cargarSincronizacionMaster();
         } catch (err: any) {
             const errorData = err.response?.data;
-            
-            // Si el backend nos mandó la lista estructurada de ventas
             if (errorData && errorData.ventas) {
-                // Formateamos las ventas para mostrarlas como strings descriptivos
                 const ventasFormateadas = errorData.ventas.map((v: any) => 
                     `ID Venta: #${v.id} | Fecha: ${new Date(v.fecha).toLocaleDateString()} | Total: $${v.total} (${v.metodoPago})`
                 );
-
                 setErrorModal({
                     visible: true,
                     mensaje: "Restricción de Integridad en Cliente",
@@ -446,7 +439,6 @@ export const CatalogosAdmin: React.FC = () => {
                     elementosVinculados: ventasFormateadas
                 });
             } else {
-                // Fallback por si ocurre otro tipo de error de texto
                 setErrorModal({
                     visible: true,
                     mensaje: "Error del Sistema",
@@ -489,178 +481,198 @@ export const CatalogosAdmin: React.FC = () => {
             {/* VISTA 1: CATALOGO DE INVENTARIO */}
             {pestanaActiva === 'inventario' && (
                 <>
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', width: '100%' }}>
-                        {/* CATEGORIAS */}
-                        <div style={panelEstilo}>
-                            <h4 style={{ color: '#a855f7', margin: 0, fontSize: '1rem', fontWeight: 700 }}><FaTags /> {editandoCategoria ? 'Modificar' : 'Estructurar'} Categoría</h4>
-                            <form onSubmit={guardarCategoria} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <input type="text" placeholder="Nombre (Ej: Streaming, Mandos)" value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} style={inputEstilo} required />
-                                <input type="text" placeholder="URL Imagen Muestra" value={categoriaImagen} onChange={e => setCategoriaImagen(e.target.value)} style={inputEstilo} />
-                                <button type="submit" style={{ padding: '8px', background: '#a855f7', color: '#fff', border: 'none', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer', marginTop: '4px' }}>{editandoCategoria ? 'Actualizar' : 'Guardar'}</button>
-                            </form>
-                            <div style={miniListaEstilo}>
-                                {categorias.map(c => (
-                                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', borderBottom: '1px solid #1e293b', fontSize: '0.8rem' }}>
-                                        <span>{c.nombre}</span>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <span onClick={() => { setEditandoCategoria(c.id); setNuevaCategoria(c.nombre); setCategoriaImagen(c.imagenUrl); }} style={{ color: '#f59e0b', cursor: 'pointer' }}><FaEdit /></span>
-                                            <span onClick={() => eliminarCategoria(c.id)} style={{ color: '#ef4444', cursor: 'pointer' }}><FaTrash /></span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    {/* BARRA DE ACCIÓN PRINCIPAL - FLUJO ENFOCADO */}
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <button 
+                            onClick={() => {
+                                if (mostrarFormularioProducto) limpiarFormularioProducto();
+                                setMostrarFormularioProducto(!mostrarFormularioProducto);
+                            }} 
+                            style={{ padding: '12px 24px', background: mostrarFormularioProducto ? '#475569' : '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}
+                        >
+                            {mostrarFormularioProducto ? <><FaTimes /> Cancelar Registro</> : <><FaPlus /> Registrar Nuevo Producto</>}
+                        </button>
 
-                        {/* JUEGOS */}
-                        <div style={panelEstilo}>
-                            <h4 style={{ color: '#f59e0b', margin: 0, fontSize: '1rem', fontWeight: 700 }}><FaGamepad /> {editandoJuego ? 'Modificar' : 'Registrar'} Juego objetivo</h4>
-                            <form onSubmit={guardarJuego} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <input type="text" placeholder="Nombre del Juego (Ej: Free Fire)" value={nuevoJuego} onChange={e => setNuevoJuego(e.target.value)} style={inputEstilo} required />
-                                <input type="text" placeholder="URL Banner / Portada" value={juegoImagen} onChange={e => setJuegoImagen(e.target.value)} style={inputEstilo} />
-                                <button type="submit" style={{ padding: '8px', background: '#f59e0b', color: '#000', border: 'none', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer', marginTop: '4px' }}>{editandoJuego ? 'Actualizar' : 'Guardar'}</button>
-                            </form>
-                            <div style={miniListaEstilo}>
-                                {juegos.map(j => (
-                                    <div key={j.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', borderBottom: '1px solid #1e293b', fontSize: '0.8rem' }}>
-                                        <span>{j.nombre}</span>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <span onClick={() => { setEditandoJuego(j.id); setNuevoJuego(j.nombre); setJuegoImagen(j.imagenUrl); }} style={{ color: '#f59e0b', cursor: 'pointer' }}><FaEdit /></span>
-                                            <span onClick={() => eliminarJuego(j.id)} style={{ color: '#ef4444', cursor: 'pointer' }}><FaTrash /></span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <button 
+                            onClick={() => setMostrarEstructurasSecundarias(!mostrarEstructurasSecundarias)} 
+                            style={{ padding: '12px 20px', background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '8px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}
+                        >
+                            <FaTags /> Configurar Categorías y Juegos {mostrarEstructurasSecundarias ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
+                        </button>
                     </div>
 
-                    {/* FORMULARIO MAESTRO DE PRODUCTOS COMPLETO */}
-                    <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155', boxSizing: 'border-box' }}>
-                        <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}><FaBoxOpen /> Ficha de Asignación de Inventario</h4>
-                        <form onSubmit={guardarProducto} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
-                            {/* COLUMNA 1: IDENTIFICACIÓN Y PRECIOS */}
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nombre Comercial</label>
-                                <input type="text" value={prodNombre} onChange={e => setProdNombre(e.target.value)} style={inputEstilo} required />
-                                
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Precio Compra (C$)</label>
-                                        <input type="number" value={prodCosto || ''} onChange={e => setProdCosto(Number(e.target.value))} style={inputEstilo} required />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Precio Venta (C$)</label>
-                                        <input type="number" value={prodPrecio || ''} onChange={e => setProdPrecio(Number(e.target.value))} style={inputEstilo} required />
-                                    </div>
-                                </div>
-
-                                <div style={{ marginTop: '10px' }}>
-                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaTruck /> Proveedor Homologado</label>
-                                    <select 
-                                        value={proveedor} 
-                                        onChange={e => setProveedor(e.target.value)} 
-                                        style={inputEstilo as any} 
-                                        required
-                                    >
-                                        <option value="">-- Seleccionar Proveedor --</option>
-                                        {listaProveedores.map((prov: any) => (
-                                            <option key={prov.id} value={prov.razonSocial}>{prov.razonSocial}</option>
-                                        ))}
-                                    </select>
+                    {/* SECCIÓN COLAPSABLE: CATEGORÍAS Y JUEGOS */}
+                    {mostrarEstructurasSecundarias && (
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', width: '100%', background: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px dashed #334155' }}>
+                            {/* CATEGORIAS */}
+                            <div style={panelEstilo}>
+                                <h4 style={{ color: '#a855f7', margin: 0, fontSize: '1rem', fontWeight: 700 }}><FaTags /> {editandoCategoria ? 'Modificar' : 'Estructurar'} Categoría</h4>
+                                <form onSubmit={guardarCategoria} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <input type="text" placeholder="Nombre (Ej: Streaming, Mandos)" value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} style={inputEstilo} required />
+                                    <input type="text" placeholder="URL Imagen Muestra" value={categoriaImagen} onChange={e => setCategoriaImagen(e.target.value)} style={inputEstilo} />
+                                    <button type="submit" style={{ padding: '8px', background: '#a855f7', color: '#fff', border: 'none', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer', marginTop: '4px' }}>{editandoCategoria ? 'Actualizar' : 'Guardar'}</button>
+                                </form>
+                                <div style={miniListaEstilo}>
+                                    {categorias.map(c => (
+                                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', borderBottom: '1px solid #1e293b', fontSize: '0.8rem' }}>
+                                            <span>{c.nombre}</span>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <span onClick={() => { setEditandoCategoria(c.id); setNuevaCategoria(c.nombre); setCategoriaImagen(c.imagenUrl); }} style={{ color: '#f59e0b', cursor: 'pointer' }}><FaEdit /></span>
+                                                <span onClick={() => eliminarCategoria(c.id)} style={{ color: '#ef4444', cursor: 'pointer' }}><FaTrash /></span>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* COLUMNA 2: CATEGORÍA Y CONFIGURACIÓN DIGITAL */}
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Categoría Estructural</label>
-                                <select value={catIdSeleccionada} onChange={e => setCatIdSeleccionada(e.target.value)} style={inputEstilo as any} required>
-                                    <option value="">-- Seleccionar --</option>
-                                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                                </select>
+                            {/* JUEGOS */}
+                            <div style={panelEstilo}>
+                                <h4 style={{ color: '#f59e0b', margin: 0, fontSize: '1rem', fontWeight: 700 }}><FaGamepad /> {editandoJuego ? 'Modificar' : 'Registrar'} Juego objetivo</h4>
+                                <form onSubmit={guardarJuego} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <input type="text" placeholder="Nombre del Juego (Ej: Free Fire)" value={nuevoJuego} onChange={e => setNuevoJuego(e.target.value)} style={inputEstilo} required />
+                                    <input type="text" placeholder="URL Banner / Portada" value={juegoImagen} onChange={e => setJuegoImagen(e.target.value)} style={inputEstilo} />
+                                    <button type="submit" style={{ padding: '8px', background: '#f59e0b', color: '#000', border: 'none', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer', marginTop: '4px' }}>{editandoJuego ? 'Actualizar' : 'Guardar'}</button>
+                                </form>
+                                <div style={miniListaEstilo}>
+                                    {juegos.map(j => (
+                                        <div key={j.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', borderBottom: '1px solid #1e293b', fontSize: '0.8rem' }}>
+                                            <span>{j.nombre}</span>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <span onClick={() => { setEditandoJuego(j.id); setNuevoJuego(j.nombre); setJuegoImagen(j.imagenUrl); }} style={{ color: '#f59e0b', cursor: 'pointer' }}><FaEdit /></span>
+                                                <span onClick={() => eliminarJuego(j.id)} style={{ color: '#ef4444', cursor: 'pointer' }}><FaTrash /></span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaShieldAlt /> Garantía (Días)</label>
-                                        <input type="number" min={0} value={garantiaDias} onChange={e => setGarantiaDias(Number(e.target.value))} style={inputEstilo} />
+                    {/* SECCIÓN COLAPSABLE: FORMULARIO MAESTRO DE PRODUCTO */}
+                    {mostrarFormularioProducto && (
+                        <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #38bdf8', boxSizing: 'border-box' }}>
+                            <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}><FaBoxOpen /> {editandoProducto ? 'Modificando Ficha Técnica' : 'Ficha de Asignación de Inventario'}</h4>
+                            <form onSubmit={guardarProducto} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+                                {/* COLUMNA 1: IDENTIFICACIÓN Y PRECIOS */}
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nombre Comercial</label>
+                                    <input type="text" value={prodNombre} onChange={e => setProdNombre(e.target.value)} style={inputEstilo} required />
+                                    
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Precio Compra (C$)</label>
+                                            <input type="number" value={prodCosto || ''} onChange={e => setProdCosto(Number(e.target.value))} style={inputEstilo} required />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Precio Venta (C$)</label>
+                                            <input type="number" value={prodPrecio || ''} onChange={e => setProdPrecio(Number(e.target.value))} style={inputEstilo} required />
+                                        </div>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaCheckCircle /> Estado</label>
-                                        <select value={estadoProd} onChange={e => setEstadoProd(e.target.value)} style={inputEstilo as any}>
-                                            <option value="Activo">Activo</option>
-                                            <option value="Pausado">Pausado</option>
-                                            <option value="Agotado">Agotado</option>
+
+                                    <div style={{ marginTop: '10px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaTruck /> Proveedor Homologado</label>
+                                        <select value={proveedor} onChange={e => setProveedor(e.target.value)} style={inputEstilo as any} required>
+                                            <option value="">-- Seleccionar Proveedor --</option>
+                                            {listaProveedores.map((prov: any) => (
+                                                <option key={prov.id} value={prov.razonSocial}>{prov.razonSocial}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '12px 0 0 0' }}>
-                                    <label style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                        <input type="checkbox" checked={esDigital} onChange={e => {
-                                            setEsDigital(e.target.checked);
-                                            if(!e.target.checked) {
-                                                setEsSuscripcion(false);
-                                                setJuegoIdSeleccionado('');
-                                            }
-                                        }} /> ¿Es Recarga / Producto Digital?
-                                    </label>
-                                    
-                                    {esDigital && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '6px 0' }}>
-                                            <label style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer', fontSize: '0.85rem', color: '#f43f5e' }}>
-                                                <input type="checkbox" checked={esSuscripcion} onChange={e => setEsSuscripcion(e.target.checked)} /> 🔄 ¿Es Suscripción Recurrente?
-                                            </label>
+                                {/* COLUMNA 2: CATEGORÍA Y CONFIGURACIÓN DIGITAL */}
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Categoría Estructural</label>
+                                    <select value={catIdSeleccionada} onChange={e => setCatIdSeleccionada(e.target.value)} style={inputEstilo as any} required>
+                                        <option value="">-- Seleccionar --</option>
+                                        {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                    </select>
+
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaShieldAlt /> Garantía (Días)</label>
+                                            <input type="number" min={0} value={garantiaDias} onChange={e => setGarantiaDias(Number(e.target.value))} style={inputEstilo} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaCheckCircle /> Estado</label>
+                                            <select value={estadoProd} onChange={e => setEstadoProd(e.target.value)} style={inputEstilo as any}>
+                                                <option value="Activo">Activo</option>
+                                                <option value="Pausado">Pausado</option>
+                                                <option value="Agotado">Agotado</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '12px 0 0 0' }}>
+                                        <label style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                            <input type="checkbox" checked={esDigital} onChange={e => {
+                                                setEsDigital(e.target.checked);
+                                                if(!e.target.checked) {
+                                                    setEsSuscripcion(false);
+                                                    setJuegoIdSeleccionado('');
+                                                }
+                                            }} /> ¿Es Recarga / Producto Digital?
+                                        </label>
+                                        
+                                        {esDigital && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '6px 0' }}>
+                                                <label style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer', fontSize: '0.85rem', color: '#f43f5e' }}>
+                                                    <input type="checkbox" checked={esSuscripcion} onChange={e => setEsSuscripcion(e.target.checked)} /> 🔄 ¿Es Suscripción Recurrente?
+                                                </label>
+                                                
+                                                {esSuscripcion && (
+                                                    <div style={{ paddingLeft: '20px' }}>
+                                                        <label style={{ fontSize: '0.75rem', color: '#fca5a5', display: 'block' }}>Días de Vigencia del Servicio</label>
+                                                        <input 
+                                                            type="number" 
+                                                            min={1} 
+                                                            value={diasDuracion} 
+                                                            onChange={e => setDiasDuracion(Number(e.target.value))} 
+                                                            style={{ ...inputEstilo, width: '100%', padding: '6px 10px', marginTop: '2px', borderColor: '#f43f5e' }} 
+                                                            placeholder="Ej: 30"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* COLUMNA 3: ASIGNACIÓN DE RELACIONES Y EXISTENCIAS */}
+                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                    {esDigital ? (
+                                        <div>
+                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Juego Asociado (Opcional)</label>
+                                            <select value={juegoIdSeleccionado} onChange={e => setJuegoIdSeleccionado(e.target.value)} style={inputEstilo as any}>
+                                                <option value="">-- No aplica / Ninguno --</option>
+                                                {juegos.map(j => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+                                            </select>
                                             
-                                            {esSuscripcion && (
-                                                <div style={{ paddingLeft: '20px' }}>
-                                                    <label style={{ fontSize: '0.75rem', color: '#fca5a5', display: 'block' }}>Días de Vigencia del Servicio</label>
-                                                    <input 
-                                                        type="number" 
-                                                        min={1} 
-                                                        value={diasDuracion} 
-                                                        onChange={e => setDiasDuracion(Number(e.target.value))} 
-                                                        style={{ ...inputEstilo, width: '100%', padding: '6px 10px', marginTop: '2px', borderColor: '#f43f5e' }} 
-                                                        placeholder="Ej: 30"
-                                                    />
-                                                </div>
-                                            )}
+                                            <div style={{ marginTop: '10px' }}>
+                                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Existencias Físicas / Cuentas Lote</label>
+                                                <input type="number" value={prodStock || ''} onChange={e => setProdStock(Number(e.target.value))} style={inputEstilo} required />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Existencias Físicas</label>
+                                            <input type="number" placeholder="Existencias Físicas" value={prodStock || ''} onChange={e => setProdStock(Number(e.target.value))} style={inputEstilo} required />
                                         </div>
                                     )}
-                                </div>
-                            </div>
 
-                            {/* COLUMNA 3: ASIGNACIÓN DE RELACIONES Y EXISTENCIAS */}
-                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                {esDigital ? (
-                                    <div>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Juego Asociado (Opcional)</label>
-                                        <select value={juegoIdSeleccionado} onChange={e => setJuegoIdSeleccionado(e.target.value)} style={inputEstilo as any}>
-                                            <option value="">-- No aplica / Ninguno --</option>
-                                            {juegos.map(j => <option key={j.id} value={j.id}>{j.nombre}</option>)}
-                                        </select>
-                                        
-                                        <div style={{ marginTop: '10px' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Existencias Físicas / Cuentas Lote</label>
-                                            <input type="number" value={prodStock || ''} onChange={e => setProdStock(Number(e.target.value))} style={inputEstilo} required />
-                                        </div>
+                                    <div style={{ marginTop: '6px' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Foto de Muestra</label>
+                                        <input type="file" accept="image/*" onChange={procesarSubidaImagen} style={{ ...inputEstilo, background: '#0f172a' }} />
                                     </div>
-                                ) : (
-                                    <div>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Existencias Físicas</label>
-                                        <input type="number" placeholder="Existencias Físicas" value={prodStock || ''} onChange={e => setProdStock(Number(e.target.value))} style={inputEstilo} required />
+
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                                        <button type="submit" style={{ flex: 1, padding: '10px', background: editandoProducto ? '#f59e0b' : '#38bdf8', color: '#000', border: 'none', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer' }}>{editandoProducto ? 'Actualizar Ficha' : 'Insertar Producto'}</button>
+                                        <button type="button" onClick={() => { limpiarFormularioProducto(); setMostrarFormularioProducto(false); }} style={{ padding: '10px', background: '#475569', border: 'none', borderRadius: '6px', color: '#fff' }}><FaTimes /></button>
                                     </div>
-                                )}
-
-                                <div style={{ marginTop: '6px' }}>
-                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Foto de Muestra</label>
-                                    <input type="file" accept="image/*" onChange={procesarSubidaImagen} style={{ ...inputEstilo, background: '#0f172a' }} />
                                 </div>
-
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-                                    <button type="submit" style={{ flex: 1, padding: '10px', background: editandoProducto ? '#f59e0b' : '#38bdf8', color: '#000', border: 'none', fontWeight: 'bold', borderRadius: '6px', cursor: 'pointer' }}>{editandoProducto ? 'Actualizar Ficha' : 'Insertar Producto'}</button>
-                                    {editandoProducto && <button type="button" onClick={limpiarFormularioProducto} style={{ padding: '10px', background: '#475569', border: 'none', borderRadius: '6px', color: '#fff' }}><FaTimes /></button>}
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                            </form>
+                        </div>
+                    )}
 
                     {/* FILTROS VISUALES */}
                     <div style={{ background: '#0f172a', padding: '16px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -674,7 +686,7 @@ export const CatalogosAdmin: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* TABLA DE RENDIMIENTO INVENTARIO COMPLETA CON SUBPANEL DE PERFILES */}
+                    {/* TABLA DE RENDIMIENTO INVENTARIO COMPLETA */}
                     <div style={{ background: '#1e293b', padding: '16px', borderRadius: '12px', border: '1px solid #334155', overflowX: 'auto' }}>
                         <input type="text" placeholder="🔍 Filtrar inventario por coincidencia..." value={filtroProd} onChange={e => setFiltroProd(e.target.value)} style={{ ...inputEstilo, marginBottom: '12px', marginTop: 0 }} />
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -733,7 +745,7 @@ export const CatalogosAdmin: React.FC = () => {
                                             </td>
                                         </tr>
 
-                                        {/* SUB-PANEL EXPANDIBLE: INGRESO MANUAL DE PANTALLAS/PERFILES */}
+                                        {/* SUB-PANEL EXPANDIBLE: PERFILES */}
                                         {productoIdPerfilAbierto === p.id && (
                                             <tr style={{ background: '#0f172a', borderBottom: '1px solid #334155' }}>
                                                 <td colSpan={10} style={{ padding: '16px' }}>
@@ -743,7 +755,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                             <button onClick={() => setProductoIdPerfilAbierto(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}><FaTimes /> Cerrar Panel</button>
                                                         </div>
 
-                                                        {/* FORMULARIO DE INYECCIÓN INTELIGENTE (INDIVIDUAL O CUENTA COMPLETA) */}
                                                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '8px', border: '1px solid #233249', marginBottom: '14px' }}>
                                                             <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
                                                                 <button type="button" onClick={() => setModoIngreso('individual')} style={{ background: modoIngreso === 'individual' ? '#047688' : '#334155', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
@@ -755,7 +766,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                             </div>
 
                                                             {modoIngreso === 'individual' ? (
-                                                                /* FORMULARIO INDIVIDUAL ANTERIOR */
                                                                 <form onSubmit={agregarPerfilManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
                                                                     <div>
                                                                         <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Nombre Perfil</label>
@@ -780,7 +790,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                                     </div>
                                                                 </form>
                                                             ) : (
-                                                                /* NUEVO FORMULARIO AUTOMÁTICO DE CUENTA COMPLETA */
                                                                 <form onSubmit={agregarCuentaCompletaManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                                                                     <div>
                                                                         <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Correo de la Cuenta</label>
@@ -803,19 +812,16 @@ export const CatalogosAdmin: React.FC = () => {
                                                             )}
                                                         </div>
 
-                                                        {/* GRID DE ESTADOS EN TIEMPO REAL CON EDICIÓN Y LIBERACIÓN */}
                                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
                                                             {perfilesActuales.map((perfil) => {
                                                                 const esEditando = perfilEditandoId === perfil.id;
 
                                                                 return (
                                                                     <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: '1px solid', borderColor: perfil.ocupado ? '#ef4444' : '#10b981', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '8px' }}>
-                                                                        
-                                                                        {/* Cabecera del Perfil */}
                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                                 {esEditando ? (
-                                                                                    <input type="text" value={perfilEditandoDatos.nombrePerfil} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, nombrePerfil: e.target.value})} style={{ background: '#0f172a', border: '1px solid #475569', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', width: '90px' }} />
+                                                                                    <input type="text" value={perfilEditandoDatos.ExtNombrePerfil} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} style={{ background: '#0f172a', border: '1px solid #475569', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', width: '90px' }} />
                                                                                 ) : (
                                                                                     <strong style={{ fontSize: '0.85rem' }}>{perfil.nombrePerfil}</strong>
                                                                                 )}
@@ -823,8 +829,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                     {perfil.ocupado ? "Ocupado" : "Libre"}
                                                                                 </span>
                                                                             </div>
-                                                                            
-                                                                            {/* Botón Eliminar Físicamente Perfil (Solo si está libre) */}
                                                                             {!perfil.ocupado && !esEditando && (
                                                                                 <button onClick={() => removerPerfilManual(perfil.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }} title="Eliminar Perfil por completo">
                                                                                     <FaTrash size={12} />
@@ -832,13 +836,10 @@ export const CatalogosAdmin: React.FC = () => {
                                                                             )}
                                                                         </div>
 
-                                                                        {/* Datos del Perfil */}
                                                                         <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
                                                                             <div style={{ marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                                 ✉️ {perfil.correoCuenta}
                                                                             </div>
-                                                                            
-                                                                            {/* Sección del PIN (Editable) */}
                                                                             <div>
                                                                                 🔑 PIN: {esEditando ? (
                                                                                     <input type="text" value={perfilEditandoDatos.pin} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} style={{ background: '#0f172a', border: '1px solid #fb923c', color: '#fb923c', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', width: '60px', fontWeight: 'bold' }} maxLength={6} />
@@ -850,15 +851,13 @@ export const CatalogosAdmin: React.FC = () => {
                                                                             {perfil.ocupado && (
                                                                                 <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '6px', fontWeight: '500', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                                                     <span>👤 Cliente: {perfil.nombreCliente || `ID: ${perfil.idClienteAsignado}`}</span>
-                                                                                    {/* BOTÓN CRÍTICO: QUITAR PERSONA / LIBERAR PERFIL */}
-                                                                                    <button onClick={() => liberarPerfilCliente(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }} title="Quitar cliente por falta de pago">
+                                                                                    <button onClick={() => liberarPerfilCliente(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>
                                                                                         Quitar Persona
                                                                                     </button>
                                                                                 </div>
                                                                             )}
                                                                         </div>
 
-                                                                        {/* Acciones de Edición en el Pie de la Tarjeta */}
                                                                         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                                                                             {esEditando ? (
                                                                                 <>
@@ -871,7 +870,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                 </button>
                                                                             )}
                                                                         </div>
-
                                                                     </div>
                                                                 );
                                                             })}
@@ -931,7 +929,7 @@ export const CatalogosAdmin: React.FC = () => {
                 </>
             )}
 
-            {/* MODAL RESPONSIVO: CREACIÓN Y EDICIÓN DE CLIENTES */}
+            {/* MODAL RESPONSIVO: CLIENTES */}
             {mostrarModalCliente && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)' }}>
                     <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '440px', width: '90%', border: '1px solid #334155' }}>
@@ -986,6 +984,5 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             )}
         </div>
-        
     );
 };

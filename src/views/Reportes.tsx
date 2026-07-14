@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaMoneyBillWave, FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch } from 'react-icons/fa';
+import { FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch } from 'react-icons/fa';
 
 export const Reportes: React.FC = () => {
     // Estados del Generador de Reportes Original
@@ -8,6 +8,9 @@ export const Reportes: React.FC = () => {
     const [hasta, setHasta] = useState('');
     const [datosReporte, setDatosReporte] = useState<any>(null);
     const [cargandoReporte, setCargandoReporte] = useState(false);
+
+    const [clientes, setClientes] = useState<any[]>([]);
+    const [productos, setProductos] = useState<any[]>([]);
 
     // Estados de la Tabla de Auditoría de Ventas
     const [ventasHistorial, setVentasHistorial] = useState<any[]>([]);
@@ -43,7 +46,6 @@ export const Reportes: React.FC = () => {
         let fFin = new Date(`${year}-${month}-${day}T00:00:00`);
 
         if (tipo === 'semana') {
-            // Corregimos el cálculo de la semana: si es domingo (0), lo tratamos como el día 7 de la semana
             const diaSemana = fInicio.getDay() === 0 ? 7 : fInicio.getDay();
             fInicio.setDate(fInicio.getDate() - (diaSemana - 1)); // Lunes de la semana actual
         } else if (tipo === 'mes') {
@@ -52,7 +54,6 @@ export const Reportes: React.FC = () => {
             fInicio = new Date(Number(year), 0, 1); // 1 de Enero del año actual
         }
 
-        // Función auxiliar para formatear localmente como YYYY-MM-DD sin usar toISOString()
         const formatearLocal = (d: Date) => {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -85,24 +86,73 @@ export const Reportes: React.FC = () => {
         cargarHistorialVentas();
     }, []);
 
+    useEffect(() => {
+        api.get('/clientes').then(res => setClientes(res.data)).catch(() => {});
+        api.get('/products').then(res => setProductos(res.data)).catch(() => {});
+    }, []);
+
     // Filtrar la tabla de auditoría por número de factura
     const ventasFiltradas = ventasHistorial.filter(v => 
         v.id.toString().includes(busquedaFactura) || 
-        (v.cliente?.nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase())
+        (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase())
     );
 
     // Lógica de Modificación en el Modal
     const abrirEditorVenta = (venta: any) => {
         setVentaAEditar(venta);
         setMetodoPago(venta.metodoPago);
-        setDetallesEditados(venta.detalles.map((d: any) => ({ ...d })));
+        
+        // Inyectamos el nombre correcto buscando en el array global de productos normalizado
+        const detallesConNombre = venta.detalles.map((d: any) => {
+            const prodEncontrado = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+            return {
+                ...d,
+                nombre: prodEncontrado ? (prodEncontrado.nombre ?? prodEncontrado.Nombre) : (d.producto?.nombre || d.producto?.Nombre || `Producto #${d.idProducto}`)
+            };
+        });
+        
+        setDetallesEditados(detallesConNombre);
+    };
+
+    const eliminarVentaCompleta = async (id: number) => {
+        if (!window.confirm(`¿Está completamente seguro de ELIMINAR la factura #000${id}? Esta acción revertirá inventarios y eliminará el ingreso de caja de forma permanente.`)) return;
+        
+        try {
+            await api.delete(`/ventas/${id}`);
+            alert("Venta eliminada e inventarios restaurados.");
+            setVentaAEditar(null);
+            setCargandoTabla(true);
+            cargarHistorialVentas();
+            if (desde && hasta) ConsultarReporte();
+        } catch (err: any) {
+            alert(err.response?.data || "Error al eliminar la venta.");
+        }
+    };
+
+    const cambiarProductoDetalle = (index: number, idProd: number) => {
+        const prodSeleccionado = productos.find(p => (p.id ?? p.Id) === idProd);
+        if (!prodSeleccionado) return;
+
+        const copia = [...detallesEditados];
+        copia[index].idProducto = idProd;
+        copia[index].nombre = prodSeleccionado.nombre ?? prodSeleccionado.Nombre; 
+        copia[index].precioUnitario = prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0; 
+        copia[index].subTotal = (copia[index].cantidad * (prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0)) - (copia[index].descuento || 0);
+        setDetallesEditados(copia);
+    };
+
+    const actualizarPrecioDetalle = (index: number, nuevoPrecio: number) => {
+        const copia = [...detallesEditados];
+        copia[index].precioUnitario = nuevoPrecio;
+        copia[index].subTotal = (copia[index].cantidad * nuevoPrecio) - (copia[index].descuento || 0);
+        setDetallesEditados(copia);
     };
 
     const actualizarCantidadDetalle = (index: number, nuevaCantidad: number) => {
         if (nuevaCantidad < 1) return;
         const copia = [...detallesEditados];
         copia[index].cantidad = nuevaCantidad;
-        copia[index].subTotal = nuevaCantidad * copia[index].precioUnitario;
+        copia[index].subTotal = (nuevaCantidad * copia[index].precioUnitario) - (copia[index].descuento || 0);
         setDetallesEditados(copia);
     };
 
@@ -113,7 +163,7 @@ export const Reportes: React.FC = () => {
         const payload = {
             id: ventaAEditar.id,
             idUsuario: ventaAEditar.idUsuario,
-            idCliente: ventaAEditar.idCliente,
+            idCliente: ventaAEditar.idCliente === 0 ? null : ventaAEditar.idCliente,
             metodoPago: nuevoMetodoPago,
             detalles: detallesEditados
         };
@@ -124,7 +174,7 @@ export const Reportes: React.FC = () => {
             setVentaAEditar(null);
             setCargandoTabla(true);
             cargarHistorialVentas();
-            if (desde && hasta) ConsultarReporte(); // Refrescar reporte si está activo
+            if (desde && hasta) ConsultarReporte(); 
         } catch (err: any) {
             alert(err.response?.data || "Error al procesar la auditoría.");
         }
@@ -169,7 +219,6 @@ export const Reportes: React.FC = () => {
                         </td>
                     </tr>
                 </table>
-
                 <div class="seccion-titulo">Resumen de Ingresos Financieros</div>
                 <br>
                 <div class="grid-cards">
@@ -190,7 +239,6 @@ export const Reportes: React.FC = () => {
                         <h3 style="color:#16a34a">C$ ${datosReporte.finanzas.total}</h3>
                     </div>
                 </div>
-
                 <div class="seccion-titulo">Top Productos Vendidos en el Período</div>
                 <table class="data-table">
                     <thead>
@@ -210,7 +258,6 @@ export const Reportes: React.FC = () => {
                         `).join('')}
                     </tbody>
                 </table>
-
                 <div class="seccion-titulo">Desglose Colectivo de Transacciones (${datosReporte.ventasTotales})</div>
                 <table class="data-table">
                     <thead>
@@ -234,7 +281,6 @@ export const Reportes: React.FC = () => {
                         `).join('')}
                     </tbody>
                 </table>
-
                 <script>
                     window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
                 </script>
@@ -246,7 +292,6 @@ export const Reportes: React.FC = () => {
         ventanaPrint.document.close();
     };
 
-    // Estilos de Input controlados legibles para fondo oscuro
     const estiloInputControlado = {
         padding: '8px 12px',
         background: '#0f172a',
@@ -276,7 +321,6 @@ export const Reportes: React.FC = () => {
                 <p style={{ color: '#94a3b8', margin: '4px 0 0 0', fontSize: '0.85rem' }}>Análisis financiero del periodo y corrección de libros de IVA/Inventario.</p>
             </div>
             
-            {/* SECCIÓN 1: BARRA DE FILTROS DEL REPORTADOR */}
             <div className="filtros-container">
                 <div className="rango-botones">
                     <button onClick={() => aplicarRangoRapido('hoy')} style={{ padding: '8px 14px', background: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>Hoy</button>
@@ -299,7 +343,6 @@ export const Reportes: React.FC = () => {
                 </button>
             </div>
 
-            {/* SECCIÓN 2: PRESENTACIÓN DE RESULTADOS EN PANTALLA */}
             {datosReporte && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -313,7 +356,6 @@ export const Reportes: React.FC = () => {
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #10b981'}}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>BALANCE NETO (CAJA REAL)</small>
                             <h3 style={{ margin: '4px 0 0 0', color: '#10b981', fontSize: '1.4rem' }}>
-                                {/* Sumamos directamente el total inmutable de las transacciones devueltas por el API */}
                                 C$ {datosReporte.transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
                             </h3>
                         </div>
@@ -323,7 +365,6 @@ export const Reportes: React.FC = () => {
                                 C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
                             </h3>
                         </div>
-
                         <div style={{ background: '#1e293b', padding: '14px', borderRadius: '10px', borderLeft: '4px solid #a855f7', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                             <small style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.7rem' }}>TRANSFERENCIA</small>
                             <h3 style={{ margin: '4px 0 0 0', fontSize: '1.4rem' }}>
@@ -338,12 +379,10 @@ export const Reportes: React.FC = () => {
                 </div>
             )}
 
-            {/* SECCIÓN 3: TABLA DE AUDITORÍA EN VIVO Y CORRECCIÓN (REVERSIVA) */}
             <div style={{ marginTop: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
                     <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}><FaCalendarAlt /> Libro de Modificaciones e Historial POS</h4>
                     
-                    {/* Buscador de facturas */}
                     <div style={{ position: 'relative', width: '100%', maxWidth: '280px' }}>
                         <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem' }} />
                         <input 
@@ -384,17 +423,21 @@ export const Reportes: React.FC = () => {
                                             <td style={{ padding: '10px', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
                                                 {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
                                             </td>
-                                            <td style={{ padding: '10px' }}>{v.cliente?.nombre || 'Mostrador General'}</td>
+                                            <td style={{ padding: '10px' }}>{v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General'}</td>
                                             <td style={{ padding: '10px' }}>
                                                 <span style={{ padding: '2px 8px', background: '#0f172a', borderRadius: '4px', fontSize: '0.75rem', border: '1px solid #334155' }}>{v.metodoPago}</span>
                                             </td>
                                             <td style={{ padding: '10px', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                                {v.detalles?.map((d: any, idx: number) => (
-                                                    <div key={idx}>{d.cantidad}x {d.nombre}</div>
-                                                ))}
+                                                {v.detalles?.map((d: any, idx: number) => {
+                                                    const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                                                    return (
+                                                        <div key={idx}>
+                                                            {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}
+                                                        </div>
+                                                    );
+                                                })}
                                             </td>
                                             <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#10b981' }}>
-                                                {/* Cambia el reduce por el total directo del registro */}
                                                 C$ {(v.total ?? 0).toLocaleString()}
                                             </td>
                                             <td style={{ padding: '10px', textAlign: 'center' }}>
@@ -413,56 +456,119 @@ export const Reportes: React.FC = () => {
 
             {/* MODAL DE AJUSTE CONTABLE REVERSIVO */}
             {ventaAEditar && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '500px', width: '90%', border: '1px solid #f59e0b', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)' }}>
+                    <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '650px', width: '95%', border: '1px solid #f59e0b', maxHeight: '90vh', overflowY: 'auto' }}>
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                            <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <FaMoneyBillWave /> Corregir Factura #000{ventaAEditar.id}
+                            <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '1.15rem' }}>
+                                🛠️ Auditoría Absoluta: Factura #000{ventaAEditar.id}
                             </h3>
                             <button onClick={() => setVentaAEditar(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem' }}><FaTimes /></button>
                         </div>
 
                         <form onSubmit={procesarAuditoriaVenta} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Método de Pago Efectivo / Banco</label>
-                                <select value={nuevoMetodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ ...estiloInputControlado, width: '100%', cursor: 'pointer', marginTop: '4px' }}>
-                                    <option value="Efectivo">💵 Efectivo</option>
-                                    <option value="Transferencia">🏦 Transferencia Bancaria</option>
-                                    <option value="Tarjeta">💳 Tarjeta</option>
-                                </select>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Asignar Cliente</label>
+                                    <select 
+                                        value={ventaAEditar.idCliente || ventaAEditar.IdCliente || 0} 
+                                        onChange={e => setVentaAEditar({...ventaAEditar, idCliente: Number(e.target.value)})} 
+                                        style={{ ...estiloInputControlado, width: '100%', marginTop: '4px' }}
+                                    >
+                                        <option value={0}>Mostrador General</option>
+                                        {clientes.map(c => {
+                                            const cId = c.id ?? c.Id;
+                                            const cNombre = c.nombre ?? c.Nombre;
+                                            return <option key={cId} value={cId}>{cNombre}</option>;
+                                        })}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Método de Pago</label>
+                                    <select value={nuevoMetodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ ...estiloInputControlado, width: '100%', marginTop: '4px' }}>
+                                        <option value="Efectivo">💵 Efectivo</option>
+                                        <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                                        <option value="Tarjeta">💳 Tarjeta</option>
+                                        <option value="Crédito">⚠️ Crédito Interno</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '6px', fontWeight: 600 }}>Ajustar Cantidades del Inventario Vendido</label>
-                                <div style={{ maxHeight: '160px', overflowY: 'auto', background: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Artículos, Precios y Cantidades</label>
+                                <div style={{ background: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {detallesEditados.map((det, idx) => (
-                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ fontSize: '0.8rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '65%' }}>
-                                                • {det.nombre}
-                                            </span>
+                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                            
+                                            <select 
+                                                value={Number(det.idProducto)} 
+                                                onChange={e => cambiarProductoDetalle(idx, Number(e.target.value))}
+                                                style={{ ...estiloInputControlado, fontSize: '0.75rem', padding: '4px', width: '100%' }}
+                                            >
+                                                {productos.length === 0 ? (
+                                                    <option value={det.idProducto}>{det.nombre}</option>
+                                                ) : (
+                                                    productos.map(p => {
+                                                        const pId = p.id ?? p.Id;
+                                                        const pNombre = p.nombre ?? p.Nombre;
+                                                        return (
+                                                            <option key={pId} value={Number(pId)}>
+                                                                {pNombre}
+                                                            </option>
+                                                        );
+                                                    })
+                                                )}
+                                            </select>
+
                                             <input 
                                                 type="number" 
                                                 value={det.cantidad} 
                                                 min={1} 
+                                                placeholder="Cant"
                                                 onChange={e => actualizarCantidadDetalle(idx, Number(e.target.value))} 
-                                                style={{ width: '65px', padding: '6px', background: '#1e293b', color: '#fff', border: '1px solid #334155', borderRadius: '6px', textAlign: 'center', fontSize: '0.85rem' }} 
+                                                style={{ ...estiloInputControlado, padding: '4px', textAlign: 'center' }} 
                                             />
+
+                                            <input 
+                                                type="number" 
+                                                value={det.precioUnitario} 
+                                                placeholder="Precio"
+                                                onChange={e => actualizarPrecioDetalle(idx, Number(e.target.value))} 
+                                                style={{ ...estiloInputControlado, padding: '4px', textAlign: 'center' }} 
+                                            />
+
+                                            <span style={{ fontSize: '0.8rem', color: '#10b981', textAlign: 'right', fontWeight: 'bold' }}>
+                                                C$ {(det.subTotal ?? 0).toLocaleString()}
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                                ⚠️ <strong>Nota de Auditoría Reversiva:</strong> Al procesar este cambio, el backend en .NET reintegrará automáticamente el stock original de MySQL y recalculará las existencias y cajas con los nuevos montos en una sola transacción.
+                            <div style={{ textAlign: 'right', padding: '5px 0' }}>
+                                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Nuevo Total Factura: </span>
+                                <strong style={{ color: '#10b981', fontSize: '1.2rem' }}>
+                                    C$ {detallesEditados.reduce((acc, d) => acc + (d.subTotal || 0), 0).toLocaleString()}
+                                </strong>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-                                <button type="submit" style={{ flex: 1, padding: '12px', background: '#f59e0b', color: '#000', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                    Guardar Cambios y Revertir
-                                </button>
-                                <button type="button" onClick={() => setVentaAEditar(null)} style={{ padding: '12px', background: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                    Cancelar
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button type="submit" style={{ flex: 1, padding: '12px', background: '#f59e0b', color: '#000', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                        Guardar y Recalcular Todo
+                                    </button>
+                                    <button type="button" onClick={() => setVentaAEditar(null)} style={{ padding: '12px', background: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                        Cerrar
+                                    </button>
+                                </div>
+                                
+                                <button 
+                                    type="button" 
+                                    onClick={() => eliminarVentaCompleta(ventaAEditar.id)} 
+                                    style={{ padding: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px' }}
+                                >
+                                    🚨 Eliminar Venta por Completo (Destruir Registro)
                                 </button>
                             </div>
                         </form>
