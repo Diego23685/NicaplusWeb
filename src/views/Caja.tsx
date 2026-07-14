@@ -49,6 +49,11 @@ export const imprimirTicketTermico = (datosVenta: any) => {
         return;
     }
 
+    // Calcular el descuento total acumulado en los detalles
+    let descuentoTotalAcumulado = 0;
+    const metodoUsado = datosVenta.metodoPagoCongelado || "Efectivo";
+    const totalReal = datosVenta.totalCongelado || datosVenta.detalles.reduce((sum: number, i: any) => sum + i.subTotal, 0);
+
     const contenidoTicket = `
         <!DOCTYPE html>
         <html>
@@ -56,16 +61,25 @@ export const imprimirTicketTermico = (datosVenta: any) => {
             <title>Factura Nicaplus</title>
             <style>
                 @page { margin: 0; }
-                body { font-family: 'Courier New', Courier, monospace; width: 200px; margin: 10px; font-size: 11px; color: #000; }
+                body { 
+                    font-family: 'Courier New', Courier, monospace; 
+                    width: 200px; 
+                    margin: 4px 10px; 
+                    font-size: 11px; 
+                    color: #000; 
+                    line-height: 1.2;
+                }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
-                .linea { border-bottom: 1px dashed #000; margin: 8px 0; }
+                .linea { border-bottom: 1px dashed #000; margin: 6px 0; }
                 table { width: 100%; border-collapse: collapse; }
+                .negrita { font-weight: bold; }
+                .tabla-detalles td { vertical-align: top; padding: 2px 0; }
             </style>
         </head>
         <body>
             <div class="text-center">
-                <strong>NICAPLUS GAMING</strong><br>
+                <span class="negrita" style="font-size: 13px;">NICAPLUS GAMING</span><br>
                 Tienda Digital y Taller Técnico<br>
                 León, Nicaragua<br>
                 Tel: +505 8888-8888
@@ -73,33 +87,73 @@ export const imprimirTicketTermico = (datosVenta: any) => {
             <div class="linea"></div>
             <div>
                 Factura: #000${datosVenta.ventaId || 1}<br>
-                Fecha: ${new Date().toLocaleDateString()}<br>
-                Atendió: Personal Autorizado
+                Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
+                Condición: ${metodoUsado.toUpperCase()}<br>
+                Cliente: ${(datosVenta.cliente?.nombre || "Mostrador").substring(0, 18)}
             </div>
             <div class="linea"></div>
-            <table>
+            <table class="tabla-detalles">
                 <thead>
                     <tr>
-                        <th align="left">Cant/Desc</th>
-                        <th align="right">Total</th>
+                        <th align="left" class="negrita">Cant/Desc</th>
+                        <th align="right" class="negrita">Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${datosVenta.detalles.map((item: any) => `
-                        <tr>
-                            <td>${item.cantidad}x ${(item.nombre || 'Producto').substring(0, 15)}</td>
-                            <td align="right">C$ ${item.subTotal}</td>
-                        </tr>
-                        ${item.metadataDigital ? `<tr><td colspan="2" style="font-size:9px; padding-left:10px; color:#555; word-break: break-all;">${item.metadataDigital}</td></tr>` : ''}
-                    `).join('')}
+                    ${datosVenta.detalles.map((item: any) => {
+                        const descPorItem = (item.descuento || 0) * item.cantidad;
+                        descuentoTotalAcumulado += descPorItem;
+                        
+                        return `
+                            <tr>
+                                <td>${item.cantidad}x ${(item.nombre || 'Producto').substring(0, 15)}</td>
+                                <td align="right">C$ ${item.subTotal}</td>
+                            </tr>
+                            ${item.descuento && item.descuento > 0 ? `
+                            <tr>
+                                <td colspan="2" style="font-size: 9px; color: #333; padding-left: 10px;">
+                                    (Descto: -C$ ${descPorItem})
+                                </td>
+                            </tr>
+                            ` : ''}
+                            ${item.metadataDigital ? `
+                            <tr>
+                                <td colspan="2" style="font-size:9px; padding-left:10px; color:#333; word-break: break-all;">
+                                    ID: ${item.metadataDigital.replace(/^DIAS:\d+\|/, '')}
+                                </td>
+                            </tr>
+                            ` : ''}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
             <div class="linea"></div>
-            <div class="text-right">
-                <strong>Total: C$ ${datosVenta.detalles.reduce((sum: number, i: any) => sum + i.subTotal, 0)}</strong>
+            
+            <table style="width: 100%;">
+                ${descuentoTotalAcumulado > 0 ? `
+                <tr>
+                    <td align="left">Subtotal:</td>
+                    <td align="right">C$ ${totalReal + descuentoTotalAcumulado}</td>
+                </tr>
+                <tr>
+                    <td align="left">Descuento:</td>
+                    <td align="right">-C$ ${descuentoTotalAcumulado}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                    <td align="left" class="negrita" style="font-size: 12px;">TOTAL:</td>
+                    <td align="right" class="negrita" style="font-size: 12px;">C$ ${totalReal}</td>
+                </tr>
+            </table>
+
+            ${metodoUsado === "Crédito" && datosVenta.fechaVencimientoCreditoCongelado ? `
+            <div style="font-size: 9px; margin-top: 4px;" class="text-center">
+                * VENCE AL CRÉDITO EL: ${new Date(datosVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString('es-NI')} *
             </div>
+            ` : ''}
+
             <div class="linea"></div>
-            <div class="text-center" style="margin-top:15px;">
+            <div class="text-center" style="margin-top:8px;">
                 ¡Gracias por tu preferencia!<br>
                 Soporte y Garantía de Calidad.
             </div>
@@ -248,56 +302,144 @@ export const Caja: React.FC = () => {
         const metodoUsado = datosUltimaVenta.metodoPagoCongelado;
         const totalReal = datosUltimaVenta.totalCongelado;
         const esVentaCredito = metodoUsado === "Crédito";
+        
+        const separador = "----------------------------------";
 
-        let mensaje = `*NICAPLUS GAMING & TECH*\n`;
-        mensaje += `👋 ¡Hola, ${clienteObj.nombre}! Muchas gracias por tu confianza.\n`;
-        mensaje += `🧾 *COMPROBANTE DIGITAL DE COMPRA*\n`;
-        mensaje += `Factura: #000${datosUltimaVenta.ventaId}\n`;
-        mensaje += `Fecha: ${new Date().toLocaleDateString()}\n`;
-        mensaje += `Condición: *${metodoUsado.toUpperCase()}*\n`;
-        mensaje += `--------------------------------------\n\n`;
-        mensaje += `🔑 *DATOS DE ACCESO Y SERVICIOS*:\n\n`;
+        const getEmojiSeguro = (codigoWeb: string) => {
+            try {
+                return decodeURIComponent(codigoWeb);
+            } catch (e) {
+                return "";
+            }
+        };
+
+        const emojiMando       = getEmojiSeguro("%F0%9F%8E%AE"); // 🎮
+        const emojiRecibo      = getEmojiSeguro("%F0%9F%93%9D"); // 📝
+        const emojiCandado     = getEmojiSeguro("%F0%9F%94%92"); // 🔒
+        const emojiFlecha      = getEmojiSeguro("%F0%9F%94%B9"); // 🔹
+        const emojiCorreo      = getEmojiSeguro("%F0%9F%93%A7"); // 📧
+        const emojiLlave       = getEmojiSeguro("%F0%9F%94%91"); // 🔑
+        const emojiUser        = getEmojiSeguro("%F0%9F%91%A4"); // 👤
+        const emojiCalendario  = getEmojiSeguro("%F0%9F%93%85"); // 📅
+        const emojiVerde       = getEmojiSeguro("%F0%9F%99%A2"); // 🟢
+        const emojiRojo        = getEmojiSeguro("%F0%9F%94%B4"); // 🔴
+        const emojiReloj       = "\u{23F3}";     // ⏳
+        const emojiDolar       = getEmojiSeguro("%F0%9F%92%B0"); // 💰
+        const emojiCheck       = getEmojiSeguro("%E2%9C%85");     // ✅
+        const emojiNota        = getEmojiSeguro("%F0%9F%93%8C"); // 📌
+        const emojiManos       = getEmojiSeguro("%F0%9F%A4%9D"); // 🤝
+        const emojiDescuento   = getEmojiSeguro("%F0%9F%87%B7"); // 🏷️
+
+        const lineas: string[] = [];
+
+        lineas.push(`${emojiMando} *NICAPLUS GAMING & TECH*`);
+        lineas.push("");
+        lineas.push(`¡Hola, ${clienteObj.nombre}! Gracias por tu compra.`);
+        lineas.push("");
+        lineas.push(separador);
+        lineas.push("");
+        lineas.push(`${emojiRecibo} *COMPROBANTE DIGITAL DE COMPRA*`);
+        lineas.push(`Factura: #000${datosUltimaVenta.ventaId}`);
+        lineas.push(`Fecha de compra: ${new Date().toLocaleDateString('es-NI')}`);
+        lineas.push(`Condición: ${metodoUsado.toUpperCase()}`);
+        lineas.push("");
+        lineas.push(separador);
+        lineas.push("");
+        lineas.push(`${emojiCandado} *CREDENCIALES DE ACCESO*`);
+        lineas.push("");
+
+        // Calcular el descuento total acumulado mientras recorremos los detalles
+        let descuentoTotalAcumulado = 0;
 
         datosUltimaVenta.detalles.forEach((item: any, idx: number) => {
-            mensaje += `*${idx + 1}. ${item.nombre || 'Servicio Digital'}*\n`;
-            mensaje += `🔹 Cantidad: ${item.cantidad}\n`;
+            lineas.push(`*Servicio ${idx + 1}:* ${item.nombre || 'Servicio Digital'}`);
+            lineas.push(`${emojiFlecha} *Cantidad:* ${item.cantidad}`);
             
+            // Si el ítem tiene descuento asignado, lo calculamos e informamos
+            if (item.descuento && item.descuento > 0) {
+                const descPorItem = item.descuento * item.cantidad;
+                descuentoTotalAcumulado += descPorItem;
+                lineas.push(`🎁 *Descuento aplicado:* -C$ ${descPorItem}`);
+            }
+
             if (item.metadataDigital) {
+                let accesosReales = item.metadataDigital;
                 if (item.metadataDigital.includes("DIAS:")) {
                     const partes = item.metadataDigital.split('|');
-                    const accesosReales = partes.slice(1).join('|');
-                    mensaje += `👤 Acceso/ID: _${accesosReales || 'Asignado en Servidor'}_\n`;
+                    accesosReales = partes.slice(1).join('|');
+                }
+                
+                if (accesosReales.includes('|')) {
+                    const fragmentos = accesosReales.split('|').map((f: string) => f.trim());
+                    
+                    if (fragmentos[2]) {
+                        const accesoLimpio = fragmentos[2].replace(/acceso:\s*/i, '');
+                        const subPartes = accesoLimpio.split('/');
+                        if (subPartes[0]) lineas.push(`${emojiCorreo} *Correo:* ${subPartes[0].trim()}`);
+                        if (subPartes[1]) lineas.push(`${emojiLlave} *Contraseña:* ${subPartes[1].trim()}`);
+                    }
+                    if (fragmentos[0]) {
+                        const perfilLimpio = fragmentos[0].replace(/perfil:\s*/i, '');
+                        lineas.push(`${emojiUser} *Perfil asignado:* ${perfilLimpio}`);
+                    }
+                    if (fragmentos[1]) {
+                        const pinLimpio = fragmentos[1].replace(/pin:\s*/i, '');
+                        lineas.push(`${emojiCandado} *PIN:* ${pinLimpio}`);
+                    }
                 } else {
-                    mensaje += `👤 Acceso/ID: _${item.metadataDigital}_\n`;
+                    lineas.push(`${emojiUser} *Acceso/ID:* _${accesosReales}_`);
                 }
             }
-
-            const diasSuscripcion = item.diasSuscripcion || 30;
-            const fInicio = new Date();
-            const fVence = new Date(fInicio.getTime() + (diasSuscripcion * 24 * 60 * 60 * 1000));
-            
-            mensaje += `📅 Vigencia: ${diasSuscripcion} días\n`;
-            mensaje += `🛑 Vence el: *${fVence.toLocaleDateString()}*\n`;
-            mensaje += `--------------------------------------\n`;
+            lineas.push("");
         });
 
-        mensaje += `\n💰 *RESUMEN FINANCIERO*:\n`;
-        mensaje += `Total Neto: *C$ ${totalReal}*\n`;
+        lineas.push(separador);
+        lineas.push("");
+        lineas.push(`${emojiCalendario} *VIGENCIA DEL SERVICIO*`);
+        lineas.push("");
+
+        const primerItem = datosUltimaVenta.detalles[0];
+        const diasSuscripcion = primerItem?.diasSuscripcion || 30;
+        const fInicio = new Date();
+        const fVence = new Date(fInicio.getTime() + (diasSuscripcion * 24 * 60 * 60 * 1000));
+
+        lineas.push(`${emojiVerde} *Fecha de activación:* ${fInicio.toLocaleDateString('es-NI')}`);
+        lineas.push(`${emojiRojo} *Fecha de vencimiento:* ${fVence.toLocaleDateString('es-NI')}`);
+        lineas.push(`${emojiReloj} *Duración:* ${diasSuscripcion} días`);
+        lineas.push("");
+        lineas.push(separador);
+        lineas.push("");
+        lineas.push(`${emojiDolar} *INFORMACIÓN FINANCIERA*`);
+        lineas.push("");
+        
+        // Desglose si hubo descuento total en la orden
+        if (descuentoTotalAcumulado > 0) {
+            lineas.push(`Subtotal: C$ ${totalReal + descuentoTotalAcumulado}`);
+            lineas.push(`Descuento Total: -C$ ${descuentoTotalAcumulado}`);
+        }
+        lineas.push(`*Total a Pagar: C$ ${totalReal}*`);
         
         if (esVentaCredito) {
-            mensaje += `⚠️ *ESTADO:* Cuenta por cobrar pendiente.\n`;
+            lineas.push(`Estado: ${emojiReloj} Cuenta por cobrar`);
             if (datosUltimaVenta.fechaVencimientoCreditoCongelado) {
-                mensaje += `📅 *LÍMITE DE PAGO:* ${new Date(datosUltimaVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString()}\n`;
+                const fLimite = new Date(datosUltimaVenta.fechaVencimientoCreditoCongelado + "T12:00:00");
+                lineas.push(`Fecha límite de pago: ${fLimite.toLocaleDateString('es-NI')}`);
             }
         } else {
-            mensaje += `✅ *ESTADO:* Factura Cancelada / Pagada.\n`;
+            lineas.push(`Estado: ${emojiCheck} Factura Cancelada / Pagada`);
         }
 
-        mensaje += `\n📌 *INFORMACIÓN OPERATIVA*:\n`;
-        mensaje += `• Las caídas de perfiles o contraseñas deben reportarse inmediatamente.\n\n`;
-        mensaje += `¡Disfruta tu servicio de entretenimiento! 🎮✨`;
+        lineas.push("");
+        lineas.push(separador);
+        lineas.push("");
+        lineas.push(`${emojiNota} *INFORMACIÓN OPERATIVA*:`);
+        lineas.push("- Las caídas de perfiles o contraseñas deben reportarse inmediatamente.");
+        lineas.push("");
+        lineas.push(`¡Muchas gracias por su preferencia! ${emojiManos}`);
 
-        const urlWhatsApp = `https://wa.me/${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`;
+        const mensajeFinal = lineas.join("\n");
+        const urlWhatsApp = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeFinal)}`;
+        
         window.open(urlWhatsApp, '_blank');
     };
 
