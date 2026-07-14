@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { FaUser, FaPhone, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle } from 'react-icons/fa';
+import { FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch } from 'react-icons/fa';
 
 interface Orden {
     id: number;
@@ -12,13 +12,24 @@ interface Orden {
     cliente?: { nombre: string; telefono: string; email: string };
 }
 
+interface Cliente {
+    id: number;
+    nombre: string;
+    telefono: string;
+    email: string;
+}
+
 export const Taller: React.FC = () => {
     const [ordenes, setOrdenes] = useState<Orden[]>([]);
+    const [clientes, setClientes] = useState<Cliente[]>([]);
     const [dispositivo, setDispositivo] = useState('');
     const [diagnostico, setDiagnostico] = useState('');
     const [notasGarantia, setNotasGarantia] = useState('Garantía de 30 días sobre la reparación efectuada. No cubre sellos rotos o humedad.');
     
-    // Datos del Cliente del Dispositivo
+    // Gestión de Cliente (Selección o Registro Nuevo)
+    const [modoNuevoCliente, setModoNuevoCliente] = useState(false);
+    const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
+    const [busquedaCliente, setBusquedaCliente] = useState('');
     const [nombreCliente, setNombreCliente] = useState('');
     const [telefonoCliente, setTelefonoCliente] = useState('');
     const [emailCliente, setEmailCliente] = useState('');
@@ -29,18 +40,34 @@ export const Taller: React.FC = () => {
     const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
     const [herramientasUsadas, setHerramientasUsadas] = useState('');
     const [costoReparacion, setCostoReparacion] = useState<number>(0);
+    const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo'); // ◄ NUEVO: Método de pago real
 
-    // 💡 NUEVOS ESTADOS: Para el modal de selección de Avisar / Imprimir
+    // Estados para el modal de selección de Avisar / Imprimir
     const [mostrarModalAccion, setMostrarModalAccion] = useState(false);
     const [ordenParaAccion, setOrdenParaAccion] = useState<Orden | null>(null);
     const [tipoAccionContexto, setTipoAccionContexto] = useState<'AlListo' | 'AlEntregar'>('AlListo');
     const [datosEntregaCache, setDatosEntregaCache] = useState<any>(null);
 
-    const cargarOrdenes = () => {
-        api.get('/ordenesservicio').then(res => setOrdenes(res.data)).catch(err => console.error(err));
+    const cargarDatos = async () => {
+        try {
+            const [resOrdenes, resClientes] = await Promise.all([
+                api.get('/ordenesservicio'),
+                api.get('/clientes')
+            ]);
+            setOrdenes(resOrdenes.data);
+            setClientes(resClientes.data);
+        } catch (err) {
+            console.error("Error al cargar datos del taller:", err);
+        }
     };
 
-    useEffect(() => { cargarOrdenes(); }, []);
+    useEffect(() => { cargarDatos(); }, []);
+
+    // Filtrado dinámico de clientes de la BD
+    const clientesFiltrados = clientes.filter(c => 
+        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || 
+        c.telefono.includes(busquedaCliente)
+    );
 
     const imprimirDocumentosSoporte = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
@@ -51,11 +78,10 @@ export const Taller: React.FC = () => {
             <head>
                 <title>Comprobante_Taller_${ordenId}</title>
                 <style>
-                    body { font-family: 'Courier New', monospace; width: 260px; margin: 10px; font-size: 11px; color: #000; }
+                    body { font-family: 'Courier New', monospace; width: 200px; margin: 10px; font-size: 11px; color: #000; line-height: 1.2; }
                     .center { text-align: center; }
-                    .right { text-align: right; }
-                    .linea { border-bottom: 1px dashed #000; margin: 10px 0; }
-                    .titulo { font-weight: bold; font-size: 13px; margin: 5px 0; }
+                    .linea { border-bottom: 1px dashed #000; margin: 8px 0; }
+                    .titulo { font-weight: bold; font-size: 13px; }
                 </style>
             </head>
             <body>
@@ -63,7 +89,7 @@ export const Taller: React.FC = () => {
                     <span class="titulo">NICAPLUS GAMING</span><br>
                     Taller de Soporte Técnico<br>
                     León, Nicaragua<br>
-                    <strong>RECIBO DE INGRESO #ORD-${ordenId}</strong>
+                    <strong>INGRESO #ORD-${ordenId}</strong>
                 </div>
                 <div class="linea"></div>
                 <strong>CLIENTE:</strong> ${datos.cliente.nombre}<br>
@@ -71,14 +97,12 @@ export const Taller: React.FC = () => {
                 <strong>FECHA:</strong> ${new Date().toLocaleDateString()}<br>
                 <div class="linea"></div>
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
-                <strong>FALLA REPORTADA:</strong><br>${datos.diagnostico}<br>
+                <strong>FALLA:</strong><br>${datos.diagnostico}<br>
                 <div class="linea"></div>
-                <div class="center" style="margin-bottom: 40px;">
+                <div class="center" style="margin-bottom: 30px;">
                     Conserve este voucher para retirar su equipo.<br>
                 </div>
-
                 <div style="page-break-after: always;"></div>
-
                 <div class="center">
                     <span class="titulo">NICAPLUS GAMING</span><br>
                     <strong>PÓLIZA DE GARANTÍA</strong><br>
@@ -88,7 +112,7 @@ export const Taller: React.FC = () => {
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
                 <strong>DUEÑO:</strong> ${datos.cliente.nombre}<br>
                 <div class="linea"></div>
-                <strong>TÉRMINOS DE GARANTÍA:</strong><br>
+                <strong>TÉRMINOS:</strong><br>
                 ${datos.notasGarantia}<br>
                 <div class="linea"></div>
                 <br><br>
@@ -115,20 +139,19 @@ export const Taller: React.FC = () => {
             <head>
                 <title>Voucher_Entrega_${datosEntrega.ordenId}</title>
                 <style>
-                    body { font-family: 'Courier New', monospace; width: 260px; margin: 10px; font-size: 11px; color: #000; line-height: 1.4; }
+                    body { font-family: 'Courier New', monospace; width: 200px; margin: 10px; font-size: 11px; color: #000; line-height: 1.2; }
                     .center { text-align: center; }
-                    .right { text-align: right; }
                     .linea { border-bottom: 1px dashed #000; margin: 8px 0; }
-                    .titulo { font-weight: bold; font-size: 13px; margin: 5px 0; }
-                    .total-box { font-size: 14px; font-weight: bold; text-align: right; margin: 10px 0; }
+                    .titulo { font-weight: bold; font-size: 13px; }
+                    .total-box { font-size: 12px; font-weight: bold; text-align: right; margin: 8px 0; }
                 </style>
             </head>
             <body>
                 <div class="center">
                     <span class="titulo">NICAPLUS GAMING</span><br>
-                    Comprobante de Entrega Final<br>
+                    Entrega Final de Taller<br>
                     León, Nicaragua<br>
-                    <strong>ORDEN DE SERVICIO: #ORD-${datosEntrega.ordenId}</strong>
+                    <strong>ORDEN: #ORD-${datosEntrega.ordenId}</strong>
                 </div>
                 <div class="linea"></div>
                 <strong>CLIENTE:</strong> ${datosEntrega.clienteNombre}<br>
@@ -136,21 +159,22 @@ export const Taller: React.FC = () => {
                 <strong>FECHA SALIDA:</strong> ${new Date().toLocaleDateString()}<br>
                 <div class="linea"></div>
                 <strong>EQUIPO RETIRADO:</strong><br>${datosEntrega.dispositivo}<br><br>
-                <strong>DIAGNÓSTICO TÉCNICO FINAL:</strong><br>${datosEntrega.diagnosticoFinal}<br><br>
-                <strong>INSTRUMENTAL/REPUESTOS:</strong><br>${datosEntrega.herramientasUsadas}<br>
+                <strong>SOLUCIÓN TÉCNICA:</strong><br>${datosEntrega.diagnosticoFinal}<br><br>
+                <strong>REPUESTOS:</strong><br>${datosEntrega.herramientasUsadas}<br>
                 <div class="linea"></div>
                 
                 <div class="total-box">
-                    TOTAL PAGADO: C$ ${datosEntrega.costoReparacion.toLocaleString('es-NI')}
+                    TOTAL PAGADO: C$ ${datosEntrega.costoReparacion.toLocaleString('es-NI')}<br>
+                    MÉTODO: ${datosEntrega.metodoPago.toUpperCase()}
                 </div>
                 
                 <div class="linea"></div>
-                <center><strong>TÉRMINOS DE COBERTURA</strong></center>
+                <center><strong>GARANTÍA</strong></center>
                 <p style="font-size: 9px; text-align: justify;">
                     ${datosEntrega.notasGarantia}
                 </p>
                 <div class="linea"></div>
-                <br><br><br>
+                <br><br>
                 <div class="center">
                     _______________________<br>
                     Firma de Cliente Conforme
@@ -165,17 +189,15 @@ export const Taller: React.FC = () => {
         ventana.document.close();
     };
 
-    // 💡 NUEVA FUNCIÓN: Dispara la API de WhatsApp vía Web Link (wa.me) usando variables
     const abrirEnlaceWhatsApp = (orden: Orden, tipo: 'Listo' | 'Entregado', datosAdicionales?: any) => {
         if (!orden.cliente?.telefono) {
             alert("El cliente no tiene un teléfono válido registrado.");
             return;
         }
 
-        // Limpiar el número de teléfono
         let telefono = orden.cliente.telefono.replace(/\s+/g, '').replace(/-/g, '');
         if (!telefono.startsWith('505')) {
-            telefono = '505' + telefono; // Código de Nicaragua
+            telefono = '505' + telefono;
         }
 
         let textoMensaje = "";
@@ -187,46 +209,70 @@ export const Taller: React.FC = () => {
             textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${orden.cliente.nombre}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${costo.toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
         }
 
-        // Codificar texto para URL segura
         const url = `https://wa.me/${telefono}?text=${encodeURIComponent(textoMensaje)}`;
         window.open(url, '_blank');
     };
 
     const registrarIngresoTaller = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!dispositivo || !diagnostico || !nombreCliente || !telefonoCliente) {
-            alert("Complete los datos del cliente y del dispositivo corporativo.");
+        
+        if (!dispositivo || !diagnostico) {
+            alert("Complete los datos del dispositivo.");
             return;
         }
 
-        try {
-            const resCliente = await api.post('/clientes', {
-                nombre: nombreCliente,
-                telefono: telefonoCliente,
-                email: emailCliente || 'taller@nicaplus.com',
-                puntosAcumulados: 0
-            });
+        let idClienteFinal = idClienteSeleccionado;
 
-            const idClienteCreado = resCliente.data.id;
+        try {
+            // Si el técnico decide registrar un cliente nuevo sobre la marcha
+            if (modoNuevoCliente) {
+                if (!nombreCliente || !telefonoCliente) {
+                    alert("Complete los datos obligatorios del nuevo cliente.");
+                    return;
+                }
+                const resCliente = await api.post('/clientes', {
+                    nombre: nombreCliente,
+                    telefono: telefonoCliente,
+                    email: emailCliente || 'taller@nicaplus.com',
+                    puntosAcumulados: 0
+                });
+                idClienteFinal = resCliente.data.id;
+            }
+
+            if (!idClienteFinal || idClienteFinal === 0) {
+                alert("Debe seleccionar un cliente de la base de datos o registrar uno nuevo.");
+                return;
+            }
+
+            const clienteAsociado = clientes.find(c => c.id === idClienteFinal) || { nombre: nombreCliente, telefono: telefonoCliente };
 
             const resOrden = await api.post('/ordenesservicio', {
-                idCliente: idClienteCreado,
+                idCliente: idClienteFinal,
                 dispositivo,
                 diagnostico,
                 notas: notasGarantia
             });
 
-            alert("Equipo registrado. Emitiendo Voucher de taller y Hoja de Garantía.");
+            alert("Equipo registrado con éxito.");
             
             imprimirDocumentosSoporte(resOrden.data.id, {
                 dispositivo,
                 diagnostico,
                 notasGarantia,
-                cliente: { nombre: nombreCliente, telefono: telefonoCliente }
+                cliente: { nombre: clienteAsociado.nombre, telefono: clienteAsociado.telefono }
             });
 
-            setDispositivo(''); setDiagnostico(''); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente('');
-            cargarOrdenes();
+            // Limpieza de campos
+            setDispositivo(''); 
+            setDiagnostico(''); 
+            setIdClienteSeleccionado(null);
+            setBusquedaCliente('');
+            setNombreCliente(''); 
+            setTelefonoCliente(''); 
+            setEmailCliente('');
+            setModoNuevoCliente(false);
+            
+            cargarDatos();
         } catch (err) {
             alert("Error en el flujo de registro del taller.");
         }
@@ -241,6 +287,7 @@ export const Taller: React.FC = () => {
             setDiagnosticoFinal(`Se solucionó la falla original: ${orden.diagnostico}`);
             setHerramientasUsadas('');
             setCostoReparacion(0);
+            setMetodoPagoEntrega('Efectivo'); // Resetear a efectivo por defecto
             setMostrarModalEntrega(true);
             return;
         }
@@ -252,9 +299,8 @@ export const Taller: React.FC = () => {
 
         try {
             await api.put(`/ordenesservicio/${id}/estado?nuevoEstado=${siguienteEstado}`, "");
-            cargarOrdenes();
+            cargarDatos();
 
-            // 💡 Si pasó a "Listo", abrimos el nuevo modal de decisión rápida
             if (siguienteEstado === 'Listo') {
                 setOrdenParaAccion(orden);
                 setTipoAccionContexto('AlListo');
@@ -273,12 +319,13 @@ export const Taller: React.FC = () => {
             const payload = {
                 diagnosticoFinal,
                 herramientasUsed: herramientasUsadas || 'Herramientas básicas de banco técnico',
-                costoReparacion: Number(costoReparacion)
+                costoReparacion: Number(costoReparacion),
+                metodoPago: metodoPagoEntrega, // ◄ CORREGIDO: Se envía el método de pago seleccionado
+                idProductoServicio: 1 
             };
 
             await api.put(`/ordenesservicio/${ordenAEntregar.id}/entregar`, payload);
             
-            // Guardamos los datos temporalmente para usarlos si decide imprimir o enviar por Whatsapp
             const datosImpresion = {
                 ordenId: ordenAEntregar.id,
                 dispositivo: ordenAEntregar.dispositivo,
@@ -287,6 +334,7 @@ export const Taller: React.FC = () => {
                 diagnosticoFinal,
                 herramientasUsadas: payload.herramientasUsed,
                 costoReparacion: payload.costoReparacion,
+                metodoPago: metodoPagoEntrega, // ◄ CORREGIDO: También se refleja en el ticket físico impreso
                 notasGarantia
             };
 
@@ -296,9 +344,8 @@ export const Taller: React.FC = () => {
             
             setMostrarModalEntrega(false);
             setOrdenAEntregar(null);
-            cargarOrdenes();
+            cargarDatos();
 
-            // 💡 Abrimos el modal de decisión final de ticket/notificación de salida
             setMostrarModalAccion(true);
         } catch (err) {
             alert("Error al procesar la entrega final del equipo.");
@@ -316,6 +363,20 @@ export const Taller: React.FC = () => {
         boxSizing: 'border-box' as const,
         fontSize: '0.9rem',
         outline: 'none'
+    };
+
+    const estiloSelectControlado = {
+        width: '100%',
+        padding: '10px 12px',
+        marginTop: '6px',
+        background: '#0f172a',
+        color: '#ffffff',
+        border: '1px solid #334155',
+        borderRadius: '6px',
+        boxSizing: 'border-box' as const,
+        fontSize: '0.9rem',
+        outline: 'none',
+        cursor: 'pointer'
     };
 
     const estiloBotonAccionRapida = {
@@ -353,17 +414,41 @@ export const Taller: React.FC = () => {
                 </h3>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                    
+                    {/* BUSCADOR Y SELECTOR DE CLIENTE (INTEGRADO DE CAJA) */}
                     <div>
-                        <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaUser /> Nombre del Cliente</label>
-                        <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={estiloInputControlado} placeholder="Nombre completo" required />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaUser /> Cliente de la Orden</label>
+                            <button type="button" onClick={() => { setModoNuevoCliente(!modoNuevoCliente); setIdClienteSeleccionado(null); }} style={{ background: '#581c7e', border: 'none', color: '#fff', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                {modoNuevoCliente ? "🔍 Buscar en base de datos" : "➕ Crear nuevo cliente"}
+                            </button>
+                        </div>
+
+                        {modoNuevoCliente ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={estiloInputControlado} placeholder="Nombre completo" required />
+                                <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} style={estiloInputControlado} placeholder="Teléfono" required />
+                                <input type="email" value={emailCliente} onChange={e => setEmailCliente(e.target.value)} style={estiloInputControlado} placeholder="Email (Opcional)" />
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-5%)', color: '#64748b', fontSize: '0.8rem' }} />
+                                    <input type="text" placeholder="Filtrar clientes por nombre o celular..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)} style={{ ...estiloInputControlado, paddingLeft: '30px' }} />
+                                </div>
+                                <select value={idClienteSeleccionado || 0} onChange={e => setIdClienteSeleccionado(Number(e.target.value))} style={estiloSelectControlado} required>
+                                    <option value={0}>-- Selecciona el Cliente --</option>
+                                    {clientesFiltrados.map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
+
                     <div>
-                        <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaPhone /> Teléfono</label>
-                        <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} style={estiloInputControlado} placeholder="Ej: 88888888" required />
-                    </div>
-                    <div>
-                        <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaLaptop /> Dispositivo</label>
-                        <input type="text" value={dispositivo} onChange={e => setDispositivo(e.target.value)} style={estiloInputControlado} placeholder="Ej: PS5 Standard o Nintendo Switch" required />
+                        <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaLaptop /> Dispositivo corporativo</label>
+                        <input type="text" value={dispositivo} onChange={e => setDispositivo(e.target.value)} style={estiloInputControlado} placeholder="Ej: PS5 Slim o Nintendo Switch" required />
                     </div>
                 </div>
 
@@ -406,7 +491,6 @@ export const Taller: React.FC = () => {
                                         <button onClick={() => avanzarEstado(orden.id, orden.estado)} style={{ flex: 1, padding: '8px', background: '#581c7e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#4c1d95'} onMouseLeave={(e) => e.currentTarget.style.background = '#581c7e'}>
                                             {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar Estado'} <FaChevronRight size={10} />
                                         </button>
-                                        {/* 💡 ACCESO DIRECTO DESDE EL TABLERO: Botón rápido para abrir WhatsApp si la orden ya está Lista */}
                                         {orden.estado === 'Listo' && (
                                             <button title="Notificar por WhatsApp de inmediato" onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} style={{ padding: '8px 12px', background: '#25d366', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                                 <FaWhatsapp size={14} />
@@ -425,7 +509,7 @@ export const Taller: React.FC = () => {
                 ))}
             </div>
 
-            {/* MODAL DE LIQUIDACIÓN Y ENTREGA FINAL (ESTILO CORPORATIVO ERP) */}
+            {/* MODAL DE LIQUIDACIÓN Y ENTREGA FINAL (CON MÉTODO DE PAGO CORREGIDO) */}
             {mostrarModalEntrega && ordenAEntregar && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)' }}>
                     <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '500px', width: '90%', border: '1px solid #334155', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
@@ -448,7 +532,18 @@ export const Taller: React.FC = () => {
 
                             <div>
                                 <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}><FaWrench /> Repuestos / Herramientas Utilizadas</label>
-                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} style={estiloInputControlado} placeholder="Ej: Cautín, pasta flux, cambio de puerto HDMI" required />
+                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} style={estiloInputControlado} placeholder="Ej: Cambio de puerto HDMI, limpieza interna" required />
+                            </div>
+
+                            {/* NUEVO DROPDOWN: SELECCIÓN DEL MÉTODO DE PAGO REAL */}
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}><FaMoneyBillWave /> Método de Pago</label>
+                                <select value={metodoPagoEntrega} onChange={e => setMetodoPagoEntrega(e.target.value)} style={estiloSelectControlado} required>
+                                    <option value="Efectivo">💵 Efectivo</option>
+                                    <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                                    <option value="Tarjeta">💳 Tarjeta</option>
+                                    <option value="Crédito">🛑 Crédito (Cuenta por Cobrar)</option>
+                                </select>
                             </div>
 
                             <div>
@@ -469,7 +564,7 @@ export const Taller: React.FC = () => {
                 </div>
             )}
 
-            {/* 💡 NUEVO MODAL INTERACTIVO: CENTRO DE ALERTAS, WHATSAPP E IMPRESIÓN RÁPIDA */}
+            {/* MODAL INTERACTIVO: CENTRO DE ALERTAS, WHATSAPP E IMPRESIÓN RÁPIDA */}
             {mostrarModalAccion && ordenParaAccion && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(6px)' }}>
                     <div style={{ background: '#1e293b', padding: '26px', borderRadius: '16px', maxWidth: '460px', width: '90%', border: '2px solid #334155', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
@@ -485,7 +580,6 @@ export const Taller: React.FC = () => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             
-                            {/* BOTÓN: AVISAR CLIENTE POR WHATSAPP (Abre pestaña externa) */}
                             <button 
                                 onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)}
                                 style={{ ...estiloBotonAccionRapida, background: '#25d366' }}
@@ -495,11 +589,9 @@ export const Taller: React.FC = () => {
                                 <FaWhatsapp size={18} /> Avisar al Cliente por WhatsApp
                             </button>
 
-                            {/* BOTÓN: IMPRIMIR TICKET TÉCNICO */}
                             <button 
                                 onClick={() => {
                                     if (tipoAccionContexto === 'AlListo') {
-                                        // Imprime el comprobante inicial/revisión rápida
                                         imprimirDocumentosSoporte(ordenParaAccion.id, {
                                             dispositivo: ordenParaAccion.dispositivo,
                                             diagnostico: ordenParaAccion.diagnostico,
@@ -507,7 +599,6 @@ export const Taller: React.FC = () => {
                                             cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '' }
                                         });
                                     } else if (datosEntregaCache) {
-                                        // Imprime el comprobante definitivo de entrega con costos
                                         imprimirVoucherEntrega(datosEntregaCache);
                                     }
                                 }}
@@ -518,7 +609,6 @@ export const Taller: React.FC = () => {
                                 <FaPrint size={18} /> Imprimir Ticket Comercial
                             </button>
 
-                            {/* BOTÓN DE CIERRE O CONTINUAR */}
                             <button 
                                 onClick={() => { 
                                     setMostrarModalAccion(false); 
