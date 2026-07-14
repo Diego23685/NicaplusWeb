@@ -328,7 +328,6 @@ export const Caja: React.FC = () => {
         const emojiCheck       = getEmojiSeguro("%E2%9C%85");     // ✅
         const emojiNota        = getEmojiSeguro("%F0%9F%93%8C"); // 📌
         const emojiManos       = getEmojiSeguro("%F0%9F%A4%9D"); // 🤝
-        const emojiDescuento   = getEmojiSeguro("%F0%9F%87%B7"); // 🏷️
 
         const lineas: string[] = [];
 
