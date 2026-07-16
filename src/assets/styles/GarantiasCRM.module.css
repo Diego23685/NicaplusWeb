@@ -1,0 +1,224 @@
+.container {
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    text-align: left;
+}
+
+/* ENCABEZADO */
+.headerWrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.title {
+    margin: 0;
+    color: #38bdf8;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: #94a3b8;
+    margin: 2px 0 0 0;
+    font-size: 0.85rem;
+}
+
+.perdidaBox {
+    background: #2d1e24;
+    border: 1px solid #ef4444;
+    padding: 10px 16px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.perdidaLabel {
+    color: #fca5a5;
+    font-weight: bold;
+    font-size: 0.75rem;
+}
+
+.perdidaMonto {
+    color: #ef4444;
+    font-size: 1.2rem;
+}
+
+/* DISEÑO DE PANELES */
+.dashboardGrid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.panelCard {
+    flex: 1 1 380px;
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    height: fit-content;
+}
+
+.panelCardWide {
+    flex: 1 1 500px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 16px;
+    overflow-x: auto;
+    height: fit-content;
+}
+
+.panelTitle {
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.titleOrange { color: #fb923c; }
+.titleBlue { color: #38bdf8; }
+.titleGreen { color: #10b981; }
+
+/* ELEMENTOS DE FORMULARIO */
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.fullWidth {
+    grid-column: span 2;
+}
+
+.label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    padding: 10px 12px;
+    margin-top: 4px;
+    background: #0f172a;
+    color: #ffffff;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+    border-color: #38bdf8;
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* BOTONES */
+.btnPrimary {
+    grid-column: span 2;
+    padding: 12px;
+    background: #fb923c;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btnSecondary {
+    grid-column: span 2;
+    padding: 12px;
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btnAction {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* HISTORIAL Y TEMPLATES */
+.listContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.historyCard {
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid #fb923c;
+    font-size: 0.85rem;
+}
+
+.templateCard {
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid #10b981;
+    font-size: 0.85rem;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.cardMeta {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid #1e293b;
+    padding-top: 6px;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.emptyText {
+    color: #64748b;
+    font-style: italic;
+    text-align: center;
+    display: block;
+    padding: 20px;
+}

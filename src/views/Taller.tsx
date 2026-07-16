@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
-    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch 
+    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract 
 } from 'react-icons/fa';
 import styles from '../assets/styles/Taller.module.css'; // Importación de estilos modulares
 
@@ -73,6 +73,167 @@ export const Taller: React.FC = () => {
         c.telefono.includes(busquedaCliente)
     );
 
+    // NUEVA FUNCIÓN: Genera una hoja entera A4/Carta independiente para la póliza de garantía formal
+    const imprimirContratoGarantiaCompleto = (ordenId: number, datos: any) => {
+        const ventana = window.open('', '_blank');
+        if (!ventana) return;
+
+        const html = `
+            <html>
+            <head>
+                <title>Contrato_Garantia_ORD-${ordenId}</title>
+                <style>
+                    @page { size: letter; margin: 15mm; }
+                    body { 
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                        color: #581c7e; 
+                        line-height: 1.5; 
+                        font-size: 13px;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                    .header-logo { font-size: 24px; font-weight: 800; color: #581c7e; letter-spacing: -0.5px; }
+                    .header-sub { font-size: 11px; color: #64748b; line-height: 1.3; }
+                    .doc-title { text-align: right; font-size: 16px; font-weight: bold; color: #0f172a; text-transform: uppercase; }
+                    .doc-number { text-align: right; font-size: 18px; font-weight: 800; color: #dc2626; margin-top: 5px; }
+                    
+                    .section-title { 
+                        font-size: 12px; 
+                        font-weight: bold; 
+                        text-transform: uppercase; 
+                        color: #581c7e; 
+                        border-bottom: 2px solid #e2e8f0; 
+                        padding-bottom: 5px; 
+                        margin: 20px 0 10px 0; 
+                    }
+                    
+                    .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                    .info-grid td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
+                    .info-label { font-weight: bold; color: #475569; width: 25%; background: #f8fafc; font-size: 11px; text-transform: uppercase; }
+                    .info-value { color: #0f172a; }
+
+                    .terms-box { 
+                        background: #f8fafc; 
+                        border: 1px solid #e2e8f0; 
+                        border-radius: 6px; 
+                        padding: 15px; 
+                        font-size: 11px; 
+                        color: #334155; 
+                        text-align: justify;
+                    }
+                    .terms-box ol { margin: 0; padding-left: 18px; }
+                    .terms-box li { margin-bottom: 8px; }
+                    
+                    .signatures-table { width: 100%; margin-top: 50px; border-collapse: collapse; }
+                    .signatures-table td { width: 50%; text-align: center; vertical-align: bottom; height: 80px; }
+                    .linea-firma { width: 200px; border-bottom: 1px solid #94a3b8; margin: 0 auto 5px auto; }
+                    .firma-label { font-size: 11px; color: #64748b; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <!-- Encabezado de Empresa -->
+                <table class="header-table">
+                    <tr>
+                        <td>
+                            <div class="header-logo">NICAPLUS GAMING</div>
+                            <div class="header-sub">
+                                Venta de celulares y accesorios<br>
+                                De la estatua de la madre 1c y media al norte, León, Nicaragua<br>
+                                Soporte: +505 8787-0821 | taller@nicaplus.com
+                            </div>
+                        </td>
+                        <td style="text-align: right; vertical-align: top;">
+                            <div class="doc-title">Póliza de Garantía de Servicio</div>
+                            <div class="doc-number">ORD-${ordenId}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
+                                Fecha de Emisión: ${new Date().toLocaleDateString('es-NI')}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Información del Cliente -->
+                <div class="section-title">Información del Beneficiario / Cliente</div>
+                <table class="info-grid">
+                    <tr>
+                        <td class="info-label">Nombre del Cliente</td>
+                        <td class="info-value"><strong>${datos.cliente.nombre}</strong></td>
+                        <td class="info-label">Teléfono de Contacto</td>
+                        <td class="info-value">${datos.cliente.telefono || 'N/D'}</td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">Correo Electrónico</td>
+                        <td class="info-value" colspan="3">${datos.cliente.email || 'taller@nicaplus.com'}</td>
+                    </tr>
+                </table>
+
+                <!-- Detalles del Servicio Técnico -->
+                <div class="section-title">Especificaciones del Equipo y Trabajo Realizado</div>
+                <table class="info-grid">
+                    <tr>
+                        <td class="info-label">Dispositivo / Consola</td>
+                        <td class="info-value" colspan="3"><strong>${datos.dispositivo}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="info-label">Reporte Inicial (Falla)</td>
+                        <td class="info-value" colspan="3">${datos.diagnostico}</td>
+                    </tr>
+                    ${datos.diagnosticoFinal ? `
+                    <tr>
+                        <td class="info-label">Solución Aplicada</td>
+                        <td class="info-value" colspan="3">${datos.diagnosticoFinal}</td>
+                    </tr>
+                    ` : ''}
+                    ${datos.herramientasUsadas ? `
+                    <tr>
+                        <td class="info-label">Respuestos / Insumos</td>
+                        <td class="info-value" colspan="3">${datos.herramientasUsadas}</td>
+                    </tr>
+                    ` : ''}
+                </table>
+
+                <!-- Términos y Condiciones Completo -->
+                <div class="section-title">Cláusulas y Condiciones de la Garantía Limitada</div>
+                <div class="terms-box">
+                    <ol>
+                        <li><strong>Ámbito de Cobertura:</strong> La presente póliza cubre única y exclusivamente la mano de obra y los componentes sustituidos detallados en esta orden. No ampara fallas ajenas al sector intervenido originalmente.</li>
+                        <li><strong>Periodo de Validez:</strong> Las notas de tiempo establecidas para este servicio son: <strong>${datos.notasGarantia}</strong>.</li>
+                        <li><strong>Exclusiones de Cobertura:</strong> La garantía quedará automáticamente anulada bajo las siguientes circunstancias:
+                            <ul>
+                                <li>Rotura, manipulación, alteración o remoción de los sellos de garantía físicos de NICAPLUS GAMING colocados en el chasis del equipo.</li>
+                                <li>Evidencia de daños físicos posteriores a la entrega (golpes, fisuras, abolladuras, puertos forzados).</li>
+                                <li>Presencia de humedad, sulfatación, ingreso de líquidos, sobrecargas eléctricas o plagas de insectos en el interior de la placa de circuito.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Condiciones para Reclamación:</strong> Para hacer efectivo el reclamo, es requisito indispensable presentar este contrato impreso o digital de forma legible. El equipo será sometido a un diagnóstico técnico inicial de evaluación.</li>
+                    </ol>
+                </div>
+
+                <!-- Firmas -->
+                <table class="signatures-table">
+                    <tr>
+                        <td>
+                            <div class="linea-firma"></div>
+                            <div class="firma-label">NICAPLUS GAMING<br>Técnico Autorizado</div>
+                        </td>
+                        <td>
+                            <div class="linea-firma"></div>
+                            <div class="firma-label">Cliente Conforme<br>Firma o Cédula</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <script>
+                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
+                </script>
+            </body>
+            </html>
+        `;
+        ventana.document.write(html);
+        ventana.document.close();
+    };
+
     const imprimirDocumentosSoporte = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
         if (!ventana) return;
@@ -105,24 +266,6 @@ export const Taller: React.FC = () => {
                 <div class="linea"></div>
                 <div class="center" style="margin-bottom: 30px;">
                     Conserve este voucher para retirar su equipo.<br>
-                </div>
-                <div style="page-break-after: always;"></div>
-                <div class="center">
-                    <span class="titulo">NICAPLUS GAMING</span><br>
-                    <strong>PÓLIZA DE GARANTÍA</strong><br>
-                    Asociada a Orden: #ORD-${ordenId}
-                </div>
-                <div class="linea"></div>
-                <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
-                <strong>DUEÑO:</strong> ${datos.cliente.nombre}<br>
-                <div class="linea"></div>
-                <strong>TÉRMINOS:</strong><br>
-                ${datos.notasGarantia}<br>
-                <div class="linea"></div>
-                <br><br>
-                <div class="center">
-                    _______________________<br>
-                    Firma Técnico Autorizado
                 </div>
                 <script>
                     window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
@@ -173,7 +316,7 @@ export const Taller: React.FC = () => {
                 </div>
                 
                 <div class="linea"></div>
-                <center><strong>GARANTÍA</strong></center>
+                <center><strong>GARANTÍA EN TICKET</strong></center>
                 <p style="font-size: 9px; text-align: justify;">
                     ${datosEntrega.notasGarantia}
                 </p>
@@ -213,7 +356,8 @@ export const Taller: React.FC = () => {
             textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${orden.cliente.nombre}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${costo.toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
         }
 
-        const url = `https://wa.me/${telefono}?text=${encodeURIComponent(textoMensaje)}`;
+        // Usamos api.whatsapp.com con codificación URL segura para emojis, enters y negritas
+        const url = `https://api.whatsapp.com/send/?phone=${telefono}&text=${encodeURIComponent(textoMensaje)}&type=phone_number&app_absent=0`;
         window.open(url, '_blank');
     };
 
@@ -247,7 +391,7 @@ export const Taller: React.FC = () => {
                 return;
             }
 
-            const clienteAsociado = clientes.find(c => c.id === idClienteFinal) || { nombre: nombreCliente, telefono: telefonoCliente };
+            const clienteAsociado = clientes.find(c => c.id === idClienteFinal) || { nombre: nombreCliente, telefono: telefonoCliente, email: emailCliente };
 
             const resOrden = await api.post('/ordenesservicio', {
                 idCliente: idClienteFinal,
@@ -258,11 +402,20 @@ export const Taller: React.FC = () => {
 
             alert("Equipo registrado con éxito.");
             
+            // Imprime el tique de control para conservar en el taller/falla
             imprimirDocumentosSoporte(resOrden.data.id, {
                 dispositivo,
                 diagnostico,
                 notasGarantia,
                 cliente: { nombre: clienteAsociado.nombre, telefono: clienteAsociado.telefono }
+            });
+
+            // OPCIONAL: Imprime directamente el contrato entero de garantía al ingresar el equipo
+            imprimirContratoGarantiaCompleto(resOrden.data.id, {
+                dispositivo,
+                diagnostico,
+                notasGarantia,
+                cliente: clienteAsociado
             });
 
             // Limpieza de campos
@@ -334,6 +487,7 @@ export const Taller: React.FC = () => {
                 dispositivo: ordenAEntregar.dispositivo,
                 clienteNombre: ordenAEntregar.cliente?.nombre || 'Cliente General',
                 clienteTelefono: ordenAEntregar.cliente?.telefono || 'N/D',
+                clienteEmail: ordenAEntregar.cliente?.email || '',
                 diagnosticoFinal,
                 herramientasUsadas: payload.herramientasUsed,
                 costoReparacion: payload.costoReparacion,
@@ -355,7 +509,6 @@ export const Taller: React.FC = () => {
         }
     };
 
-    // Helper para determinar la clase de color según la columna del Kanban
     const getColumnHeaderClass = (columnaName: string) => {
         if (columnaName === 'Listo') return styles.colListo;
         if (columnaName === 'En Revisión') return styles.colRevision;
@@ -379,13 +532,7 @@ export const Taller: React.FC = () => {
                             <label className={styles.label}>
                                 <FaUser /> Cliente de la Orden
                             </label>
-                            <button 
-                                type="button" 
-                                onClick={() => { setModoNuevoCliente(!modoNuevoCliente); setIdClienteSeleccionado(null); }} 
-                                className={styles.btnCambiarModo}
-                            >
-                                {modoNuevoCliente ? "🔍 Buscar en base de datos" : "➕ Crear nuevo cliente"}
-                            </button>
+                            
                         </div>
 
                         {modoNuevoCliente ? (
@@ -469,16 +616,17 @@ export const Taller: React.FC = () => {
 
                 <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
                     <label className={styles.label}>Condiciones y Póliza de Garantía a Imprimir</label>
+                    
                     <input 
                         type="text" 
                         value={notasGarantia} 
-                        onChange={e => setNotasGarantia(e.target.value)} 
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotasGarantia(e.target.value)} 
                         className={styles.input} 
                     />
                 </div>
 
                 <button type="submit" className={styles.btnSubmit}>
-                    Ingresar Equipo e Imprimir Soporte
+                    Ingresar Equipo e Imprimir Soporte y Contrato
                 </button>
             </form>
 
@@ -653,7 +801,7 @@ export const Taller: React.FC = () => {
                                             dispositivo: ordenParaAccion.dispositivo,
                                             diagnostico: ordenParaAccion.diagnostico,
                                             notasGarantia,
-                                            cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '' }
+                                            cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '', email: ordenParaAccion.cliente?.email || '' }
                                         });
                                     } else if (datosEntregaCache) {
                                         imprimirVoucherEntrega(datosEntregaCache);
@@ -661,7 +809,37 @@ export const Taller: React.FC = () => {
                                 }}
                                 className={`${styles.btnActionBase} ${styles.btnActionPrint}`}
                             >
-                                <FaPrint size={18} /> Imprimir Ticket Comercial
+                                <FaPrint size={18} /> Imprimir Ticket Comercial (Térmico)
+                            </button>
+
+                            {/* NUEVO BOTÓN: Permite imprimir el contrato de garantía A4 directamente desde las acciones comerciales */}
+                            <button 
+                                onClick={() => {
+                                    const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo' 
+                                        ? {
+                                            dispositivo: ordenParaAccion.dispositivo,
+                                            diagnostico: ordenParaAccion.diagnostico,
+                                            notasGarantia,
+                                            cliente: ordenParaAccion.cliente || { nombre: 'Cliente General', telefono: 'N/D', email: '' }
+                                          }
+                                        : {
+                                            dispositivo: ordenParaAccion.dispositivo,
+                                            diagnostico: ordenParaAccion.diagnostico,
+                                            diagnosticoFinal: datosEntregaCache?.diagnosticoFinal,
+                                            herramientasUsadas: datosEntregaCache?.herramientasUsadas,
+                                            notasGarantia,
+                                            cliente: { 
+                                                nombre: datosEntregaCache?.clienteNombre, 
+                                                telefono: datosEntregaCache?.clienteTelefono, 
+                                                email: datosEntregaCache?.clienteEmail 
+                                            }
+                                          };
+                                    imprimirContratoGarantiaCompleto(ordenParaAccion.id, datosGarantiaParaImprimir);
+                                }}
+                                className={`${styles.btnActionBase}`}
+                                style={{ backgroundColor: '#2563eb', color: '#fff' }}
+                            >
+                                <FaFileContract size={18} /> Imprimir Contrato Garantía (Hoja Entera A4)
                             </button>
 
                             <button 
