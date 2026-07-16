@@ -2,9 +2,7 @@
 
 /* Contenedor Principal */
 .container {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+  display: block;
   padding: 20px;
   width: 100%;
   max-width: 1600px;
@@ -16,24 +14,33 @@
   min-height: 100vh;
 }
 
-@media (min-width: 1024px) {
+/* Wrapper: Apilado vertical en móviles, fila en escritorio */
+.cajaWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+@media (min-width: 1630px) {
   .cajaWrapper {
-    grid-template-columns: 1.6fr 1fr !important;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .productosPanel {
+    flex: 1.6;
+  }
+  .carritoPanel {
+    flex: 1;
+    min-width: 350px;
   }
   .panel {
     height: calc(100vh - 80px) !important;
   }
 }
 
-.cajaWrapper {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  width: 100%;
-}
-
-/* Panel Base */
-.panel {
+/* Panel Base y Carrito Panel */
+.panel, .carritoPanel {
   background: #111827;
   border: 1px solid #1f2937;
   border-radius: 16px;
@@ -46,7 +53,7 @@
   transition: border-color 0.2s ease;
 }
 
-.panel:hover {
+.panel:hover, .carritoPanel:hover {
   border-color: #374151;
 }
 
@@ -209,19 +216,19 @@
 /* Tarjeta de Producto (Cuadrícula) */
 .productGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+  gap: 8px;
 }
 
 .productCard {
-  padding: 12px;
+  padding: 8px;
   border: 1px solid #1f2937;
   border-radius: 12px;
   cursor: pointer;
   background: #030712;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   box-sizing: border-box;
   transition: all 0.2s ease-in-out;
 }
@@ -234,7 +241,7 @@
 
 .productImgContainer {
   width: 100%;
-  height: 90px;
+  height: 70px;
   background: #111827;
   border-radius: 8px;
   overflow: hidden;
@@ -265,7 +272,8 @@
 }
 
 .productName {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -294,13 +302,13 @@
 
 .productBadges {
   border-top: 1px solid #111827;
-  padding-top: 8px;
+  padding-top: 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: auto;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
 }
 
 /* Fila de Producto (Lista) */
@@ -393,18 +401,6 @@
 }
 
 /* --- SECCIÓN CARRITO --- */
-.carritoPanel {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  min-height: 500px;
-}
-
 .carritoHeader {
   display: flex;
   justify-content: space-between;
