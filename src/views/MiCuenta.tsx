@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import styles from '../assets/styles/Clientes/MiCuenta.module.css';
 
 interface MiCuentaProps {
     alVolver: () => void;
@@ -25,6 +26,7 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
                 setDatos(respuesta.data);
             } catch (error) {
                 console.error(`Error cargando datos de ${pestañaActiva}:`, error);
+                setDatos(null);
             } finally {
                 setCargando(false);
             }
@@ -34,36 +36,40 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
     }, [pestañaActiva]);
 
     return (
-        <div style={estilos.contenedor}>
-            <header style={estilos.header}>
-                <button onClick={alVolver} style={estilos.btnVolver}>← Volver al Catálogo</button>
-                <h1 style={estilos.titulo}>Mi Cuenta</h1>
-                <button onClick={alCerrarSesion} style={estilos.btnSalir}>Cerrar Sesión</button>
+        <div className={styles.contenedor}>
+            <header className={styles.header}>
+                <button onClick={alVolver} className={styles.btnVolver}>
+                    ← Volver al Catálogo
+                </button>
+                <h1 className={styles.titulo}>Mi Cuenta</h1>
+                <button onClick={alCerrarSesion} className={styles.btnSalir}>
+                    Cerrar Sesión
+                </button>
             </header>
 
-            <div style={estilos.layout}>
+            <div className={styles.layout}>
                 {/* Menú Lateral */}
-                <aside style={estilos.sidebar}>
+                <aside className={styles.sidebar}>
                     <button 
-                        style={pestañaActiva === 'dashboard' ? estilos.tabActivo : estilos.tab} 
+                        className={pestañaActiva === 'dashboard' ? styles.tabActivo : styles.tab} 
                         onClick={() => setPestañaActiva('dashboard')}
                     >
                         📊 Resumen General
                     </button>
                     <button 
-                        style={pestañaActiva === 'perfil' ? estilos.tabActivo : estilos.tab} 
+                        className={pestañaActiva === 'perfil' ? styles.tabActivo : styles.tab} 
                         onClick={() => setPestañaActiva('perfil')}
                     >
-                        👤 Información de Perfil
+                        👤 Mi Perfil
                     </button>
                     <button 
-                        style={pestañaActiva === 'compras' ? estilos.tabActivo : estilos.tab} 
+                        className={pestañaActiva === 'compras' ? styles.tabActivo : styles.tab} 
                         onClick={() => setPestañaActiva('compras')}
                     >
                         🛍️ Historial de Compras
                     </button>
                     <button 
-                        style={pestañaActiva === 'suscripciones' ? estilos.tabActivo : estilos.tab} 
+                        className={pestañaActiva === 'suscripciones' ? styles.tabActivo : styles.tab} 
                         onClick={() => setPestañaActiva('suscripciones')}
                     >
                         💳 Mis Suscripciones
@@ -71,43 +77,140 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
                 </aside>
 
                 {/* Contenedor Dinámico */}
-                <main style={estilos.contenidoPrincipal}>
+                <main className={styles.contenidoPrincipal}>
                     {cargando ? (
-                        <div style={estilos.cargando}>Cargando información del servidor...</div>
+                        <div className={styles.cargando}>Cargando información del servidor...</div>
                     ) : (
-                        <div style={estilos.tarjeta}>
+                        <div className={styles.tarjeta}>
+                            {/* 1. DASHBOARD */}
                             {pestañaActiva === 'dashboard' && (
                                 <div>
-                                    <h2 style={estilos.subtitulo}>Panel de Control (Dashboard)</h2>
-                                    <pre style={estilos.json}>{JSON.stringify(datos, null, 2)}</pre>
-                                </div>
-                            )}
-
-                            {pestañaActiva === 'perfil' && (
-                                <div>
-                                    <h2 style={estilos.subtitulo}>Mis Datos Personales</h2>
-                                    {datos && (
-                                        <div style={estilos.infoGrid}>
-                                            <p><strong>Nombre completo:</strong> {datos.nombre || datos.Nombre}</p>
-                                            <p><strong>Correo electrónico:</strong> {datos.email || datos.Email}</p>
-                                            <p><strong>Teléfono:</strong> {datos.telefono || datos.Telefono || 'No registrado'}</p>
-                                            <p><strong>Usuario:</strong> {datos.username || datos.Username}</p>
+                                    <h2 className={styles.subtitulo}>Panel de Control</h2>
+                                    {datos ? (
+                                        <div className={styles.infoGrid}>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Bienvenido de vuelta</span>
+                                                <span className={styles.infoValue}>{datos.nombreUsuario || 'Usuario'}</span>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Última Compra</span>
+                                                <span className={styles.infoValue}>{datos.ultimaCompra || 'Sin compras recientes'}</span>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Suscripciones Activas</span>
+                                                <span className={styles.infoValue}>{datos.totalSuscripciones || 0}</span>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Puntos / Miembro</span>
+                                                <span className={styles.infoValue}>{datos.rangoMiembro || 'Bronce'}</span>
+                                            </div>
                                         </div>
+                                    ) : (
+                                        <div className={styles.noDatos}>Cargando el resumen de tu cuenta...</div>
                                     )}
                                 </div>
                             )}
 
-                            {pestañaActiva === 'compras' && (
+                            {/* 2. PERFIL DE USUARIO */}
+                            {pestañaActiva === 'perfil' && (
                                 <div>
-                                    <h2 style={estilos.subtitulo}>Mis Órdenes y Compras</h2>
-                                    <pre style={estilos.json}>{JSON.stringify(datos, null, 2)}</pre>
+                                    <h2 className={styles.subtitulo}>Mis Datos Personales</h2>
+                                    {datos ? (
+                                        <div className={styles.infoGrid}>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Nombre completo</span>
+                                                <span className={styles.infoValue}>{datos.nombre || datos.Nombre || 'N/A'}</span>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Correo electrónico</span>
+                                                <span className={styles.infoValue}>{datos.email || datos.Email || 'N/A'}</span>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Teléfono</span>
+                                                <span className={styles.infoValue}>{datos.telefono || datos.Telefono || 'No registrado'}</span>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <span className={styles.infoLabel}>Nombre de usuario</span>
+                                                <span className={styles.infoValue}>@{datos.username || datos.Username || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.noDatos}>No hay información de perfil disponible.</div>
+                                    )}
                                 </div>
                             )}
 
+                            {/* 3. HISTORIAL DE COMPRAS */}
+                            {pestañaActiva === 'compras' && (
+                                <div>
+                                    <h2 className={styles.subtitulo}>Mis Órdenes y Compras</h2>
+                                    {datos && Array.isArray(datos) && datos.length > 0 ? (
+                                        <div className={styles.tableResponsive}>
+                                            <table className={styles.table}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>ID Órden</th>
+                                                        <th>Fecha</th>
+                                                        <th>Total</th>
+                                                        <th>Estado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {datos.map((compra: any, idx: number) => (
+                                                        <tr key={compra.id || idx}>
+                                                            <td style={{ fontWeight: 700 }}>#{compra.id || compra.codigo || idx + 100}</td>
+                                                            <td>{compra.fecha || 'Reciente'}</td>
+                                                            <td style={{ color: '#b002c2', fontWeight: 800 }}>${compra.total || 0}</td>
+                                                            <td>
+                                                                <span className={`${styles.badge} ${compra.estado === 'completado' || compra.estado === 'Pagado' ? styles.badgeSuccess : styles.badgePending}`}>
+                                                                    {compra.estado || 'Completado'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.noDatos}>Aún no has realizado ninguna compra en nuestra tienda.</div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 4. SUSCRIPCIONES */}
                             {pestañaActiva === 'suscripciones' && (
                                 <div>
-                                    <h2 style={estilos.subtitulo}>Suscripciones Activas</h2>
-                                    <pre style={estilos.json}>{JSON.stringify(datos, null, 2)}</pre>
+                                    <h2 className={styles.subtitulo}>Suscripciones Activas</h2>
+                                    {datos && Array.isArray(datos) && datos.length > 0 ? (
+                                        <div className={styles.tableResponsive}>
+                                            <table className={styles.table}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Plan</th>
+                                                        <th>Próximo Pago</th>
+                                                        <th>Monto</th>
+                                                        <th>Estatus</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {datos.map((sub: any, idx: number) => (
+                                                        <tr key={sub.id || idx}>
+                                                            <td style={{ fontWeight: 700 }}>{sub.plan || 'Suscripción Básica'}</td>
+                                                            <td>{sub.proximoPago || 'N/A'}</td>
+                                                            <td style={{ color: '#38bdf8', fontWeight: 800 }}>${sub.monto || 0}/mes</td>
+                                                            <td>
+                                                                <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+                                                                    {sub.estatus || 'Activa'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.noDatos}>No tienes ninguna suscripción activa actualmente.</div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -116,22 +219,4 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
             </div>
         </div>
     );
-};
-
-const estilos: { [key: string]: React.CSSProperties } = {
-    contenedor: { minHeight: '100vh', background: '#0f172a', fontFamily: 'Roboto, sans-serif', color: '#fff', padding: '20px' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '15px', marginBottom: '25px' },
-    titulo: { fontSize: '24px', fontWeight: 'bold', margin: 0 },
-    btnVolver: { background: 'transparent', border: '1px solid #047688', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-    btnSalir: { background: '#f87171', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-    layout: { display: 'flex', gap: '30px', maxWidth: '1200px', margin: '0 auto' },
-    sidebar: { width: '250px', display: 'flex', flexDirection: 'column', gap: '10px' },
-    tab: { width: '100%', padding: '14px', textAlignLast: 'left', background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: '500', transition: 'all 0.2s' },
-    tabActivo: { width: '100%', padding: '14px', background: '#b002c2', border: '1px solid #b002c2', color: '#fff', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: 'bold', boxShadow: '0 0 10px rgba(176,2,194,0.4)' },
-    contenidoPrincipal: { flex: 1 },
-    tarjeta: { background: '#1e293b', padding: '30px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' },
-    subtitulo: { margin: '0 0 20px 0', fontSize: '20px', color: '#fff', borderBottom: '1px solid #334155', paddingBottom: '10px' },
-    infoGrid: { display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '16px', color: '#cbd5e1' },
-    cargando: { textAlign: 'center', padding: '50px', color: '#94a3b8', fontSize: '18px' },
-    json: { background: '#0f172a', padding: '15px', borderRadius: '6px', overflowX: 'auto', color: '#38bdf8', fontSize: '14px', border: '1px solid #334155' }
 };

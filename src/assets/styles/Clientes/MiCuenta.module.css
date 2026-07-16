@@ -1,0 +1,267 @@
+/* ==========================================================================
+   CONTENEDOR Y LAYOUT GENERAL
+   ========================================================================== */
+.contenedor {
+  min-height: 100vh;
+  background-color: #0b0713;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 2rem;
+  position: relative;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 1.25rem;
+  margin-bottom: 2.5rem;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.titulo {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+/* ==========================================================================
+   BOTONES PREMIUM DE NAVEGACIÓN Y ACCIÓN
+   ========================================================================== */
+.btnVolver {
+  background: rgba(4, 118, 136, 0.08);
+  border: 1px solid rgba(4, 118, 136, 0.3);
+  color: #38bdf8;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(4px);
+}
+
+.btnVolver:hover {
+  background: rgba(4, 118, 136, 0.2);
+  border-color: #058fa4;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(4, 118, 136, 0.3);
+  transform: translateY(-1px);
+}
+
+.btnSalir {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  color: #f43f5e;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btnSalir:hover {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: #f43f5e;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.2);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   PANEL CENTRAL (SIDEBAR + MAIN)
+   ========================================================================== */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 280px 1fr;
+  }
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tab {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.tab:hover {
+  background: rgba(4, 118, 136, 0.08);
+  border-color: rgba(4, 118, 136, 0.3);
+  color: #38bdf8;
+}
+
+.tabActivo {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: rgba(176, 2, 194, 0.12);
+  border: 1px solid rgba(176, 2, 194, 0.35);
+  color: #b002c2;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 800;
+  box-shadow: 0 0 15px rgba(176, 2, 194, 0.1);
+}
+
+/* ==========================================================================
+   CONTENIDO DINÁMICO Y TARJETAS GLASSMORPHIC
+   ========================================================================== */
+.contenidoPrincipal {
+  flex: 1;
+  min-width: 0;
+}
+
+.tarjeta {
+  background: linear-gradient(145deg, rgba(22, 16, 38, 0.55), rgba(17, 11, 30, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 2.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.subtitulo {
+  margin: 0 0 1.75rem 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.75rem;
+}
+
+/* Información de Perfil */
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .infoGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.infoItem {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+}
+
+.infoLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+  display: block;
+  font-weight: 700;
+}
+
+.infoValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+/* ==========================================================================
+   TABLAS Y LISTAS MODERNAS (Para Compras y Suscripciones)
+   ========================================================================== */
+.tableResponsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  padding: 1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 800;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table td {
+  padding: 1.25rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+}
+
+.table tr:hover td {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.5rem;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.badgeSuccess {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.badgePending {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+}
+
+/* Loader y Fallbacks */
+.cargando {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.noDatos {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+  font-size: 0.95rem;
+}

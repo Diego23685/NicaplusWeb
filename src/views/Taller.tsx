@@ -1,6 +1,11 @@
+// Taller.tsx
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch } from 'react-icons/fa';
+import { 
+    FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
+    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch 
+} from 'react-icons/fa';
+import styles from '../assets/styles/Taller.module.css'; // Importación de estilos modulares
 
 interface Orden {
     id: number;
@@ -40,7 +45,7 @@ export const Taller: React.FC = () => {
     const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
     const [herramientasUsadas, setHerramientasUsadas] = useState('');
     const [costoReparacion, setCostoReparacion] = useState<number>(0);
-    const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo'); // ◄ NUEVO: Método de pago real
+    const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo');
 
     // Estados para el modal de selección de Avisar / Imprimir
     const [mostrarModalAccion, setMostrarModalAccion] = useState(false);
@@ -63,7 +68,6 @@ export const Taller: React.FC = () => {
 
     useEffect(() => { cargarDatos(); }, []);
 
-    // Filtrado dinámico de clientes de la BD
     const clientesFiltrados = clientes.filter(c => 
         c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || 
         c.telefono.includes(busquedaCliente)
@@ -224,7 +228,6 @@ export const Taller: React.FC = () => {
         let idClienteFinal = idClienteSeleccionado;
 
         try {
-            // Si el técnico decide registrar un cliente nuevo sobre la marcha
             if (modoNuevoCliente) {
                 if (!nombreCliente || !telefonoCliente) {
                     alert("Complete los datos obligatorios del nuevo cliente.");
@@ -287,7 +290,7 @@ export const Taller: React.FC = () => {
             setDiagnosticoFinal(`Se solucionó la falla original: ${orden.diagnostico}`);
             setHerramientasUsadas('');
             setCostoReparacion(0);
-            setMetodoPagoEntrega('Efectivo'); // Resetear a efectivo por defecto
+            setMetodoPagoEntrega('Efectivo');
             setMostrarModalEntrega(true);
             return;
         }
@@ -320,7 +323,7 @@ export const Taller: React.FC = () => {
                 diagnosticoFinal,
                 herramientasUsed: herramientasUsadas || 'Herramientas básicas de banco técnico',
                 costoReparacion: Number(costoReparacion),
-                metodoPago: metodoPagoEntrega, // ◄ CORREGIDO: Se envía el método de pago seleccionado
+                metodoPago: metodoPagoEntrega,
                 idProductoServicio: 1 
             };
 
@@ -334,7 +337,7 @@ export const Taller: React.FC = () => {
                 diagnosticoFinal,
                 herramientasUsadas: payload.herramientasUsed,
                 costoReparacion: payload.costoReparacion,
-                metodoPago: metodoPagoEntrega, // ◄ CORREGIDO: También se refleja en el ticket físico impreso
+                metodoPago: metodoPagoEntrega,
                 notasGarantia
             };
 
@@ -352,91 +355,83 @@ export const Taller: React.FC = () => {
         }
     };
 
-    const estiloInputControlado = {
-        width: '100%',
-        padding: '10px 12px',
-        marginTop: '6px',
-        background: '#0f172a',
-        color: '#ffffff',
-        border: '1px solid #334155',
-        borderRadius: '6px',
-        boxSizing: 'border-box' as const,
-        fontSize: '0.9rem',
-        outline: 'none'
-    };
-
-    const estiloSelectControlado = {
-        width: '100%',
-        padding: '10px 12px',
-        marginTop: '6px',
-        background: '#0f172a',
-        color: '#ffffff',
-        border: '1px solid #334155',
-        borderRadius: '6px',
-        boxSizing: 'border-box' as const,
-        fontSize: '0.9rem',
-        outline: 'none',
-        cursor: 'pointer'
-    };
-
-    const estiloBotonAccionRapida = {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-        padding: '14px',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '1rem',
-        fontWeight: 'bold' as const,
-        cursor: 'pointer',
-        color: '#fff',
-        transition: 'opacity 0.2s'
+    // Helper para determinar la clase de color según la columna del Kanban
+    const getColumnHeaderClass = (columnaName: string) => {
+        if (columnaName === 'Listo') return styles.colListo;
+        if (columnaName === 'En Revisión') return styles.colRevision;
+        return styles.colRecibido;
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box', color: '#fff', fontFamily: 'sans-serif' }}>
+        <div className={styles.tallerContainer}>
             
-            <style>{`
-                @media (max-width: 767px) {
-                    .kanban-tablero { grid-template-columns: 1fr !important; }
-                    .kanban-columna { max-height: 350px; }
-                }
-                @media (min-width: 768px) and (max-width: 1023px) {
-                    .kanban-tablero { grid-template-columns: repeat(3, minmax(220px, 1fr)) !important; overflow-x: auto; padding-bottom: 10px; }
-                }
-            `}</style>
-
             {/* FORMULARIO AVANZADO DE INGRESO */}
-            <form onSubmit={registrarIngresoTaller} style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155', boxSizing: 'border-box', width: '100%' }}>
-                <h3 style={{ margin: '0 0 16px 0', color: '#38bdf8', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <form onSubmit={registrarIngresoTaller} className={styles.formIngreso}>
+                <h3 className={styles.formTitle}>
                     <FaTools /> Registro de Ingreso de Equipos y Control de Dueños
                 </h3>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                <div className={styles.formGrid}>
                     
-                    {/* BUSCADOR Y SELECTOR DE CLIENTE (INTEGRADO DE CAJA) */}
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaUser /> Cliente de la Orden</label>
-                            <button type="button" onClick={() => { setModoNuevoCliente(!modoNuevoCliente); setIdClienteSeleccionado(null); }} style={{ background: '#581c7e', border: 'none', color: '#fff', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    {/* BUSCADOR Y SELECTOR DE CLIENTE */}
+                    <div className={styles.formGroup}>
+                        <div className={styles.labelWrapper}>
+                            <label className={styles.label}>
+                                <FaUser /> Cliente de la Orden
+                            </label>
+                            <button 
+                                type="button" 
+                                onClick={() => { setModoNuevoCliente(!modoNuevoCliente); setIdClienteSeleccionado(null); }} 
+                                className={styles.btnCambiarModo}
+                            >
                                 {modoNuevoCliente ? "🔍 Buscar en base de datos" : "➕ Crear nuevo cliente"}
                             </button>
                         </div>
 
                         {modoNuevoCliente ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} style={estiloInputControlado} placeholder="Nombre completo" required />
-                                <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} style={estiloInputControlado} placeholder="Teléfono" required />
-                                <input type="email" value={emailCliente} onChange={e => setEmailCliente(e.target.value)} style={estiloInputControlado} placeholder="Email (Opcional)" />
+                                <input 
+                                    type="text" 
+                                    value={nombreCliente} 
+                                    onChange={e => setNombreCliente(e.target.value)} 
+                                    className={styles.input} 
+                                    placeholder="Nombre completo" 
+                                    required 
+                                />
+                                <input 
+                                    type="text" 
+                                    value={telefonoCliente} 
+                                    onChange={e => setTelefonoCliente(e.target.value)} 
+                                    className={styles.input} 
+                                    placeholder="Teléfono" 
+                                    required 
+                                />
+                                <input 
+                                    type="email" 
+                                    value={emailCliente} 
+                                    onChange={e => setEmailCliente(e.target.value)} 
+                                    className={styles.input} 
+                                    placeholder="Email (Opcional)" 
+                                />
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div style={{ position: 'relative' }}>
-                                    <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-5%)', color: '#64748b', fontSize: '0.8rem' }} />
-                                    <input type="text" placeholder="Filtrar clientes por nombre o celular..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)} style={{ ...estiloInputControlado, paddingLeft: '30px' }} />
+                                <div className={styles.inputIconWrapper}>
+                                    <FaSearch className={styles.inputIcon} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Filtrar clientes por nombre o celular..." 
+                                        value={busquedaCliente} 
+                                        onChange={e => setBusquedaCliente(e.target.value)} 
+                                        className={`${styles.input} ${styles.inputWithIcon}`} 
+                                    />
                                 </div>
-                                <select value={idClienteSeleccionado || 0} onChange={e => setIdClienteSeleccionado(Number(e.target.value))} style={estiloSelectControlado} required>
+                                <select 
+                                    value={idClienteSeleccionado || 0} 
+                                    onChange={e => setIdClienteSeleccionado(Number(e.target.value))} 
+                                    className={styles.select} 
+                                    required
+                                >
                                     <option value={0}>-- Selecciona el Cliente --</option>
                                     {clientesFiltrados.map(c => (
                                         <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
@@ -446,53 +441,81 @@ export const Taller: React.FC = () => {
                         )}
                     </div>
 
-                    <div>
-                        <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}><FaLaptop /> Dispositivo corporativo</label>
-                        <input type="text" value={dispositivo} onChange={e => setDispositivo(e.target.value)} style={estiloInputControlado} placeholder="Ej: PS5 Slim o Nintendo Switch" required />
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}>
+                            <FaLaptop /> Dispositivo corporativo
+                        </label>
+                        <input 
+                            type="text" 
+                            value={dispositivo} 
+                            onChange={e => setDispositivo(e.target.value)} 
+                            className={styles.input} 
+                            placeholder="Ej: PS5 Slim o Nintendo Switch" 
+                            required 
+                        />
                     </div>
                 </div>
 
-                <div style={{ marginBottom: '14px' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Falla y Diagnóstico Inicial</label>
-                    <textarea value={diagnostico} onChange={e => setDiagnostico(e.target.value)} style={{ ...estiloInputControlado, height: '70px', resize: 'none' }} placeholder="Detalles de la falla técnica detectada..." required />
+                <div className={styles.formGroup} style={{ marginBottom: '14px' }}>
+                    <label className={styles.label}>Falla y Diagnóstico Inicial</label>
+                    <textarea 
+                        value={diagnostico} 
+                        onChange={e => setDiagnostico(e.target.value)} 
+                        className={styles.textarea} 
+                        placeholder="Detalles de la falla técnica detectada..." 
+                        required 
+                    />
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Condiciones y Póliza de Garantía a Imprimir</label>
-                    <input type="text" value={notasGarantia} onChange={e => setNotasGarantia(e.target.value)} style={estiloInputControlado} />
+                <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
+                    <label className={styles.label}>Condiciones y Póliza de Garantía a Imprimir</label>
+                    <input 
+                        type="text" 
+                        value={notasGarantia} 
+                        onChange={e => setNotasGarantia(e.target.value)} 
+                        className={styles.input} 
+                    />
                 </div>
 
-                <button type="submit" style={{ padding: '12px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', transition: 'background 0.2s', width: '100%', maxWidth: '300px' }} onMouseEnter={(e) => e.currentTarget.style.background = '#059669'} onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}>
+                <button type="submit" className={styles.btnSubmit}>
                     Ingresar Equipo e Imprimir Soporte
                 </button>
             </form>
 
             {/* TABLERO KANBAN ADAPTATIVO */}
-            <div className="kanban-tablero" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
+            <div className={styles.kanbanTablero}>
                 {['Recibido', 'En Revisión', 'Listo'].map(columna => (
-                    <div className="kanban-columna" key={columna} style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', maxHeight: '500px', overflowY: 'auto' }}>
-                        <h4 style={{ margin: '0 0 12px 0', borderBottom: '2px solid #334155', paddingBottom: '6px', color: columna === 'Listo' ? '#10b981' : columna === 'En Revisión' ? '#38bdf8' : '#f59e0b', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <div className={styles.kanbanColumna} key={columna}>
+                        <h4 className={`${styles.columnHeader} ${getColumnHeaderClass(columna)}`}>
                             {columna} ({ordenes.filter(o => o.estado === columna).length})
                         </h4>
                         
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                        <div className={styles.cardsContainer}>
                             {ordenes.filter(o => o.estado === columna).map(orden => (
-                                <div key={orden.id} style={{ background: '#0f172a', padding: '12px', borderRadius: '8px', border: '1px solid #334155', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                                        <strong style={{ fontSize: '0.9rem', color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>{orden.dispositivo}</strong>
-                                        <span style={{ fontSize: '0.7rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>#{orden.id}</span>
+                                <div key={orden.id} className={styles.card}>
+                                    <div className={styles.cardHeader}>
+                                        <strong className={styles.cardTitle}>{orden.dispositivo}</strong>
+                                        <span className={styles.cardBadge}>#{orden.id}</span>
                                     </div>
-                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>{orden.diagnostico}</p>
-                                    <div style={{ borderTop: '1px solid #1e293b', paddingTop: '6px', marginTop: '2px' }}>
-                                        <small style={{ color: '#cbd5e1', fontWeight: 600, display: 'block' }}>Cliente: {orden.cliente?.nombre}</small>
-                                        <small style={{ color: '#64748b', display: 'block', marginTop: '1px' }}>Tel: {orden.cliente?.telefono}</small>
+                                    <p className={styles.cardDesc}>{orden.diagnostico}</p>
+                                    <div className={styles.cardDivider}>
+                                        <small className={styles.cardClientName}>Cliente: {orden.cliente?.nombre}</small>
+                                        <small className={styles.cardClientPhone}>Tel: {orden.cliente?.telefono}</small>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                                        <button onClick={() => avanzarEstado(orden.id, orden.estado)} style={{ flex: 1, padding: '8px', background: '#581c7e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#4c1d95'} onMouseLeave={(e) => e.currentTarget.style.background = '#581c7e'}>
-                                            {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar Estado'} <FaChevronRight size={10} />
+                                    <div className={styles.cardActions}>
+                                        <button 
+                                            onClick={() => avanzarEstado(orden.id, orden.estado)} 
+                                            className={styles.btnAvanzar}
+                                        >
+                                            {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'} 
+                                            <FaChevronRight size={10} />
                                         </button>
                                         {orden.estado === 'Listo' && (
-                                            <button title="Notificar por WhatsApp de inmediato" onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} style={{ padding: '8px 12px', background: '#25d366', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                            <button 
+                                                title="Notificar por WhatsApp de inmediato" 
+                                                onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} 
+                                                className={styles.btnWhatsAppQuick}
+                                            >
                                                 <FaWhatsapp size={14} />
                                             </button>
                                         )}
@@ -500,7 +523,7 @@ export const Taller: React.FC = () => {
                                 </div>
                             ))}
                             {ordenes.filter(o => o.estado === columna).length === 0 && (
-                                <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748b', textAlign: 'center', padding: '20px 0', margin: 'auto' }}>
+                                <div className={styles.emptyColumnText}>
                                     Sin órdenes en este estado
                                 </div>
                             )}
@@ -509,36 +532,60 @@ export const Taller: React.FC = () => {
                 ))}
             </div>
 
-            {/* MODAL DE LIQUIDACIÓN Y ENTREGA FINAL (CON MÉTODO DE PAGO CORREGIDO) */}
+            {/* MODAL DE LIQUIDACIÓN Y ENTREGA FINAL */}
             {mostrarModalEntrega && ordenAEntregar && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '500px', width: '90%', border: '1px solid #334155', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
                         
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                            <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700 }}><FaTools /> Liquidación de Orden #{ordenAEntregar.id}</h3>
-                            <button onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem' }}><FaTimes /></button>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>
+                                <FaTools /> Liquidación de Orden #{ordenAEntregar.id}
+                            </h3>
+                            <button 
+                                onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} 
+                                className={styles.btnCloseModal}
+                            >
+                                <FaTimes />
+                            </button>
                         </div>
 
-                        <form onSubmit={ejecutarEntregaFinal} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            <div>
-                                <small style={{ color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Equipo a Retirar:</small>
+                        <form onSubmit={ejecutarEntregaFinal} className={styles.modalForm}>
+                            <div className={styles.infoRow}>
+                                <small className={styles.infoRowLabel}>Equipo a Retirar:</small>
                                 <strong>{ordenAEntregar.dispositivo}</strong> ({ordenAEntregar.cliente?.nombre})
                             </div>
 
-                            <div>
-                                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}><FaUser /> Diagnóstico de Reparación Final</label>
-                                <textarea value={diagnosticoFinal} onChange={e => setDiagnosticoFinal(e.target.value)} style={{ ...estiloInputControlado, height: '60px', resize: 'none' }} placeholder="Escriba la solución aplicada..." required />
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaUser /> Diagnóstico de Reparación Final</label>
+                                <textarea 
+                                    value={diagnosticoFinal} 
+                                    onChange={e => setDiagnosticoFinal(e.target.value)} 
+                                    className={styles.textarea} 
+                                    placeholder="Escriba la solución aplicada..." 
+                                    required 
+                                />
                             </div>
 
-                            <div>
-                                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}><FaWrench /> Repuestos / Herramientas Utilizadas</label>
-                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} style={estiloInputControlado} placeholder="Ej: Cambio de puerto HDMI, limpieza interna" required />
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaWrench /> Repuestos / Herramientas Utilizadas</label>
+                                <input 
+                                    type="text" 
+                                    value={herramientasUsadas} 
+                                    onChange={e => setHerramientasUsadas(e.target.value)} 
+                                    className={styles.input} 
+                                    placeholder="Ej: Cambio de puerto HDMI, limpieza interna" 
+                                    required 
+                                />
                             </div>
 
-                            {/* NUEVO DROPDOWN: SELECCIÓN DEL MÉTODO DE PAGO REAL */}
-                            <div>
-                                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}><FaMoneyBillWave /> Método de Pago</label>
-                                <select value={metodoPagoEntrega} onChange={e => setMetodoPagoEntrega(e.target.value)} style={estiloSelectControlado} required>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaMoneyBillWave /> Método de Pago</label>
+                                <select 
+                                    value={metodoPagoEntrega} 
+                                    onChange={e => setMetodoPagoEntrega(e.target.value)} 
+                                    className={styles.select} 
+                                    required
+                                >
                                     <option value="Efectivo">💵 Efectivo</option>
                                     <option value="Transferencia">🏦 Transferencia Bancaria</option>
                                     <option value="Tarjeta">💳 Tarjeta</option>
@@ -546,16 +593,28 @@ export const Taller: React.FC = () => {
                                 </select>
                             </div>
 
-                            <div>
-                                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}><FaMoneyBillWave /> Costo del Servicio Técnico (C$)</label>
-                                <input type="number" value={costoReparacion || ''} onChange={e => setCostoReparacion(Number(e.target.value))} style={{ ...estiloInputControlado, fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981' }} placeholder="Monto cobrado en Córdobas" min={0} required />
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaMoneyBillWave /> Costo del Servicio Técnico (C$)</label>
+                                <input 
+                                    type="number" 
+                                    value={costoReparacion || ''} 
+                                    onChange={e => setCostoReparacion(Number(e.target.value))} 
+                                    className={`${styles.input} ${styles.inputCosto}`} 
+                                    placeholder="Monto cobrado en Córdobas" 
+                                    min={0} 
+                                    required 
+                                />
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <button type="submit" style={{ flex: 1, padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                            <div className={styles.modalActions}>
+                                <button type="submit" className={styles.btnModalConfirm}>
                                     Procesar Salida
                                 </button>
-                                <button type="button" onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} style={{ padding: '12px', background: '#475569', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} 
+                                    className={styles.btnModalCancel}
+                                >
                                     Cancelar
                                 </button>
                             </div>
@@ -564,27 +623,25 @@ export const Taller: React.FC = () => {
                 </div>
             )}
 
-            {/* MODAL INTERACTIVO: CENTRO DE ALERTAS, WHATSAPP E IMPRESIÓN RÁPIDA */}
+            {/* MODAL INTERACTIVO: ACCIÓN RÁPIDA / WHATSAPP / IMPRESIÓN */}
             {mostrarModalAccion && ordenParaAccion && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(6px)' }}>
-                    <div style={{ background: '#1e293b', padding: '26px', borderRadius: '16px', maxWidth: '460px', width: '90%', border: '2px solid #334155', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalSuccessContent}>
                         
-                        <FaCheckCircle size={50} color="#10b981" style={{ marginBottom: '14px' }} />
+                        <FaCheckCircle size={50} className={styles.successIcon} />
                         
-                        <h3 style={{ margin: '0 0 6px 0', fontSize: '1.4rem', color: '#f8fafc' }}>
+                        <h3 className={styles.successTitle}>
                             {tipoAccionContexto === 'AlListo' ? '¡Equipo Marcado Como Listo!' : '¡Orden Procesada Exitosamente!'}
                         </h3>
-                        <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 20px 0' }}>
+                        <p className={styles.successDesc}>
                             Selecciona las acciones comerciales inmediatas para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo}).
                         </p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div className={styles.actionButtonsContainer}>
                             
                             <button 
                                 onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)}
-                                style={{ ...estiloBotonAccionRapida, background: '#25d366' }}
-                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                                className={`${styles.btnActionBase} ${styles.btnActionWhatsApp}`}
                             >
                                 <FaWhatsapp size={18} /> Avisar al Cliente por WhatsApp
                             </button>
@@ -602,9 +659,7 @@ export const Taller: React.FC = () => {
                                         imprimirVoucherEntrega(datosEntregaCache);
                                     }
                                 }}
-                                style={{ ...estiloBotonAccionRapida, background: '#3b82f6' }}
-                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                                className={`${styles.btnActionBase} ${styles.btnActionPrint}`}
                             >
                                 <FaPrint size={18} /> Imprimir Ticket Comercial
                             </button>
@@ -615,7 +670,7 @@ export const Taller: React.FC = () => {
                                     setOrdenParaAccion(null); 
                                     setDatosEntregaCache(null); 
                                 }}
-                                style={{ ...estiloBotonAccionRapida, background: '#475569', marginTop: '10px' }}
+                                className={`${styles.btnActionBase} ${styles.btnActionReturn}`}
                             >
                                 Listo, Volver al Tablero
                             </button>

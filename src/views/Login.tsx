@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import './Login.css';
+import { Cargando } from './Cargando'; // 1. Importamos tu nuevo cargador
+import '../assets/styles/Login/Login.css';
 
 export const Login: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false); // 2. Nuevo estado de éxito
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const { login } = useAuth();
 
@@ -25,18 +27,27 @@ export const Login: React.FC = () => {
         try {
             const res = await api.post('/auth/login', { username, password });
             
-            // CORRECCIÓN AQUÍ: Pasa solo el string del token
-            login(res.data.token); 
-            
-            alert("Bienvenido al sistema");
+            // 3. En lugar del alert, disparamos la animación de éxito
+            const token = res.data.token;
+            setIsSuccess(true);
+
+            // Dejamos correr la animación de carga durante 2.5 segundos
+            setTimeout(() => {
+                login(token); 
+            }, 2500);
+
         } catch (err: any) {
-            // Mejoramos el manejo de error para mostrar el mensaje real del servidor
+            // El manejo de errores del servidor se mantiene limpio
             const mensaje = err.response?.data || 'Error al iniciar sesión';
-            alert(mensaje);
-        } finally {
+            alert(mensaje); // Opcional: Podrías cambiar este alert también por un Toast flotante
             setIsLoading(false);
         }
     };
+
+    // 4. Si la autenticación es exitosa, interceptamos el renderizado aquí
+    if (isSuccess) {
+        return <Cargando username={username} />;
+    }
 
     return (
         <div className="login-container">

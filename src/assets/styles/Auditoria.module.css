@@ -1,0 +1,239 @@
+/* src/components/Auditoria.module.css */
+
+/* Contenedor Principal */
+.container {
+  padding: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  color: #f1f5f9;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #0b0f19; /* Fondo principal unificado */
+  min-height: 100vh;
+}
+
+.title {
+  font-size: 1.8rem;
+  margin-bottom: 24px;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+  .title {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+}
+
+/* ================= BADGES (Etiquetas de estado) ================= */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.badgeAdded {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgeModified {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badgeDeleted {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badgeDefault {
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* ================= LAYOUT DESKTOP (Tabla) ================= */
+.tableWrapper {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  overflow-x: auto;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.tableWrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 4px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.thead {
+  background-color: #030712;
+}
+
+.th {
+  padding: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #1f2937;
+}
+
+.tr {
+  border-bottom: 1px solid #1f2937;
+  transition: background-color 0.2s ease;
+}
+
+.tr:hover {
+  background-color: #1f2937;
+}
+
+.tr:last-child {
+  border-bottom: none;
+}
+
+.td {
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.tdDate {
+  color: #9ca3af;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.tdUser {
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.tdModule {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.tdDetails {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  max-width: 450px;
+  word-break: break-word;
+}
+
+/* ================= LAYOUT MOBILE (Tarjetas) ================= */
+.mobileContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.card:active {
+  transform: scale(0.98);
+  border-color: #374151;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed #1f2937;
+  padding-bottom: 10px;
+}
+
+.cardDate {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardMeta {
+  font-size: 0.9rem;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+}
+
+.cardModule {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.cardDot {
+  margin: 0 8px;
+  color: #4b5563;
+}
+
+.cardUser {
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.cardDetails {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  background: #030712;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 4px;
+  border: 1px solid #1f2937;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  background: #111827;
+  border-radius: 12px;
+  border: 1px dashed #374151;
+}

@@ -1,0 +1,524 @@
+/* Taller.module.css */
+
+/* Contenedor principal */
+.tallerContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  color: #f1f5f9;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .tallerContainer {
+    padding: 12px;
+  }
+}
+
+/* ================= FORMULARIO DE INGRESO ================= */
+.formIngreso {
+  background: #1e293b;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.formTitle {
+  margin: 0 0 20px 0;
+  color: #38bdf8;
+  font-size: 1.3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.labelWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnCambiarModo {
+  background: #581c7e;
+  border: none;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 0.2s ease;
+}
+
+.btnCambiarModo:hover {
+  background: #4c1d95;
+}
+
+/* Inputs, Textareas y Selects unificados */
+.input, .select, .textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.select {
+  cursor: pointer;
+}
+
+.textarea {
+  height: 80px;
+  resize: none;
+}
+
+.inputIconWrapper {
+  position: relative;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.inputWithIcon {
+  padding-left: 36px !important;
+}
+
+.btnSubmit {
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  width: 100%;
+  max-width: 320px;
+}
+
+.btnSubmit:hover {
+  background: #059669;
+}
+
+/* ================= TABLERO KANBAN ================= */
+.kanbanTablero {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.kanbanColumna {
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  max-height: 550px;
+  overflow-y: auto;
+}
+
+.columnHeader {
+  margin: 0 0 14px 0;
+  border-bottom: 2px solid #334155;
+  padding-bottom: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.colRecibido {
+  color: #f59e0b;
+}
+
+.colRevision {
+  color: #38bdf8;
+}
+
+.colListo {
+  color: #10b981;
+}
+
+.cardsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.card {
+  background: #0f172a;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: #475569;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 80%;
+}
+
+.cardBadge {
+  font-size: 0.7rem;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.cardDesc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.cardDivider {
+  border-top: 1px solid #1e293b;
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+.cardClientName {
+  color: #cbd5e1;
+  font-weight: 600;
+  display: block;
+}
+
+.cardClientPhone {
+  color: #64748b;
+  display: block;
+  margin-top: 1px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btnAvanzar {
+  flex: 1;
+  padding: 8px;
+  background: #581c7e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.btnAvanzar:hover {
+  background: #4c1d95;
+}
+
+.btnWhatsAppQuick {
+  padding: 8px 12px;
+  background: #25d366;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.btnWhatsAppQuick:hover {
+  opacity: 0.9;
+}
+
+.emptyColumnText {
+  font-size: 0.8rem;
+  color: #64748b;
+  text-align: center;
+  padding: 30px 0;
+  margin: auto;
+}
+
+@media (max-width: 1024px) {
+  .kanbanTablero {
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .kanbanTablero {
+    grid-template-columns: 1fr;
+  }
+  .kanbanColumna {
+    max-height: 400px;
+  }
+}
+
+/* ================= MODALES ================= */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-Index: 9999;
+  backdrop-filter: blur(4px);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.modalContent {
+  background: #1e293b;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 12px;
+}
+
+.modalTitle {
+  margin: 0;
+  color: #38bdf8;
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnCloseModal {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.btnCloseModal:hover {
+  color: #ef4444;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infoRow {
+  background: #0f172a;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  font-size: 0.9rem;
+}
+
+.infoRowLabel {
+  color: #94a3b8;
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.inputCosto {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: #10b981 !important;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btnModalConfirm {
+  flex: 1;
+  padding: 12px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btnModalConfirm:hover {
+  background: #059669;
+}
+
+.btnModalCancel {
+  padding: 12px 20px;
+  background: #475569;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btnModalCancel:hover {
+  background: #334155;
+}
+
+/* Modal comercial / Éxito */
+.modalSuccessContent {
+  max-width: 460px;
+  text-align: center;
+  padding: 30px 24px;
+}
+
+.successIcon {
+  color: #10b981;
+  margin-bottom: 16px;
+}
+
+.successTitle {
+  margin: 0 0 8px 0;
+  font-size: 1.4rem;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.successDesc {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.actionButtonsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btnActionWhatsApp {
+  background: #25d366;
+}
+
+.btnActionPrint {
+  background: #3b82f6;
+}
+
+.btnActionReturn {
+  background: #475569;
+  margin-top: 8px;
+}
+
+.btnActionBase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+
+.btnActionBase:hover {
+  opacity: 0.9;
+}

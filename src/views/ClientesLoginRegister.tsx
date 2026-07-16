@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import styles from './ClientesLoginRegister.module.css';
+import styles from '../assets/styles/ClientesLogin/ClientesLoginRegister.module.css';
+import { Cargando } from '../views/Cargando'; // Importamos tu cargador animado
 
 interface ClientesLoginRegisterProps {
     alVolver: () => void;
@@ -9,6 +10,8 @@ interface ClientesLoginRegisterProps {
 
 export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ alVolver, alIniciarSesion }) => {
     const [esRegistro, setEsRegistro] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false); // Estado para animación de login exitoso
+    const [isRegisterSuccess, setIsRegisterSuccess] = useState(false); // Estado para registro exitoso
 
     // Estados para el formulario de Login
     const [loginCorreo, setLoginCorreo] = useState('');
@@ -29,20 +32,26 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                 Password: loginPassword
             });
             
-            if (respuesta.data?.token) {
-                localStorage.setItem('token_cliente', respuesta.data.token);
-                api.defaults.headers.common['Authorization'] = `Bearer ${respuesta.data.token}`;
+            const token = respuesta.data?.token;
+            if (token) {
+                localStorage.setItem('token_cliente', token);
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             }
 
-            alert('¡Bienvenido de vuelta!');
+            // Activamos la vista de carga gaming espectacular
+            setIsSuccess(true);
             const datosUsuario = respuesta.data?.cliente || respuesta.data?.usuario || { nombre: loginCorreo };
-            
-            alIniciarSesion(datosUsuario);
-            alVolver();
+
+            // Esperamos 2.5 segundos de animación antes de ingresar al sistema
+            setTimeout(() => {
+                alIniciarSesion(datosUsuario);
+                alVolver();
+            }, 2500);
+
         } catch (error: any) {
             console.error('Error en login:', error);
             if (error.response?.data && typeof error.response.data === 'string') {
-                alert(error.response.data);
+                alert(error.response.data); // Puedes cambiar esto por un Toast de tu preferencia más adelante
             } else {
                 alert('Credenciales incorrectas o error en el servidor');
             }
@@ -68,8 +77,22 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
             };
 
             await api.post('/Auth/registro-cliente', datosRegistro);
-            alert('¡Registro completado con éxito! Ahora puedes iniciar sesión.');
-            setEsRegistro(false); 
+            
+            // Efecto visual rápido de éxito de registro
+            setIsRegisterSuccess(true);
+            
+            // Esperamos 2 segundos para cambiar la pestaña a Login automáticamente
+            setTimeout(() => {
+                setIsRegisterSuccess(false);
+                setEsRegistro(false); // Enviamos al usuario a la vista de login
+                // Limpiamos los campos del registro
+                setRegNombre('');
+                setRegCorreo('');
+                setRegUsuario('');
+                setRegTelefono('');
+                setRegPassword('');
+            }, 2000);
+
         } catch (error: any) {
             console.error('Error en el registro:', error);
             if (error.response?.data?.errors) {
@@ -80,6 +103,11 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
             }
         }
     };
+
+    // 1. Si el inicio de sesión es exitoso, mostramos el portal de carga
+    if (isSuccess) {
+        return <Cargando username={loginCorreo.split('@')[0]} />; 
+    }
 
     return (
         <div className={styles.authBody}>
@@ -132,7 +160,20 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
 
                     {/* COLUMNA DE FORMULARIOS (DERECHA) */}
                     <div className={styles.formColumn}>
-                        {!esRegistro ? (
+                        {isRegisterSuccess ? (
+                            /* 2. Pantalla intermedia rápida al registrarse con éxito */
+                            <div className={styles.formBox} style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                                <div className={styles.successPulseContainer}>
+                                    <div className={styles.successCheckmark}>✓</div>
+                                </div>
+                                <h3 className={styles.formTitle} style={{ marginTop: '1.5rem', color: '#10b981' }}>
+                                    ¡Cuenta Creada!
+                                </h3>
+                                <p className={styles.formSubtitle}>
+                                    Preparando la cabina de acceso... Redirigiéndote al portal de inicio de sesión.
+                                </p>
+                            </div>
+                        ) : !esRegistro ? (
                             <div key="login" className={styles.formBox}>
                                 <h3 className={styles.formTitle}>Acceso de Clientes</h3>
                                 <p className={styles.formSubtitle}>Ingresa tus credenciales para continuar</p>

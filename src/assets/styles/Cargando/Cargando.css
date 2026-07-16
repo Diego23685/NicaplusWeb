@@ -1,0 +1,149 @@
+/* src/components/Cargando.css */
+
+.loading-viewport {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.loading-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+}
+
+/* Animación del Portal del Loader */
+.loader-portal {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.portal-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid transparent;
+}
+
+.ring-outer {
+    width: 120px;
+    height: 120px;
+    border-top-color: #3b82f6; /* Azul brillante */
+    border-bottom-color: #1d4ed8;
+    animation: spin 2s linear infinite;
+}
+
+.ring-middle {
+    width: 90px;
+    height: 90px;
+    border-left-color: #a855f7; /* Púrpura */
+    border-right-color: #7c3aed;
+    animation: spin-reverse 1.5s linear infinite;
+}
+
+.ring-inner {
+    width: 60px;
+    height: 60px;
+    border-top-color: #ec4899; /* Rosa neón */
+    border-bottom-color: #be185d;
+    animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.portal-core {
+    width: 24px;
+    height: 24px;
+    background-color: #f43f5e; /* Coral/Rojo */
+    border-radius: 50%;
+    box-shadow: 0 0 25px #f43f5e, 0 0 50px #be185d;
+    animation: pulse 1.2s ease-in-out infinite alternate;
+}
+
+/* Textos y barra de estado */
+.loading-text-container {
+    text-align: center;
+    color: #ffffff;
+}
+
+.access-granted {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 4px;
+    margin: 0;
+    background: linear-gradient(90deg, #3b82f6, #ec4899);
+    -webkit-background-clip: text; /* Mantenemos el prefijo webkit */
+    background-clip: text;         /* ¡Y añadimos la propiedad estándar! */
+    -webkit-text-fill-color: transparent;
+    animation: text-glow 2s ease-in-out infinite alternate;
+}
+
+.welcome-user {
+    font-size: 1.1rem;
+    color: #9ca3af;
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.highlight-user {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.status-bar {
+    width: 250px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0 auto 0.75rem auto;
+}
+
+.status-progress {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #a855f7, #ec4899);
+    border-radius: 10px;
+    animation: fill-bar 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.loading-subtext {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Animaciones de CSS */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+    to { transform: rotate(-360deg); }
+}
+
+@keyframes pulse {
+    from { transform: scale(0.85); opacity: 0.7; }
+    to { transform: scale(1.15); opacity: 1; }
+}
+
+@keyframes text-glow {
+    from { filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.3)); }
+    to { filter: drop-shadow(0 0 12px rgba(236, 72, 153, 0.6)); }
+}
+
+@keyframes fill-bar {
+    to { width: 100%; }
+}

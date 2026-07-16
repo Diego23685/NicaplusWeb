@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import api from '../../services/api';
 import styles from './HeroInicio.module.css';
 
@@ -34,7 +34,6 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
   const [juegos, setJuegos] = useState<Juego[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
-  // Referencia para controlar el scroll del slider de juegos
   const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,11 +53,19 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Función para mover el scroll horizontalmente
+  // Función para el efecto de luz neón que sigue al cursor
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+  };
+
   const scroll = (direction: 'left' | 'right') => {
     if (sliderRef.current) {
       const { scrollLeft, clientWidth } = sliderRef.current;
-      // Desplazar el 80% del ancho visible para mantener contexto de la última tarjeta
       const scrollAmount = clientWidth * 0.8; 
       sliderRef.current.scrollTo({
         left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
@@ -69,15 +76,16 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
 
   return (
     <div className={styles.heroWrapper}>
-      
       <section className={styles.heroSection}>
         <div className={styles.decorativeGrid} />
+        <div className={styles.ambientLightViolet} />
+        <div className={styles.ambientLightCyan} />
 
         <div className={styles.heroGrid}>
-          {/* LADO IZQUIERDO: TEXTOS Y MÉTRICAS HORIZONTALES */}
+          {/* LADO IZQUIERDO */}
           <header className={styles.heroHeader}>
             <div className={styles.badgeSubli}>
-              <Sparkles style={{ height: '0.85rem', width: '0.85rem', color: '#b002c2' }} />
+              <Sparkles className={styles.sparkleIcon} />
               <span>Plataforma Gaming Oficial</span>
             </div>
 
@@ -100,7 +108,6 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
               </button>
             </div>
 
-            {/* MÉTRICAS EN FILA */}
             <div className={styles.statsRow}>
               <div className={styles.statBox}>
                 <span className={styles.statNum}>500+</span>
@@ -112,7 +119,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
               </div>
               <div className={styles.statBox}>
                 <span className={styles.statNum}>
-                  <ShieldCheck style={{ display: 'inline', height: '1.4rem', width: '1.4rem', color: '#047688', marginRight: '4px', verticalAlign: 'middle' }} />
+                  <ShieldCheck className={styles.shieldIcon} />
                   100%
                 </span>
                 <span className={styles.statLabel}>Garantía segura</span>
@@ -120,12 +127,17 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
             </div>
           </header>
 
-          {/* LADO DERECHO: TARJETA DE PRODUCTO COMPLETA */}
+          {/* LADO DERECHO */}
           <div className={styles.destacadoSection}>
             {!loading && productoHero && (
               <>
                 <h2 className={styles.destacadoTitle}>// PRODUCTO DESTACADO</h2>
-                <div className={styles.heroProductCard}>
+                <div 
+                  className={styles.heroProductCard}
+                  onMouseMove={handleMouseMove}
+                >
+                  {/* Luz de cursor integrada también en la tarjeta del producto */}
+                  <div className={styles.cursorGlow} />
                   
                   <div className={styles.productImgContainer}>
                     <img
@@ -133,6 +145,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
                       src={productoHero.imagenUrl || "https://via.placeholder.com/400"}
                       alt={productoHero.nombre}
                     />
+                    <div className={styles.imgGlowEffect} />
                   </div>
 
                   <div className={styles.productMeta}>
@@ -150,7 +163,6 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
                       Adquirir artículo
                     </button>
                   </div>
-
                 </div>
               </>
             )}
@@ -158,36 +170,40 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
         </div>
       </section>
 
-      {/* SECCIÓN CATEGORÍAS (Se mantiene en cuadrícula que no requiere scroll) */}
+      {/* SECCIÓN CATEGORÍAS (REDISEÑADA A BOTONES COMPACTOS) */}
       {categorias.length > 0 && (
         <section className={styles.sectionContainer}>
           <h3 className={styles.sectionHeading}>
             <Folder style={{ color: '#047688', height: '1.3rem', width: '1.3rem' }} />
             Categorías Populares
           </h3>
-          <div className={styles.tagsGrid}>
-            {categorias.slice(0, 8).map(cat => (
+          <div className={styles.categoriesPillGrid}>
+            {categorias.slice(0, 10).map(cat => (
               <div
                 key={cat.id}
-                className={styles.tagItem}
+                className={styles.categoryPill}
+                onMouseMove={handleMouseMove}
                 onClick={() => setSeccionActiva('productos')}
               >
+                {/* Capas para crear el efecto de vidrio, desenfoque y luz de cursor */}
+                <div className={styles.cursorGlow} />
+                <div className={styles.pillGlassBg} />
+                
                 {cat.imagenUrl && (
                   <img
                     src={cat.imagenUrl}
                     alt={cat.nombre}
-                    className={styles.tagBackground}
+                    className={styles.pillImageBg}
                   />
                 )}
-                <div className={styles.tagOverlay} />
-                <span className={styles.tagText}>{cat.nombre}</span>
+                <span className={styles.pillText}>{cat.nombre}</span>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* SECCIÓN JUEGOS POPULARES MEJORADA */}
+      {/* SECCIÓN JUEGOS POPULARES */}
       {juegos.length > 0 && (
         <section className={styles.sectionContainer}>
           <div className={styles.sectionHeaderWithControls}>
@@ -195,7 +211,6 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
               <Gamepad2 style={{ color: '#b002c2', height: '1.3rem', width: '1.3rem' }} />
               Juegos Populares
             </h3>
-            {/* Controles de navegación visibles solo en pantallas grandes */}
             <div className={styles.sliderControls}>
               <button 
                 className={styles.controlBtn} 
@@ -235,17 +250,17 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
                     <span className={styles.gameIcon}>🎮</span>
                     <h4 className={styles.gameName}>{juego.nombre}</h4>
                     <span className={styles.gameMeta}>Items e insignias</span>
-                    <div className={styles.gameBtn}>Ver productos →</div>
+                    <div className={styles.gameBtn}>
+                      Ver productos <ArrowRight size={14} className={styles.arrowIcon} />
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-            {/* Gradiente sutil al final para denotar que hay más contenido */}
             <div className={styles.sliderFade} />
           </div>
         </section>
       )}
-
     </div>
   );
 };

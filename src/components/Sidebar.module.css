@@ -1,0 +1,214 @@
+/* Sidebar.module.css */
+
+.sidebar {
+  width: 270px;
+  min-width: 270px;
+  background-color: #0f172a; /* Fondo ultra oscuro slate-900 */
+  height: 100vh;
+  max-height: 100vh;
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid #334155;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+/* BRANDING / LOGO */
+.branding {
+  margin-bottom: 24px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 20px;
+  padding-left: 8px;
+}
+
+.brandLogoContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandLogo {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #ffffff;
+  font-size: 1.2rem;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+}
+
+.brandTitle {
+  color: #ffffff;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.brandTeal {
+  color: #06b6d4;
+}
+
+.brandSubtitle {
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* NAVEGACIÓN Y BOTONES */
+.nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 16px;
+  background: transparent;
+  color: #f8fafc;
+  border: none;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 6px;
+  box-sizing: border-box;
+}
+
+/* Iconos dentro de botones inactivos */
+.iconTeal {
+  color: #06b6d4;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+/* Hover de botón inactivo */
+.navButton:hover {
+  background-color: rgba(124, 58, 237, 0.15); /* Purple tint */
+  transform: translateX(4px); /* Desplazamiento sutil hacia la derecha */
+}
+
+/* Botón activo */
+.navButtonActive {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.navButtonActive:hover {
+  transform: none; /* Evita que el botón activo baile al hacer hover */
+}
+
+.navButtonActive .iconTeal {
+  color: #ffffff !important;
+}
+
+/* SECCIÓN INFERIOR: PERFIL */
+.footer {
+  border-top: 1px solid #334155;
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+.profileButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.profileButton:hover {
+  background-color: #1e293b;
+}
+
+.profileButtonActive {
+  background: rgba(6, 182, 212, 0.12) !important;
+  border: 1px solid #06b6d4 !important;
+}
+
+.profileAvatar {
+  background-color: #7c3aed;
+  color: #FFFFFF;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.profileButtonActive .profileAvatar {
+  background-color: #06b6d4;
+}
+
+.profileInfo {
+  overflow: hidden;
+  flex: 1;
+}
+
+.profileName {
+  font-weight: 700;
+  color: #FFFFFF;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.profileRol {
+  color: #94a3b8;
+  display: block;
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+/* BOTÓN DE LOGOUT */
+.logoutButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background-color: #f43f5e;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.logoutButton:hover {
+  background-color: #e11d48;
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+}

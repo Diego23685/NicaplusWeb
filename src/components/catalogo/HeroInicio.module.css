@@ -1,10 +1,10 @@
 /* ==========================================================================
-   1. CONTENEDORES GENERALES Y HERO
+   1. CONTENEDORES GENERALES Y LUCES AMBIENTALES
    ========================================================================== */
 
 .heroWrapper {
   overflow: hidden;
-  background-color: #0b0713;
+  background-color: #07030e;
   color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
   padding-bottom: 5rem;
@@ -12,19 +12,46 @@
 
 .heroSection {
   position: relative;
-  min-height: 90vh;
+  min-height: 95vh;
   display: flex;
   align-items: center;
-  background: radial-gradient(circle at 80% 20%, #1e0933 0%, #0b0713 70%);
+  background: radial-gradient(circle at 50% -20%, #15092b 0%, #07030e 100%);
+}
+
+/* Luces ambientales que dan atmósfera Gaming Premium */
+.ambientLightViolet {
+  position: absolute;
+  top: 10%;
+  right: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(176, 2, 194, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+  pointer-events: none;
+  filter: blur(80px);
+  z-index: 1;
+}
+
+.ambientLightCyan {
+  position: absolute;
+  bottom: 10%;
+  left: 5%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(4, 118, 136, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+  pointer-events: none;
+  filter: blur(80px);
+  z-index: 1;
 }
 
 .decorativeGrid {
   position: absolute;
   inset: 0;
-  opacity: 0.03;
+  opacity: 0.04;
   pointer-events: none;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), 
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 .heroGrid {
@@ -34,20 +61,20 @@
   display: grid;
   max-width: 80rem;
   grid-template-columns: 1fr;
-  gap: 4rem;
-  padding: 6rem 2rem;
+  gap: 5rem;
+  padding: 8rem 2rem 6rem 2rem;
   width: 100%;
   align-items: center;
 }
 
 @media (min-width: 1024px) {
   .heroGrid {
-    grid-template-columns: 1.1fr 0.9fr;
+    grid-template-columns: 1.15fr 0.85fr;
   }
 }
 
 /* ==========================================================================
-   2. TEXTOS, BOTONES Y MÉTRICAS (COLUMNA IZQUIERDA)
+   2. COLUMNA IZQUIERDA (TEXTOS, BOTONES Y MÉTRICAS)
    ========================================================================== */
 
 .heroHeader {
@@ -59,49 +86,62 @@
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   border-radius: 9999px;
-  border: 1px solid rgba(176, 2, 194, 0.3);
-  background: rgba(88, 28, 126, 0.2);
-  padding: 0.5rem 1.2rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #e9bcff;
-  letter-spacing: 0.05em;
+  border: 1px solid rgba(176, 2, 194, 0.35);
+  background: linear-gradient(90deg, rgba(88, 28, 126, 0.25), rgba(176, 2, 194, 0.08));
+  padding: 0.6rem 1.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f3d4ff;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.sparkleIcon {
+  height: 0.9rem;
+  width: 0.9rem;
+  color: #e072ff;
+  animation: pulse 2s infinite ease-in-out;
 }
 
 .titulo {
-  margin-top: 1.5rem;
-  font-size: 2.8rem;
+  margin-top: 1.75rem;
+  font-size: 3rem;
   font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 @media (min-width: 768px) {
-  .titulo { font-size: 4rem; }
+  .titulo { font-size: 4.25rem; }
 }
 
 .textGradient {
-  background: linear-gradient(90deg, #b002c2, #6d28d9, #047688);
+  background: linear-gradient(90deg, #d946ef, #a21caf, #06b6d4);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  font-weight: 950;
+  text-shadow: none;
 }
 
 .subtitulo {
-  margin-top: 1.5rem;
-  font-size: 1.1rem;
-  line-height: 1.6;
-  color: #a49ebd;
-  max-width: 34rem;
+  margin-top: 1.75rem;
+  font-size: 1.15rem;
+  line-height: 1.65;
+  color: #94a3b8;
+  max-width: 36rem;
 }
 
+/* Botones Premium con Efectos de Iluminación */
 .btnGroup {
-  margin-top: 2.5rem;
+  margin-top: 2.75rem;
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
 }
 
@@ -109,48 +149,53 @@
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, #6d28d9, #581c7e);
-  padding: 1rem 2rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #b002c2 0%, #7c018a 100%);
+  padding: 1.1rem 2.2rem;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(109, 40, 217, 0.4);
-  transition: all 0.3s ease;
+  box-shadow: 0 8px 30px rgba(176, 2, 194, 0.35);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btnPrimary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(176, 2, 194, 0.5);
+  box-shadow: 0 15px 35px rgba(176, 2, 194, 0.55);
+  filter: brightness(1.1);
 }
 
 .btnSecondary {
   display: inline-flex;
   align-items: center;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background-color: rgba(255, 255, 255, 0.03);
-  padding: 1rem 2rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(8px);
+  padding: 1.1rem 2.2rem;
   font-size: 0.95rem;
   font-weight: 700;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btnSecondary:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.06);
   border-color: #047688;
+  box-shadow: 0 0 20px rgba(4, 118, 136, 0.25);
+  transform: translateY(-2px);
 }
 
+/* Métricas Optimizadas */
 .statsRow {
-  margin-top: 4rem;
+  margin-top: 4.5rem;
   display: flex;
-  gap: 3rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 2rem;
+  gap: 3.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 2.25rem;
 }
 
 .statBox {
@@ -159,15 +204,28 @@
 }
 
 .statNum {
-  font-size: 2rem;
-  font-weight: 800;
+  font-size: 2.25rem;
+  font-weight: 900;
   color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.shieldIcon {
+  display: inline;
+  height: 1.6rem;
+  width: 1.6rem;
+  color: #22d3ee;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 .statLabel {
-  font-size: 0.85rem;
-  color: #8c85a8;
-  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.4rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* ==========================================================================
@@ -181,41 +239,71 @@
 
 .destacadoTitle {
   font-family: monospace;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: #b002c2;
-  margin-bottom: 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: #d946ef;
+  margin-bottom: 1.25rem;
+  text-shadow: 0 0 10px rgba(217, 70, 239, 0.3);
 }
 
+/* Glassmorphism Extremo y Neón en Tarjeta */
 .heroProductCard {
-  border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(145deg, #161026, #110b1e);
-  padding: 1.5rem;
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(145deg, rgba(22, 16, 38, 0.75) 0%, rgba(13, 8, 24, 0.9) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  padding: 1.75rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.heroProductCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(176, 2, 194, 0.4);
+  box-shadow: 
+    0 40px 80px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(176, 2, 194, 0.15);
 }
 
 .productImgContainer {
   width: 100%;
-  height: 240px;
-  border-radius: 1rem;
+  height: 250px;
+  border-radius: 1.25rem;
   overflow: hidden;
-  background-color: #0b0713;
+  background-color: #07030e;
+  position: relative;
 }
 
 .productImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  filter: saturate(1.05) contrast(1.05);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Destello interior de la imagen en hover */
+.imgGlowEffect {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 120%, rgba(4, 118, 136, 0.3), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
 }
 
 .heroProductCard:hover .productImg {
-  transform: scale(1.04);
+  transform: scale(1.06);
+}
+
+.heroProductCard:hover .imgGlowEffect {
+  opacity: 1;
 }
 
 .productMeta {
@@ -225,26 +313,30 @@
 
 .tagDestacado {
   align-self: flex-start;
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.65rem;
+  font-weight: 800;
   text-transform: uppercase;
-  color: #047688;
-  background: rgba(4, 118, 136, 0.12);
-  padding: 0.25rem 0.6rem;
+  color: #22d3ee;
+  background: rgba(4, 118, 136, 0.15);
+  border: 1px solid rgba(4, 118, 136, 0.25);
+  padding: 0.3rem 0.75rem;
   border-radius: 0.5rem;
+  letter-spacing: 0.05em;
 }
 
 .productName {
-  margin-top: 0.75rem;
-  font-size: 1.5rem;
-  font-weight: 800;
+  margin-top: 0.85rem;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: #ffffff;
 }
 
 .productDesc {
   margin-top: 0.5rem;
   font-size: 0.9rem;
-  color: #928bb0;
-  line-height: 1.4;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 
 .productFooter {
@@ -252,8 +344,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 1.25rem;
 }
 
 .priceWrapper {
@@ -262,154 +354,216 @@
 }
 
 .productPrice {
-  font-size: 1.6rem;
-  font-weight: 900;
+  font-size: 1.75rem;
+  font-weight: 950;
   color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
 .stockBadge {
   font-size: 0.75rem;
-  color: #047688;
+  color: #06b6d4;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
 }
 
 .btnBuy {
-  border-radius: 0.75rem;
-  background-color: #047688;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #047688 0%, #025764 100%);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.9rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
+  padding: 0.85rem 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 15px rgba(4, 118, 136, 0.25);
 }
 
 .btnBuy:hover {
-  background-color: #058fa4;
+  background: linear-gradient(135deg, #058fa4 0%, #036b7a 100%);
   transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(4, 118, 136, 0.45);
 }
 
 /* ==========================================================================
-   4. SECCIÓN DE SECCIONES SECUNDARIAS (ESTILOS COMPARTIDOS)
+   4. CABECERAS DE SECCIONES SECUNDARIAS
    ========================================================================== */
 
 .sectionContainer {
   margin: 0 auto;
   max-width: 80rem;
-  padding: 5rem 2rem 0 2rem;
+  padding: 6rem 2rem 0 2rem;
 }
 
 .sectionHeading {
-  font-size: 1.8rem;
-  font-weight: 800;
-  margin-bottom: 2.5rem;
+  font-size: 2rem;
+  font-weight: 900;
+  margin-bottom: 2.75rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
+  letter-spacing: -0.02em;
 }
 
 /* ==========================================================================
-   5. CATEGORÍAS EN CUADRÍCULA (TAGS GRID)
+   NUEVO GRID DE CATEGORÍAS COMPACTO (CÁPSULAS DE CRISTAL)
    ========================================================================== */
 
-.tagsGrid {
+.categoriesPillGrid {
   display: grid;
-  gap: 1.25rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr)); 
+  gap: 1rem;
+  /* Grid adaptativo súper limpio */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (min-width: 640px) {
-  .tagsGrid {
+  .categoriesPillGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
-  .tagsGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .categoriesPillGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
-.tagItem {
+.categoryPill {
   position: relative;
-  height: 7rem;
-  border-radius: 1rem;
-  overflow: hidden;
+  height: 3.5rem; /* ¡Mucho más pequeños y estilizados! */
+  border-radius: 9999px; /* Forma de píldora/cápsula moderna */
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 1.5rem;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(145deg, #161026, #110b1e);
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.tagItem:hover {
-  transform: translateY(-4px);
-  border-color: #b002c2;
-  box-shadow: 0 12px 24px rgba(176, 2, 194, 0.25);
+/* Efecto de Vidrio Esmerilado de Fondo */
+.pillGlassBg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.015);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 1;
+  transition: background 0.3s ease;
 }
 
-.tagBackground {
+/* Imagen de fondo sutil ultra-difuminada */
+.pillImageBg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.6;
-  transition: transform 0.5s ease;
+  opacity: 0.12;
+  filter: blur(4px) grayscale(40%);
+  z-index: 0;
+  transition: all 0.4s ease;
 }
 
-.tagItem:hover .tagBackground {
-  transform: scale(1.08);
-  opacity: 0.8;
-}
-
-.tagOverlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(11, 7, 19, 0.85), rgba(88, 28, 126, 0.4));
-  z-index: 2;
-  transition: background 0.3s;
-}
-
-.tagItem:hover .tagOverlay {
-  background: linear-gradient(to top, rgba(11, 7, 19, 0.9), rgba(4, 118, 136, 0.5));
-}
-
-.tagText {
+.pillText {
   position: relative;
   z-index: 3;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 750;
+  color: rgba(255, 255, 255, 0.8);
   letter-spacing: 0.03em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   EL "COSO" QUE SIGUE AL CURSOR: EFECTO INTERACTIVO SPOTLIGHT
+   -------------------------------------------------------------------------- */
+
+.cursorGlow {
+  position: absolute;
+  /* Posicionamiento dinámico usando variables de JS */
+  left: var(--mouse-x, 0);
+  top: var(--mouse-y, 0);
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  /* Haz de neón degradado súper suave */
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.22) 0%, rgba(176, 2, 194, 0.05) 50%, transparent 100%);
+  pointer-events: none; /* Evita interferir con los clics */
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   ESTADOS HOVER REACTIVOS
+   -------------------------------------------------------------------------- */
+
+.categoryPill:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(6, 182, 212, 0.4); /* Borde cian reactivo */
+  box-shadow: 
+    0 10px 25px rgba(6, 182, 212, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+/* Activación del haz de luz del cursor en Hover */
+.categoryPill:hover .cursorGlow,
+.heroProductCard:hover .cursorGlow {
+  opacity: 1;
+}
+
+.categoryPill:hover .pillGlassBg {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.categoryPill:hover .pillImageBg {
+  opacity: 0.25;
+  transform: scale(1.15);
+  filter: blur(2px) grayscale(0%);
+}
+
+.categoryPill:hover .pillText {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+  letter-spacing: 0.05em;
+}
+
+/* Ajustes adicionales en la tarjeta destacada para aceptar también la luz de cursor */
+.heroProductCard {
+  overflow: hidden; /* Necesario para contener la luz */
 }
 
 /* ==========================================================================
-   6. CONTROLES Y CABECERA DEL SLIDER DE JUEGOS POPULARES
+   6. CONTROLES Y CABECERA DEL SLIDER DE JUEGOS
    ========================================================================== */
 
 .sectionHeaderWithControls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2.75rem;
 }
 
 .sectionHeadingNoMargin {
-  font-size: 1.8rem;
-  font-weight: 800;
+  font-size: 2rem;
+  font-weight: 900;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .sliderControls {
   display: none;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 @media (min-width: 1024px) {
@@ -419,27 +573,30 @@
 }
 
 .controlBtn {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #ffffff;
   border-radius: 50%;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .controlBtn:hover {
   background-color: #047688;
-  border-color: #047688;
-  transform: scale(1.05);
+  border-color: #22d3ee;
+  color: #ffffff;
+  transform: scale(1.08) translateY(-1px);
+  box-shadow: 0 5px 15px rgba(4, 118, 136, 0.4);
 }
 
 /* ==========================================================================
-   7. SLIDER DE JUEGOS POPULARES (VISTA DE FILA DESLIZABLE OPTIMIZADA)
+   7. SLIDER DE JUEGOS POPULARES (VISTA PREMIUM)
    ========================================================================== */
 
 .sliderOuterContainer {
@@ -452,52 +609,54 @@
   top: 0;
   right: 0;
   bottom: 1.5rem;
-  width: 4rem;
-  background: linear-gradient(to right, transparent, #0b0713);
+  width: 6rem;
+  background: linear-gradient(to right, transparent, #07030e);
   pointer-events: none;
   z-index: 5;
 }
 
 .sliderWrapper {
   display: flex;
-  gap: 1.25rem;
+  gap: 1.5rem;
   overflow-x: auto;
   padding-bottom: 1.5rem;
   scroll-behavior: smooth;
-  scrollbar-width: none; /* Oculta barra en Firefox */
+  scrollbar-width: none;
 }
 
 .sliderWrapper::-webkit-scrollbar {
-  display: none; /* Oculta barra en Chrome/Safari */
+  display: none;
 }
 
 .gameCard {
   position: relative;
-  flex: 0 0 14.5rem; /* Ajustado para cortar intencionalmente la siguiente tarjeta en móvil */
-  height: 20rem;
-  border-radius: 1.25rem;
+  flex: 0 0 15rem;
+  height: 22rem;
+  border-radius: 1.5rem;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 1.25rem;
-  transition: all 0.4s ease;
+  padding: 1.5rem;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (min-width: 768px) {
   .gameCard {
-    flex: 0 0 16rem;
-    height: 22rem;
-    padding: 1.5rem;
+    flex: 0 0 17.5rem;
+    height: 24rem;
+    padding: 1.75rem;
   }
 }
 
 .gameCard:hover {
   transform: translateY(-8px);
-  border-color: #047688;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  border-color: rgba(4, 118, 136, 0.5);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(4, 118, 136, 0.15);
 }
 
 .gameBackground {
@@ -506,7 +665,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s ease;
+  opacity: 0.8;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .gameCard:hover .gameBackground {
@@ -516,7 +676,7 @@
 .gameOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(11, 7, 19, 0.95) 20%, rgba(88, 28, 126, 0.2) 100%);
+  background: linear-gradient(to top, rgba(7, 3, 14, 0.96) 25%, rgba(88, 28, 126, 0.1) 100%);
   z-index: 2;
 }
 
@@ -529,33 +689,69 @@
 .gameIcon {
   font-size: 1.5rem;
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
+  transform: translateY(0);
+  transition: transform 0.3s ease;
+}
+
+.gameCard:hover .gameIcon {
+  transform: translateY(-4px) scale(1.1);
 }
 
 .gameName {
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-size: 1.35rem;
+  font-weight: 900;
   color: #ffffff;
-  line-height: 1.2;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .gameMeta {
   display: block;
   font-size: 0.8rem;
-  color: #928bb0;
-  margin-top: 0.25rem;
+  color: #64748b;
+  margin-top: 0.35rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
+/* Botón interno con animación de flecha */
 .gameBtn {
-  margin-top: 1rem;
+  margin-top: 1.25rem;
   font-size: 0.85rem;
-  font-weight: 700;
-  color: #047688;
-  display: flex;
+  font-weight: 800;
+  color: #06b6d4;
+  display: inline-flex;
   align-items: center;
-  transition: color 0.3s;
+  gap: 0.35rem;
+  transition: color 0.3s ease;
+}
+
+.arrowIcon {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .gameCard:hover .gameBtn {
   color: #ffffff;
+}
+
+.gameCard:hover .arrowIcon {
+  transform: translateX(5px);
+}
+
+/* ==========================================================================
+   8. ANIMACIONES Y DESTELLOS
+   ========================================================================== */
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    filter: drop-shadow(0 0 2px rgba(224, 114, 255, 0.5));
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.8;
+    filter: drop-shadow(0 0 8px rgba(224, 114, 255, 0.8));
+  }
 }
