@@ -660,9 +660,24 @@ export const CatalogosAdmin: React.FC = () => {
                                         </div>
                                     )}
 
+                                    {/* Sección de Foto de Muestra */}
                                     <div style={{ marginTop: '6px' }}>
-                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Foto de Muestra</label>
-                                        <input type="file" accept="image/*" onChange={procesarSubidaImagen} style={{ ...inputEstilo, background: '#0f172a' }} />
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>URL de Imagen o Subir Archivo</label>
+                                        {/* Input para URL manual */}
+                                        <input 
+                                            type="text" 
+                                            placeholder="https://ejemplo.com/foto.jpg" 
+                                            value={prodImagenUrl} 
+                                            onChange={e => setProdImagenUrl(e.target.value)} 
+                                            style={inputEstilo} 
+                                        />
+                                        {/* Input para subir archivo (opcional) */}
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            onChange={procesarSubidaImagen} 
+                                            style={{ ...inputEstilo, background: '#0f172a', marginTop: '6px' }} 
+                                        />
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
