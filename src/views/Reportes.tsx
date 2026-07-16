@@ -199,6 +199,44 @@ export const Reportes: React.FC = () => {
             return isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleDateString();
         };
 
+        // CRUCE DINÁMICO CON ESTADOS DE REACT (ventasHistorial y clientes)
+        const obtenerClienteCruzado = (transaccionReporte: any) => {
+            if (!transaccionReporte) return 'Mostrador General';
+
+            // 1. Buscamos la venta coincidente en el historial completo del frontend
+            const ventaCompleta = ventasHistorial.find(v => v.id === transaccionReporte.id);
+
+            if (ventaCompleta) {
+                // Si la venta del historial ya trae el objeto cliente poblado
+                if (ventaCompleta.cliente) {
+                    const nombreObj = ventaCompleta.cliente.nombre || ventaCompleta.cliente.Nombre;
+                    if (nombreObj) return nombreObj;
+                }
+
+                // Si la venta solo tiene el ID del cliente, lo cruzamos con el estado local de clientes
+                const idCli = ventaCompleta.idCliente || ventaCompleta.IdCliente;
+                if (idCli) {
+                    const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idCli);
+                    if (clienteEncontrado) {
+                        return clienteEncontrado.nombre || clienteEncontrado.Nombre || 'Mostrador General';
+                    }
+                }
+            }
+
+            // 2. Si no se halló en el historial de ventas, intentamos buscar directamente en la lista de clientes
+            // por si la transacción del reporte de casualidad expone algún idCliente o IdCliente
+            const idClienteDirecto = transaccionReporte.idCliente || transaccionReporte.IdCliente;
+            if (idClienteDirecto) {
+                const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idClienteDirecto);
+                if (clienteEncontrado) {
+                    return clienteEncontrado.nombre || clienteEncontrado.Nombre || 'Mostrador General';
+                }
+            }
+
+            // 3. Fallback de seguridad
+            return 'Mostrador General';
+        };
+
         // Cálculos de métricas operativas
         const totalTransacciones = transacciones.length;
         const totalNeto = transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0);
@@ -320,7 +358,6 @@ export const Reportes: React.FC = () => {
                     <tr>
                         <td>
                             <div class="logo-container">
-                                <!-- Icono SVG del Mando/Gema Nicaplus -->
                                 <img src="https://i.imgur.com/Oyiao8C.png" alt="Logo" style="height: 42px; width: auto;" />
                                 <div>
                                     <div class="logo-text">NICA<span class="logo-sub">PLUS GAMING</span></div>
@@ -387,22 +424,42 @@ export const Reportes: React.FC = () => {
                             <th style="width: 90px;">N° Factura</th>
                             <th style="width: 100px;">Fecha</th>
                             <th>Cliente</th>
+                            <th>Detalle Items</th>
                             <th style="width: 110px;">Método Pago</th>
                             <th style="width: 120px; text-align: right;">Monto Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${transacciones.length === 0 
-                            ? `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No hay transacciones registradas en este período.</td></tr>`
-                            : transacciones.map((t: any) => `
-                                <tr>
-                                    <td><strong>#000${t?.id}</strong></td>
-                                    <td>${formatearFechaSegura(t)}</td>
-                                    <td>${t?.cliente?.nombre || t?.cliente?.Nombre || 'Mostrador General'}</td>
-                                    <td><span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${t?.metodoPago}</span></td>
-                                    <td style="text-align: right; font-weight: 600; color: #0f172a;">C$ ${(t?.total ?? 0).toLocaleString()}</td>
-                                </tr>
-                            `).join('')
+                            ? `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No hay transacciones registradas.</td></tr>`
+                            : transacciones.map((t: any) => {
+                                // Buscamos la venta completa para obtener los detalles
+                                const ventaCompleta = ventasHistorial.find(v => v.id === t.id);
+                                const detalles = ventaCompleta?.detalles || [];
+                                
+                                return `
+                                    <tr>
+                                        <td><strong>#000${t?.id}</strong></td>
+                                        <td>${formatearFechaSegura(t)}</td>
+                                        <td>${obtenerClienteCruzado(t)}</td>
+                                        <td>
+                                            <div style="font-size: 9px; color: #475569;">
+                                                ${detalles.map((d: any) => {
+                                                    // BUSCAMOS EL NOMBRE REAL EN TU ESTADO 'productos'
+                                                    const productoEncontrado = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                                                    const nombreProducto = productoEncontrado 
+                                                        ? (productoEncontrado.nombre ?? productoEncontrado.Nombre) 
+                                                        : (d.nombre || `Producto #${d.idProducto}`);
+                                                        
+                                                    return `<div>• ${d.cantidad}x ${nombreProducto}</div>`;
+                                                }).join('')}
+                                            </div>
+                                        </td>
+                                        <td><span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${t?.metodoPago}</span></td>
+                                        <td style="text-align: right; font-weight: 600; color: #0f172a;">C$ ${(t?.total ?? 0).toLocaleString()}</td>
+                                    </tr>
+                                `;
+                            }).join('')
                         }
                     </tbody>
                 </table>
