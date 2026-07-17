@@ -1,0 +1,341 @@
+/* CatalogosAdmin.module.css */
+
+/* Contenedor Principal */
+.container {
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+/* Encabezado */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  color: #38bdf8;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.subtitle {
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+  font-size: 0.9rem;
+}
+
+/* Selector de Pestañas (Tabs) */
+.tabContainer {
+  display: flex;
+  background: #1e293b;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.tabButton {
+  padding: 8px 16px;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.tabButton:hover {
+  color: #f1f5f9;
+}
+
+.tabButtonActive {
+  background: #581c7e;
+  color: #ffffff;
+}
+
+/* Botonera y Controles */
+.actionRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btnPrimary {
+  background: #10b981;
+  color: #ffffff;
+}
+.btnPrimary:hover { background: #059669; }
+
+.btnDanger {
+  background: #ef4444;
+  color: #ffffff;
+}
+.btnDanger:hover { background: #dc2626; }
+
+.btnSecondary {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+}
+.btnSecondary:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.btnWarning {
+  background: #f59e0b;
+  color: #0f172a;
+}
+.btnWarning:hover { background: #d97706; }
+
+/* Paneles Secundarios / Formularios */
+.panel {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.panelSubSections {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  width: 100%;
+  background: #0f172a;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px dashed #334155;
+  box-sizing: border-box;
+}
+
+.panelSub {
+  flex: 1 1 300px;
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* Inputs, Textareas y Formularios */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.input, .select, .textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.checkboxLabel {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  user-select: none;
+  margin-top: 8px;
+}
+
+/* Filtros */
+.filterCard {
+  background: #0f172a;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scrollRow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.scrollRow::-webkit-scrollbar {
+  height: 4px;
+}
+.scrollRow::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+
+.pill {
+  padding: 6px 14px;
+  background: #1e293b;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.pill:hover { background: #334155; }
+
+.pillActivePurple { background: #a855f7 !important; font-weight: bold; }
+.pillActiveAmber { background: #f59e0b !important; color: #000 !important; font-weight: bold; }
+
+/* Tablas Modernas */
+.tableWrapper {
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  padding: 12px 8px;
+  border-bottom: 2px solid #334155;
+  color: #94a3b8;
+  text-align: left;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #1e293b;
+  vertical-align: middle;
+}
+
+.table tr:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.miniList {
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 8px;
+  background: #0f172a;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #233249;
+}
+
+.miniListItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 6px;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.8rem;
+}
+
+/* Modales */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: #1e293b;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 460px;
+  width: 90%;
+  border: 1px solid #334155;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 12px;
+}
+
+/* Extras */
+.badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
