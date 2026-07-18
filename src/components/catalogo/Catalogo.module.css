@@ -1712,3 +1712,35 @@
     display: flex !important;
   }
 }
+
+/* ==========================================================================
+   ANIMACIÓN DE OBJETO VOLADOR (FLYING TO CART EFFECT)
+   ========================================================================== */
+.flyingParticle {
+  position: fixed;
+  z-index: 9999;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #b002c2 0%, #047688 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 15px #b002c2, 0 0 30px #047688;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.8s cubic-bezier(0.42, 0, 0.58, 1), 
+              opacity 0.8s ease-in-out, 
+              width 0.8s ease, 
+              height 0.8s ease;
+}
+
+/* Efecto de pulso temporal en el botón del carrito al recibir el impacto */
+@keyframes cartBump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); box-shadow: 0 0 20px #b002c2; }
+  100% { transform: scale(1); }
+}
+
+.cartBumpAnimation {
+  animation: cartBump 0.3s ease-out;
+}

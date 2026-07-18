@@ -304,7 +304,50 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     };
 
-    const agregarAlCarrito = (producto: Producto) => {
+    // 1. Modifica la función interna agregarAlCarrito para soportar la animación
+    const agregarAlCarrito = (producto: Producto, e?: React.MouseEvent) => {
+        // Si se pasa un evento de mouse, disparamos el objeto volador
+        if (e) {
+            // Buscamos los selectores del carrito (soporta tanto la versión desk como mobile)
+            const cartButton = document.querySelector(`.${styles.cartBtnDesk}`) || document.querySelector(`.${styles.cartBtnMobile}`);
+            
+            if (cartButton) {
+                const rectBotón = e.currentTarget.getBoundingClientRect();
+                const rectCarrito = cartButton.getBoundingClientRect();
+
+                // Creamos la partícula voladora elemental
+                const flyElem = document.createElement('div');
+                flyElem.className = styles.flyingParticle;
+                
+                // Si el producto tiene imagen, se la asignamos de fondo a la esfera
+                if (producto.imagenUrl) {
+                    flyElem.style.backgroundImage = `url(${producto.imagenUrl})`;
+                }
+
+                // Posición inicial (donde está el botón que clickeó el usuario)
+                flyElem.style.left = `${rectBotón.left + rectBotón.width / 2 - 25}px`;
+                flyElem.style.top = `${rectBotón.top + rectBotón.height / 2 - 25}px`;
+                document.body.appendChild(flyElem);
+
+                // Pequeño delay frame para que el navegador capte la posición base antes de trasladar
+                requestAnimationFrame(() => {
+                    const xDiff = (rectCarrito.left + rectCarrito.width / 2) - (rectBotón.left + rectBotón.width / 2);
+                    const yDiff = (rectCarrito.top + rectCarrito.height / 2) - (rectBotón.top + rectBotón.height / 2);
+
+                    flyElem.style.transform = `translate(${xDiff}px, ${yDiff}px) scale(0.3)`;
+                    flyElem.style.opacity = '0.2';
+                });
+
+                // Limpieza al terminar el vuelo + Efecto Bump en el carrito
+                setTimeout(() => {
+                    flyElem.remove();
+                    cartButton.classList.add(styles.cartBumpAnimation);
+                    setTimeout(() => cartButton.classList.remove(styles.cartBumpAnimation), 300);
+                }, 800);
+            }
+        }
+
+        // Código original tuyo que gestiona el estado del carrito
         setCarrito(prevCarrito => {
             const existe = prevCarrito.find(item => item.producto.id === producto.id);
             if (existe) {
@@ -543,7 +586,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                             <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
                                             <button 
                                                 className={styles.promoBtn} 
-                                                onClick={() => agregarAlCarrito(productoPrincipal)}
+                                                onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
                                             >
                                                 COMPRAR POR C$ {productoPrincipal.precioVenta}
                                             </button>
@@ -578,7 +621,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     <p>¡Por solo C$ {prod.precioVenta}!</p>
                                                     <button 
                                                         className={styles.sideLink} 
-                                                        onClick={() => agregarAlCarrito(prod)}
+                                                        onClick={(e) => agregarAlCarrito(prod, e)}
                                                     >
                                                         Añadir al carrito
                                                     </button>
@@ -721,7 +764,13 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                                 <button onClick={() => agregarAlCarrito(p)} className={styles.qtyBtn}>+</button>
                                                             </div>
                                                         ) : (
-                                                            <button onClick={() => agregarAlCarrito(p)} className={styles.addBtn}>+ Añadir</button>
+                                                            /* Modifica el botón de añadir dentro de tu mapeo de productosFiltrados (Línea ~540 de tu archivo original) */
+                                                            <button 
+                                                                onClick={(e) => agregarAlCarrito(p, e)} 
+                                                                className={styles.addBtn}
+                                                            >
+                                                                + Añadir
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </div>
