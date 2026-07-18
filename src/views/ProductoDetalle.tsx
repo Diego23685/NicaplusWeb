@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {  } from 'react';
 import { FaArrowLeft, FaShoppingCart, FaCheckCircle, FaExclamationTriangle, FaShieldAlt } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogoDetalle.module.css'; // Usará los mismos estilos base
 
