@@ -976,12 +976,13 @@
   }
 }
 
+/* --- CORREGIDO --- */
 .progressDot {
   display: flex;
   align-items: center;
   gap: 1rem;
   cursor: pointer;
-  group: true;
+  position: relative;
 }
 
 .dotNumber {
@@ -999,7 +1000,20 @@
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Indicador Activo */
+/* --- EFECTO "GROUP HOVER" EN CSS PURO --- */
+/* Cuando pasas el mouse por encima del nodo padre (.progressDot), 
+   afecta directamente a los hijos (.dotNumber y .dotLine) */
+
+.progressDot:hover .dotNumber {
+  color: #ffffff;
+}
+
+.progressDot:hover .dotLine {
+  width: 45px;
+  background-color: #06b6d4;
+}
+
+/* Mantiene el estado activo que controla React por estado */
 .progressDot.dotActive .dotNumber {
   color: #ffffff;
 }
