@@ -56,6 +56,11 @@
   }
 }
 
+#center, main {
+  overflow: visible !important;
+  height: auto !important;
+}
+
 #center {
   display: flex;
   flex-direction: column;

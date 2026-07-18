@@ -2,12 +2,14 @@
    1. CONTENEDORES GENERALES Y LUCES AMBIENTALES
    ========================================================================== */
 
+/* CORREGIDO: overflow: hidden mata a position: sticky */
+/* CORREGIDO: Bloque limpio sin duplicaciones */
 .heroWrapper {
-  overflow: hidden;
   background-color: #07030e;
   color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
   padding-bottom: 5rem;
+  overflow-x: clip; /* Mantiene la seguridad lateral sin intervenir con el anclaje del hijo */
 }
 
 .heroSection {
@@ -754,4 +756,271 @@
     opacity: 0.8;
     filter: drop-shadow(0 0 8px rgba(224, 114, 255, 0.8));
   }
+}
+
+/* ==========================================================================
+   SCROLL SHOWCASE PRESENTATION (EL GRAN ESPECTÁCULO)
+   ========================================================================== */
+
+/* ==========================================================================
+   SCROLL SHOWCASE PRESENTATION (CORRECCIÓN DE ANCLAJE)
+   ========================================================================== */
+
+.showcaseContainer {
+  position: relative; /* ¡OBLIGATORIO! Determina el área total donde la escena estará fija */
+  width: 100%;
+  height: 400vh; /* Otorga 4 pantallas completas de recorrido de scroll */
+  background-color: #07030e;
+  margin-top: 4rem;
+}
+
+.stickyScene {
+  position: sticky;
+  top: 0; /* Se clava justo al llegar al tope de la ventana del navegador */
+  left: 0;
+  width: 100%;
+  height: 100vh; /* Mide exactamente lo que mide la pantalla del usuario */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  z-index: 20;
+  
+  /* Añade esto para asegurar que el navegador no ignore la propiedad en ciertos motores de renderizado */
+  will-change: transform; 
+}
+
+/* Manejo de imágenes de fondo apiladas */
+.showcaseBgWrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.showcaseBgImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  filter: scale(1.1) blur(10px) brightness(0.2) saturate(0.5);
+  transition: opacity 0.8s ease-in-out, filter 0.8s ease-in-out, transform 1.2s ease-out;
+  z-index: 1;
+}
+
+/* Diapositiva de fondo visible entra con zoom cinematográfico */
+.showcaseBgImg.slideImgActive {
+  opacity: 0.35;
+  filter: scale(1) blur(0px) brightness(0.25) saturate(0.9);
+  transform: scale(1.02);
+  z-index: 2;
+}
+
+.showcaseOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(7, 3, 14, 0.4) 0%, #07030e 90%);
+  z-index: 3;
+}
+
+.showcaseGridDecoration {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 4;
+}
+
+/* Distribución del contenido */
+.showcaseContentGrid {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  height: 100%;
+}
+
+@media (min-width: 768px) {
+  .showcaseContentGrid {
+    grid-template-columns: 1.5fr 0.5fr;
+  }
+}
+
+.showcaseLeft {
+  display: flex;
+  flex-direction: column;
+}
+
+.showcaseHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #06b6d4;
+  letter-spacing: 0.2rem;
+}
+
+.showcaseIcon {
+  height: 1.2rem;
+  width: 1.2rem;
+  color: #06b6d4;
+}
+
+/* Marcos contenedores para la animación tipo PowerPoint */
+.textSliderFrame {
+  position: relative;
+  margin-top: 2rem;
+  height: 320px;
+  width: 100%;
+}
+
+.textSlide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(30px);
+  pointer-events: none;
+  transition: opacity 0.6s ease-in-out, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.textSlideActive {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.slideTag {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #b002c2;
+  letter-spacing: 0.05em;
+}
+
+.slideTitle {
+  font-size: 2.5rem;
+  font-weight: 950;
+  color: #ffffff;
+  margin-top: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .slideTitle { font-size: 3.5rem; }
+}
+
+.slideDesc {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  margin-top: 1rem;
+  line-height: 1.6;
+  max-width: 32rem;
+}
+
+.slideBtn {
+  align-self: flex-start;
+  margin-top: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #22d3ee;
+  padding: 0.85rem 1.75rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: rgba(6, 182, 212, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slideBtn:hover {
+  background: #06b6d4;
+  color: #07030e;
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Panel Derecho: Indicadores de Progreso */
+.showcaseRight {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.progressTrack {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 768px) {
+  .progressTrack {
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 0;
+  }
+}
+
+.progressDot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  group: true;
+}
+
+.dotNumber {
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  transition: color 0.3s ease;
+}
+
+.dotLine {
+  width: 30px;
+  height: 2px;
+  background-color: #1e293b;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Indicador Activo */
+.progressDot.dotActive .dotNumber {
+  color: #ffffff;
+}
+
+.progressDot.dotActive .dotLine {
+  width: 50px;
+  background-color: #22d3ee;
+  box-shadow: 0 0 10px #22d3ee;
+}
+
+/* Zonas de control de scroll táctiles/invisibles */
+.scrollTriggersContainer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.scrollTriggerZone {
+  width: 100%;
+  height: 100vh; /* Cada una mide exactamente una pantalla completa */
 }
