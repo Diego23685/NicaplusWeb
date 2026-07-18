@@ -1126,18 +1126,114 @@
   display: none;
 }
 
+/* ==========================================================================
+   FOOTER PREMIUM ESTILO GAMING
+   ========================================================================== */
 .footer {
   background: #060409;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 1.5rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: #475569;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  border-top: 2px solid rgba(176, 2, 194, 0.2); /* Sutil línea neón superior */
+  padding: 3rem 1.5rem 1.5rem 1.5rem;
   position: relative;
   z-index: 1;
+}
+
+.footerContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 2.5rem;
+  padding-bottom: 2rem;
+}
+
+.footerBrandColumn .brandText {
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.footerDescription {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.footerInfoColumn h4,
+.footerSocialColumn h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #047688; /* Detalle cian del e-commerce */
+  margin: 0 0 1rem 0;
+  letter-spacing: 0.05em;
+}
+
+.footerInfoLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 0.75rem;
+}
+
+.contactIcon {
+  color: #b002c2; /* Detalle morado neón para los iconos decorativos */
+}
+
+.socialIconsRow {
+  display: flex;
+  gap: 1rem;
+}
+
+.socialIconBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.socialIconBtn:hover {
+  color: #ffffff;
+  background: rgba(176, 2, 194, 0.15);
+  border-color: #b002c2;
+  box-shadow: 0 0 12px rgba(176, 2, 194, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Barra inferior de Copyright */
+.footerBottomBar {
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+/* Adaptación exacta para Móviles */
+@media (max-width: 768px) {
+  .footerContainer {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: left;
+  }
+  
+  .footerDescription {
+    max-width: 100%;
+  }
 }
 
 /* ==========================================================================

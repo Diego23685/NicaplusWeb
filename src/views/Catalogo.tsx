@@ -5,7 +5,7 @@ import {
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
     FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
     FaArrowLeft, FaMinus, FaPlus, FaSignOutAlt, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave, FaSignInAlt,
-    FaChevronLeft, FaChevronRight, FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen
+    FaChevronLeft, FaChevronRight, FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen, FaFacebook, FaInstagram,
 } from 'react-icons/fa';
 
 // Diccionario de iconos según el nombre de la categoría
@@ -772,9 +772,50 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 )}
             </main>
 
+            {/* ==========================================================================
+                          FOOTER / PIE DE PÁGINA PREMIUM
+            ========================================================================== */}
             <footer className={styles.footer}>
-                <div>&copy; {new Date().getFullYear()} Nicaplus Gaming. Todos los derechos reservados.</div>
-                <div className={styles.footerLocation}>León, Nicaragua.</div>
+                <div className={styles.footerContainer}>
+                    {/* Columna 1: Sobre la marca */}
+                    <div className={styles.footerBrandColumn}>
+                        <div className={styles.brandText}>Nicaplus Gaming</div>
+                        <p className={styles.footerDescription}>
+                            Tu plataforma gaming oficial. Todo lo que necesitas para potenciar tu experiencia setup con soporte inmediato.
+                        </p>
+                    </div>
+
+                    {/* Columna 2: Datos de Contacto */}
+                    <div className={styles.footerInfoColumn}>
+                        <h4>Contacto</h4>
+                        <div className={styles.footerInfoLink}>
+                            <FaWhatsapp size={14} className={styles.contactIcon} />
+                            <span>+505 8787-0821</span> {/* Cambia por tu número real */}
+                        </div>
+                        <div className={styles.footerInfoLink}>
+                            <FaMapMarkerAlt size={14} className={styles.contactIcon} />
+                            <span>De la estatua de la madre 1c y media al norte, León, Nicaragua.</span>
+                        </div>
+                    </div>
+
+                    {/* Columna 3: Redes Sociales */}
+                    <div className={styles.footerSocialColumn}>
+                        <h4>Síguenos</h4>
+                        <div className={styles.socialIconsRow}>
+                            <a href="https://www.facebook.com/profile.php?id=100088876057372" target="_blank" rel="noopener noreferrer" className={styles.socialIconBtn} aria-label="Facebook">
+                                <FaFacebook size={18} />
+                            </a>
+                            <a href="https://www.instagram.com/nicaplusgaming?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className={styles.socialIconBtn} aria-label="Instagram">
+                                <FaInstagram size={18} />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Línea inferior de derechos reservados */}
+                <div className={styles.footerBottomBar}>
+                    <div>&copy; {new Date().getFullYear()} Venta de celulares y accesorios Nicaplus Gaming. Todos los derechos reservados.</div>
+                </div>
             </footer>
 
             {verModalTerminos && <Terminos alCerrar={() => setVerModalTerminos(false)} />}
