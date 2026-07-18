@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import api from '../services/api';
-import styles from '../components/catalogo/Catalogo.module.css';
+import styles from '../components/catalogo/Catalogo.module.css'
+import detailStyles from '../assets/styles/CatalogoDetalle.module.css'
 import { 
     FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
     FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
     FaArrowLeft, FaMinus, FaPlus, FaSignOutAlt, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave, FaSignInAlt,
     FaChevronLeft, FaChevronRight, FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen, FaFacebook, FaInstagram,
+    FaCheckCircle, FaExclamationTriangle, FaShieldAlt
 } from 'react-icons/fa';
 
 // Diccionario de iconos según el nombre de la categoría
@@ -19,7 +21,6 @@ const obtenerIconoCategoria = (nombre = '') => {
   if (n.includes('pantalla') || n.includes('monitor')) return <FaTv size={24} />;
   if (n.includes('accesorio') || n.includes('cable')) return <FaPlug size={24} />;
   
-  // Icono por defecto en caso de no coincidir, pero en versión neón estilizada
   return <FaFolderOpen size={24} />;
 };
 
@@ -57,7 +58,7 @@ interface ItemCarrito {
     cantidad: number;
 }
 
-type Seccion = 'inicio' | 'nosotros' | 'productos' | 'contacto' | 'carrito';
+type Seccion = 'inicio' | 'nosotros' | 'productos' | 'contacto' | 'carrito' | 'producto-detalle';
 
 interface CatalogoProps {
     alIrAlLogin: () => void;
@@ -66,12 +67,106 @@ interface CatalogoProps {
     alIrAMiCuenta?: () => void;
 }
 
+/* ==========================================================================
+      SUBCOMPONENTE INTERNO: DETALLE DE PRODUCTO (ESTILO AMAZON / ALIEXPRESS)
+   ========================================================================== */
+interface ProductoDetalleProps {
+    producto: Producto;
+    alVolver: () => void;
+    alAgregarAlCarrito: (p: Producto) => void;
+    cantidadEnCarrito: number;
+}
+
+const ProductoDetalle: React.FC<ProductoDetalleProps> = ({ 
+    producto, 
+    alVolver, 
+    alAgregarAlCarrito,
+    cantidadEnCarrito 
+}) => {
+    const hayStock = producto.esDigital || producto.stockActual > 0;
+
+    return (
+        // Cambiado a detailStyles 👇
+        <div className={`${detailStyles.detailViewContainer} ${styles.fadeEntrance}`}>
+            <button className={detailStyles.backToStoreBtn} onClick={alVolver}>
+                <FaArrowLeft /> Volver al catálogo
+            </button>
+
+            <div className={detailStyles.productDetailMainGrid}>
+                <div className={detailStyles.detailImageSection}>
+                    <span className={detailStyles.detailBadge} style={{ background: producto.esDigital ? '#581c7e' : '#047688' }}>
+                        {producto.esDigital ? "ENTREGA DIGITAL" : "PRODUCTO FÍSICO"}
+                    </span>
+                    {producto.imagenUrl ? (
+                        <img src={producto.imagenUrl} alt={producto.nombre} className={detailStyles.detailMainImage} />
+                    ) : (
+                        <div className={detailStyles.detailNoImage}>SIN IMAGEN DE DISPOSITIVO</div>
+                    )}
+                </div>
+
+                <div className={detailStyles.detailInfoSection}>
+                    <h1 className={detailStyles.detailProductTitle}>{producto.nombre}</h1>
+                    
+                    <div className={detailStyles.detailPriceRow}>
+                        <span className={detailStyles.detailPriceLabel}>Precio:</span>
+                        <span className={detailStyles.detailPriceValue}>C$ {producto.precioVenta}</span>
+                    </div>
+
+                    <div className={detailStyles.detailDivider} />
+
+                    <div className={detailStyles.detailStockStatus}>
+                        {hayStock ? (
+                            <span className={detailStyles.stockAvailable}>
+                                <FaCheckCircle /> Disponible {!producto.esDigital && `(${producto.stockActual} unidades en tienda)`}
+                            </span>
+                        ) : (
+                            <span className={detailStyles.stockOut}>
+                                <FaExclamationTriangle /> Agotado temporalmente
+                            </span>
+                        )}
+                    </div>
+
+                    <div className={detailStyles.detailDescriptionBox}>
+                        <h4>Descripción del Producto</h4>
+                        <p>{producto.descripcion}</p>
+                    </div>
+
+                    <div className={detailStyles.detailGarantiaBox}>
+                        <div className={detailStyles.garantiaItem}>
+                            <FaShieldAlt className={styles.contactIcon} /> {/* Mantiene styles para el icono global */}
+                            <div>
+                                <h5>Garantía de Soporte Inmediato</h5>
+                                <p>Procesamiento prioritario directo a tu WhatsApp.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={detailStyles.detailActionsRow}>
+                        <button 
+                            className={detailStyles.detailAddCartBtn}
+                            disabled={!hayStock}
+                            onClick={() => alAgregarAlCarrito(producto)}
+                        >
+                            <FaShoppingCart /> Añadir al carrito 
+                            {cantidadEnCarrito > 0 && ` (${cantidadEnCarrito})`}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ==========================================================================
+                          COMPONENTE PRINCIPAL
+   ========================================================================== */
 export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerrarSesion, alIrAMiCuenta }) => {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [juegos, setJuegos] = useState<Juego[]>([]);
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
     const [seccionActiva, setSeccionActiva] = useState<Seccion>('inicio');
+    const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [menuAbierto, setMenuAbierto] = useState(false);
     const [cargando, setCargando] = useState(true);
@@ -94,7 +189,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const juegoRowRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    // Auto-rellenar datos si el cliente ya está autenticado
     useEffect(() => {
         if (cliente) {
             setNombreCliente(cliente.nombre || cliente.Nombre || '');
@@ -102,7 +196,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     }, [cliente]);
 
-    // Canvas Interactivo Optimizado
+    // Canvas Interactivo
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -265,23 +359,16 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         window.open(`https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
-    // ==========================================================================
-    // HOOKS DE ANUNCIOS DINÁMICOS EXTRAÍDOS AL NIVEL SUPERIOR (CORREGIDO)
-    // ==========================================================================
-    
-    // 1. Banner Principal: El producto de mayor precio
     const productoPrincipal = useMemo<Producto | null>(() => {
         if (productos.length === 0) return null;
         return [...productos].sort((a, b) => b.precioVenta - a.precioVenta)[0];
     }, [productos]);
 
-    // 2. Banners Secundarios: El segundo y tercer producto
     const productosSecundarios = useMemo<Producto[]>(() => {
         if (productos.length < 3) return [];
         return [...productos].sort((a, b) => b.precioVenta - a.precioVenta).slice(1, 3);
     }, [productos]);
 
-    // Filtros de la cuadrícula de productos
     const productosFiltrados = useMemo(() => {
         return productos.filter(p => {
             const cumpleBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -308,6 +395,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             setIdJuegoSeleccionado(null);
         }
         setMenuAbierto(false);
+    };
+
+    const manejarVerDetalle = (p: Producto) => {
+        setProductoSeleccionado(p);
+        setSeccionActiva('producto-detalle');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
@@ -400,7 +493,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         </div>
                         
                         <button 
-                            className={`${styles.cartBtnDesktop} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
+                            className={`${styles.cartBtnDesk} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
                             onClick={() => cambiarSeccion('carrito')} 
                         >
                             <FaShoppingCart size={14} /> 
@@ -439,18 +532,14 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         
                         {seccionActiva === 'productos' && (
                             <div className={styles.fadeEntrance}>
-                                
-                                {/* ==========================================================================
-                                SECCIÓN DE ANUNCIOS DINÁMICOS DESDE LA API
-                                ========================================================================== */}
+                                {/* SECCIÓN DE ANUNCIOS DINÁMICOS */}
                                 <section className={styles.heroPromoSection}>
-                                    {/* Banner Principal Izquierda */}
                                     {productoPrincipal ? (
                                         <div className={styles.mainPromoBanner}>
                                             <div className={styles.promoBadge}>
                                                 {productoPrincipal.esDigital ? "DESTACADO DIGITAL" : "LO MÁS BUSCADO"}
                                             </div>
-                                            <h2 className={styles.promoTitle}>{productoPrincipal.nombre}</h2>
+                                            <h2 className={styles.promoTitle} onClick={() => manejarVerDetalle(productoPrincipal)} style={{cursor: 'pointer'}}>{productoPrincipal.nombre}</h2>
                                             <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
                                             <button 
                                                 className={styles.promoBtn} 
@@ -464,6 +553,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     src={productoPrincipal.imagenUrl} 
                                                     alt="" 
                                                     className={styles.promoAbsoluteImage}
+                                                    onClick={() => manejarVerDetalle(productoPrincipal)}
+                                                    style={{cursor: 'pointer'}}
                                                 />
                                             )}
                                         </div>
@@ -473,40 +564,34 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         </div>
                                     )}
 
-                                    {/* Banners Secundarios Derecha */}
                                     <div className={styles.sidePromoContainer}>
                                         {productosSecundarios.map((prod: Producto, index: number) => (
                                             <div 
                                                 key={prod.id} 
                                                 className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
                                             >
-                                                <div 
-                                                    key={prod.id} 
-                                                    className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
-                                                >
-                                                    <div className={styles.sideBannerContent}>
-                                                        <span className={styles.sideTag}>
-                                                            {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
-                                                        </span>
-                                                        <h3>{prod.nombre}</h3>
-                                                        <p>¡Por solo C$ {prod.precioVenta}!</p>
-                                                        <button 
-                                                            className={styles.sideLink} 
-                                                            onClick={() => agregarAlCarrito(prod)}
-                                                        >
-                                                            Añadir al carrito
-                                                        </button>
-                                                    </div>
-
-                                                    {/* AGREGAMOS LA IMAGEN DE FONDO AQUÍ */}
-                                                    {prod.imagenUrl && (
-                                                        <img 
-                                                            src={prod.imagenUrl} 
-                                                            alt="" 
-                                                            className={styles.sideBannerImage} 
-                                                        />
-                                                    )}
+                                                <div className={styles.sideBannerContent}>
+                                                    <span className={styles.sideTag}>
+                                                        {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
+                                                    </span>
+                                                    <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>{prod.nombre}</h3>
+                                                    <p>¡Por solo C$ {prod.precioVenta}!</p>
+                                                    <button 
+                                                        className={styles.sideLink} 
+                                                        onClick={() => agregarAlCarrito(prod)}
+                                                    >
+                                                        Añadir al carrito
+                                                    </button>
                                                 </div>
+                                                {prod.imagenUrl && (
+                                                    <img 
+                                                        src={prod.imagenUrl} 
+                                                        alt="" 
+                                                        className={styles.sideBannerImage} 
+                                                        onClick={() => manejarVerDetalle(prod)}
+                                                        style={{cursor: 'pointer'}}
+                                                    />
+                                                )}
                                             </div>
                                         ))}
                                         {productosSecundarios.length === 0 && (
@@ -517,9 +602,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     </div>
                                 </section>
 
-                                {/* ==========================================================================
-                                                        SECCIÓN DE CATEGORÍAS EN BURBUJAS CIRCULARES
-                                ========================================================================== */}
+                                {/* SECCIÓN DE CATEGORÍAS */}
                                 <section className={styles.filterSection} aria-label="Categorías">
                                     <div className={styles.filterSectionHeader}>
                                         <h3 className={styles.sectionTitle}><FaTags size={14} /> Categorías</h3>
@@ -530,7 +613,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     </div>
                                     <div className={styles.filterOuterContainer}>
                                         <div className={styles.selectorScrollRow} ref={catRowRef}>
-                                            {/* Burbuja de "Todas las Categorías" con Icono Neon */}
                                             <div 
                                                 onClick={() => setIdCatSeleccionada(null)} 
                                                 className={`${styles.selectorCardItem} ${idCatSeleccionada === null ? styles.selectorActivo : ''}`}
@@ -541,7 +623,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                 <span className={styles.cardText}>Todas</span>
                                             </div>
 
-                                            {/* Mapeo Dinámico de Categorías */}
                                             {categorias.map(c => (
                                                 <div 
                                                     key={c.id} 
@@ -566,9 +647,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     </div>
                                 </section>
 
-                                {/* ==========================================================================
-                                NUEVA SECCIÓN DE JUEGOS EN BURBUJAS CIRCULARES (RECUPERADA)
-                                ========================================================================== */}
+                                {/* SECCIÓN DE JUEGOS */}
                                 <section className={styles.filterSection} aria-label="Juegos">
                                     <div className={styles.filterSectionHeader}>
                                         <h3 className={styles.sectionTitle}><FaGamepad size={14} /> Filtrar por Juego</h3>
@@ -583,7 +662,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                 onClick={() => setIdJuegoSeleccionado(null)} 
                                                 className={`${styles.selectorCardItem} ${idJuegoSeleccionado === null ? styles.selectorActivo : ''}`}
                                             >
-                                                <div className={`${styles.cardImagePlaceholder} ${styles.allOverlay}`}>🎮</div>
+                                                <div className={`${styles.cardImagePlaceholder} ${styles.allOverlay}`}>%-</div>
                                                 <span className={styles.cardText}>Todos los Juegos</span>
                                             </div>
                                             {juegos.map(j => (
@@ -606,7 +685,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     </div>
                                 </section>
 
-                                {/* CUADRÍCULA DE PRODUCTOS DESTACADOS */}
+                                {/* CUADRÍCULA DE PRODUCTOS */}
                                 <div className={styles.productsHeader}>
                                     <h2 className={styles.productsHeaderTitle}>Productos Destacados</h2>
                                 </div>
@@ -616,7 +695,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         const itemEnCarrito = carrito.find(item => item.producto.id === p.id);
                                         return (
                                             <article key={p.id} className={styles.productCard}>
-                                                <div className={styles.imageContainer} onClick={() => agregarAlCarrito(p)}>
+                                                <div className={styles.imageContainer} onClick={() => manejarVerDetalle(p)}>
                                                     {p.imagenUrl ? (
                                                         <img src={p.imagenUrl} alt={p.nombre} className={styles.productImage} loading="lazy" />
                                                     ) : (
@@ -627,7 +706,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     </span>
                                                 </div>
                                                 <div className={styles.cardContent}>
-                                                    <div className={styles.infoWrapper}>
+                                                    <div className={styles.infoWrapper} onClick={() => manejarVerDetalle(p)} style={{ cursor: 'pointer' }}>
                                                         <h3 className={styles.productTitle}>{p.nombre}</h3>
                                                         <p className={styles.productDescription}>{p.descripcion}</p>
                                                     </div>
@@ -651,6 +730,16 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     })}
                                 </div>
                             </div>
+                        )}
+
+                        {/* VISTA DE DETALLE DE PRODUCTO */}
+                        {seccionActiva === 'producto-detalle' && productoSeleccionado && (
+                            <ProductoDetalle 
+                                producto={productoSeleccionado}
+                                alVolver={() => setSeccionActiva('productos')}
+                                alAgregarAlCarrito={agregarAlCarrito}
+                                cantidadEnCarrito={carrito.find(item => item.producto.id === productoSeleccionado.id)?.cantidad || 0}
+                            />
                         )}
 
                         {/* VISTA DEL CARRITO */}
@@ -772,12 +861,9 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 )}
             </main>
 
-            {/* ==========================================================================
-                          FOOTER / PIE DE PÁGINA PREMIUM
-            ========================================================================== */}
+            {/* FOOTER */}
             <footer className={styles.footer}>
                 <div className={styles.footerContainer}>
-                    {/* Columna 1: Sobre la marca */}
                     <div className={styles.footerBrandColumn}>
                         <div className={styles.brandText}>Nicaplus Gaming</div>
                         <p className={styles.footerDescription}>
@@ -785,12 +871,11 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         </p>
                     </div>
 
-                    {/* Columna 2: Datos de Contacto */}
                     <div className={styles.footerInfoColumn}>
                         <h4>Contacto</h4>
                         <div className={styles.footerInfoLink}>
                             <FaWhatsapp size={14} className={styles.contactIcon} />
-                            <span>+505 8787-0821</span> {/* Cambia por tu número real */}
+                            <span>+505 8787-0821</span>
                         </div>
                         <div className={styles.footerInfoLink}>
                             <FaMapMarkerAlt size={14} className={styles.contactIcon} />
@@ -798,7 +883,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         </div>
                     </div>
 
-                    {/* Columna 3: Redes Sociales */}
                     <div className={styles.footerSocialColumn}>
                         <h4>Síguenos</h4>
                         <div className={styles.socialIconsRow}>
@@ -812,7 +896,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     </div>
                 </div>
 
-                {/* Línea inferior de derechos reservados */}
                 <div className={styles.footerBottomBar}>
                     <div>&copy; {new Date().getFullYear()} Venta de celulares y accesorios Nicaplus Gaming. Todos los derechos reservados.</div>
                 </div>

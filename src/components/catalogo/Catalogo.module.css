@@ -33,6 +33,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 2px solid #b002c2;
+  padding: 0 2rem;
 }
 
 .navContainer {
@@ -50,6 +51,7 @@
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+  flex-shrink: 0; /* Evita que el logo se deforme */
 }
 
 .brandIndicator {
@@ -68,53 +70,12 @@
   text-transform: uppercase;
 }
 
-/* 1. El bloque contenedor de la derecha */
-.searchAndCartBlock {
-  display: flex;
-  align-items: center;
-  gap: 1rem; /* Mantiene una separación fija obligatoria entre los elementos */
-  flex-shrink: 0; /* Evita que todo el bloque colapse */
-}
-
-/* 2. El wrapper que envuelve la lupa y el input */
-.searchWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 220px; /* Ancho fijo para que no se achique ni se rompa */
-  min-width: 180px; /* Límite mínimo seguro */
-}
-
-/* Icono de la lupa dentro del input */
-.searchIcon {
-  position: absolute;
-  left: 0.8rem;
-  color: #047688;
-  pointer-events: none;
-}
-
-/* 3. El campo de texto de búsqueda */
-.searchInput {
-  width: 100%;
-  padding: 0.5rem 1rem 0.5rem 2.2rem; /* Espacio izquierdo para que el texto no pise la lupa */
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-  font-size: 0.85rem;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.searchInput:focus {
-  border-color: #b002c2;
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 10px rgba(176, 2, 194, 0.3);
-}
-
+/* El menú central de navegación */
 .navigation {
   display: flex;
   gap: 1.5rem;
+  flex-grow: 1; /* Le permite tomar espacio sobrante de forma elástica */
+  justify-content: center; /* Mantiene Inicio/Tienda perfectamente centrados */
 }
 
 .navTab {
@@ -130,6 +91,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .navTab:hover, .navTabActivo {
@@ -137,19 +99,65 @@
   text-shadow: 0 0 8px rgba(176, 2, 194, 0.6);
 }
 
+/* ==========================================================================
+   BLOQUE DERECHO COMPLETO (BUSCADOR + CARRITO + INGRESAR)
+   ========================================================================== */
+.searchAndCartBlock {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem; /* Espaciado fijo y seguro entre buscador, carrito y auth */
+  flex-shrink: 0; /* Prohíbe de forma estricta que este bloque colapse o se oculte */
+}
+
+/* Wrapper del buscador */
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 240px; 
+  min-width: 180px; 
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.8rem;
+  color: #047688;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2.2rem; 
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.searchInput:focus {
+  border-color: #b002c2;
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 10px rgba(176, 2, 194, 0.3);
+}
+
+/* Botón de Carrito (Versión Escritorio) */
 .cartBtnDesktop {
+  position: relative;
   background: rgba(176, 2, 194, 0.1);
   border: 1px solid #b002c2;
   color: #ffffff;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.2rem;
   border-radius: 2rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   font-weight: 700;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.3s;
+  transition: all 0.25s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -159,16 +167,25 @@
   box-shadow: 0 0 15px rgba(176, 2, 194, 0.5);
 }
 
+/* La Burbuja de Notificación */
 .cartBadgeCount {
+  position: absolute;
+  top: -5px;
+  right: -5px;
   background: #047688;
   color: #ffffff;
   font-size: 0.75rem;
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* 5. Contenedor de Auth (Ingresar / Salir) */
+/* Contenedor de Auth (Ingresar / Salir) */
 .userAuthContainer {
   display: flex;
   align-items: center;
@@ -185,6 +202,7 @@
   cursor: pointer;
   font-size: 0.85rem;
   transition: background 0.2s;
+  white-space: nowrap; /* Evita que la palabra "Ingresar" se rompa en dos líneas */
 }
 
 .btnIngresar:hover {
@@ -201,6 +219,7 @@
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .btnSalir:hover {
@@ -1119,7 +1138,9 @@
 }
 
 .mobileActionsBlock {
-  display: none;
+  display: none; /* Se oculta en escritorio */
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .sidebarMobile, .sidebarOverlay {
@@ -1236,10 +1257,16 @@
   }
 }
 
+@media (max-width: 768px) {
+  .mobileActionsBlock {
+    display: flex; /* Se activa solo en pantallas móviles */
+  }
+}
+
 /* ==========================================================================
    8. MEDIA QUERIES (ADAPTACIÓN MÓVIL EXACTA)
    ========================================================================== */
-@media (max-width: 968px) {
+@media (max-width: 1465px) {
   .heroPromoSection {
     grid-template-columns: 1fr;
   }
@@ -1514,4 +1541,130 @@
   z-index: 1;
   mask-image: linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
   -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
+}
+
+/* ==========================================================================
+   ESTILOS CORREGIDOS PARA EL CARRITO EN EL NAVBAR (ESCRITORIO Y MÓVIL)
+   ========================================================================== */
+
+/* Bloque contenedor que agrupa buscador y carrito en escritorio */
+.searchAndCartBlock {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Botón de Carrito (Versión Escritorio) */
+.cartBtnDesk {
+  position: relative;
+  background: rgba(176, 2, 194, 0.1);
+  border: 1px solid #b002c2;
+  color: #ffffff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cartBtnDesk:hover {
+  background: #b002c2;
+  box-shadow: 0 0 15px rgba(176, 2, 194, 0.5);
+}
+
+/* Estado Activo global */
+.cartBtnActive {
+  background: rgba(176, 2, 194, 0.2) !important;
+  border-color: #b002c2 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(176, 2, 194, 0.4) !important;
+}
+
+/* Contenedor de acciones en móvil (Carrito Express + Hamburguesa) */
+.mobileActionsBlock {
+  display: none; /* Oculto por defecto en pantallas grandes */
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Botón de Carrito (Versión Móvil) */
+.cartBtnMobile {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Formato circular neón ideal para móvil */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  padding: 0;
+}
+
+.cartBtnMobile:hover, .cartBtnMobile.cartBtnActive {
+  border-color: #047688;
+  background: rgba(4, 118, 136, 0.15);
+  box-shadow: 0 0 10px rgba(4, 118, 136, 0.3);
+}
+
+/* Botón Hamburguesa */
+.hamburgerBtn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+/* La Burbuja de Notificación (Compartida para ambos botones) */
+.cartBadgeCount {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #b002c2; 
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px #b002c2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================================
+   CORRECCIÓN DENTRO DE RESPONSIVE (MEDIA QUERY)
+   ========================================================================== */
+@media (max-width: 1465px) {
+  /* Ocultamos el carrito de escritorio */
+  .cartBtnDesk {
+    display: none !important;
+  }
+
+  /* Forzamos a que el contenedor móvil aparezca en su sitio */
+  .mobileActionsBlock {
+    display: flex !important;
+  }
+  
+  /* Eliminamos cualquier propiedad vieja que intente pisar al botón móvil */
+  .cartBtnMobile {
+    display: flex !important;
+  }
 }

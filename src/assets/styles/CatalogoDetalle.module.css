@@ -1,0 +1,241 @@
+/* ==========================================================================
+   INTERFAZ DE DETALLE DE PRODUCTO PREMIUM (AMAZON STYLE)
+   ========================================================================== */
+.detailViewContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.productDetailMainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.5rem;
+  margin-top: 1.5rem;
+  background: rgba(13, 8, 24, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 2.5rem;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+/* Sección Izquierda: Visualización */
+.detailImageSection {
+  position: relative;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(176, 2, 194, 0.1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 400px;
+  overflow: hidden;
+}
+
+.detailMainImage {
+  max-width: 100%;
+  max-height: 450px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.5));
+  transition: transform 0.3s ease;
+}
+
+.detailMainImage:hover {
+  transform: scale(1.03);
+}
+
+.detailBadge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.detailNoImage {
+  color: #475569;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+/* Sección Derecha: Metadata y Compra */
+.detailInfoSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.detailProductTitle {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.detailPriceRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.detailPriceLabel {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.detailPriceValue {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #047688; /* Tu tono cian brillante */
+  text-shadow: 0 0 10px rgba(4, 118, 136, 0.2);
+}
+
+.detailDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 1.5rem 0;
+}
+
+.detailStockStatus {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.stockAvailable {
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.stockOut {
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.detailDescriptionBox h4 {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.detailDescriptionBox p {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.detailGarantiaBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+.garantiaItem {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.garantiaItem h5 {
+  color: #ffffff;
+  margin: 0 0 0.2rem 0;
+  font-size: 0.85rem;
+}
+
+.garantiaItem p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.detailActionsRow {
+  margin-top: auto; /* Empuja el botón al fondo del contenedor flex */
+}
+
+.detailAddCartBtn {
+  width: 100%;
+  background: linear-gradient(135deg, #b002c2 0%, #7e028b 100%);
+  color: white;
+  border: none;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  padding: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(176, 2, 194, 0.3);
+}
+
+.detailAddCartBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(176, 2, 194, 0.5);
+  background: linear-gradient(135deg, #c702db 0%, #9603a6 100%);
+}
+
+.detailAddCartBtn:disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Adaptabilidad a Smartphones */
+@media (max-width: 768px) {
+  .productDetailMainGrid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 1.2rem;
+  }
+  
+  .detailImageSection {
+    min-height: 280px;
+    padding: 1rem;
+  }
+  
+  .detailProductTitle {
+    font-size: 1.5rem;
+  }
+}
+
+.backToStoreBtn {
+  background: transparent;
+  border: 1px solid rgba(4, 118, 136, 0.4);
+  color: #047688;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.backToStoreBtn:hover {
+  background: rgba(4, 118, 136, 0.1);
+  border-color: #047688;
+  box-shadow: 0 0 10px rgba(4, 118, 136, 0.2);
+}
