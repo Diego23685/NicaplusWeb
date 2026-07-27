@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck, ChevronLeft, ChevronRight, ArrowRight, MonitorPlay } from 'lucide-react';
+import { useScroll, useTransform, motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import styles from './HeroInicio.module.css';
 
@@ -41,10 +42,8 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [juegos, setJuegos] = useState<Juego[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  
-  // Estado para rastrear qué "diapositiva" está activa en el scroll
   const [slideActivo, setSlideActivo] = useState<number>(0);
-  
+
   const sliderRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -79,32 +78,25 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
     }
   ];
 
-  // Lógica del Observador de Intersección para cambiar las diapositivas fluidamente al hacer scroll
+  // Configuración de Scroll Driven con Framer Motion
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end end']
+  });
+
+  // Escucha continua del progreso de scroll para actualizar la diapositiva activa
   useEffect(() => {
-    // Un pequeño delay asegura que los nodos existan en el DOM antes de instanciar el Observer
-    const timer = setTimeout(() => {
-      const elementos = document.querySelectorAll(`.${styles.scrollTriggerZone}`);
-      
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = parseInt(entry.target.getAttribute('data-slide-id') || '0', 10);
-            setSlideActivo(id);
-          }
-        });
-      }, {
-        root: null,
-        rootMargin: "0px",
-        threshold: 0.3 // Más sensible: se activa cuando entra el 30% de la zona de scroll
-      });
+    const unsubscribe = scrollYProgress.on('change', (latest) => {
+      const total = diapositivas.length;
+      const index = Math.min(Math.floor(latest * total), total - 1);
+      setSlideActivo(index);
+    });
+    return () => unsubscribe();
+  }, [scrollYProgress, diapositivas.length]);
 
-      elementos.forEach(el => observer.observe(el));
-      
-      return () => observer.disconnect();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
+  // Transformaciones físicas continuas ligadas directamente a la rueda del ratón
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1.2, 1.05]);
+  const bgBrightness = useTransform(scrollYProgress, [0, 0.5, 1], [0.4, 0.25, 0.4]);
 
   useEffect(() => {
     Promise.all([
@@ -119,7 +111,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
         setCategorias(c.data || []);
         setJuegos(j.data || []);
       })
-      .catch(err => console.error("Error en Dashboard Hero:", err))
+      .catch((err) => console.error('Error en Dashboard Hero:', err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -134,7 +126,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
   const scroll = (direction: 'left' | 'right') => {
     if (sliderRef.current) {
       const { scrollLeft, clientWidth } = sliderRef.current;
-      const scrollAmount = clientWidth * 0.8; 
+      const scrollAmount = clientWidth * 0.8;
       sliderRef.current.scrollTo({
         left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
         behavior: 'smooth'
@@ -202,7 +194,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
                   <div className={styles.productImgContainer}>
                     <img
                       className={styles.productImg}
-                      src={productoHero.imagenUrl || "https://via.placeholder.com/400"}
+                      src={productoHero.imagenUrl || 'https://via.placeholder.com/400'}
                       alt={productoHero.nombre}
                     />
                     <div className={styles.imgGlowEffect} />
@@ -228,51 +220,91 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
         </div>
       </section>
 
-      {/* NUEVO: GRAN ESPECTÁCULO (SCROLL SHOWCASE PRESENTATION) */}
+      {/* SHOWCASE CON FRAMER MOTION (CINEMÁTICA REAL) */}
       <section ref={containerRef} className={styles.showcaseContainer}>
-        {/* El contenedor Sticky mantiene la escena fija mientras el usuario scrollea */}
         <div className={styles.stickyScene}>
-          
-          {/* Fondo Dinámico tipo diapositiva */}
-          <div className={styles.showcaseBgWrapper}>
-            {diapositivas.map((slide) => (
-              <img
-                key={slide.id}
-                src={slide.imagenUrl}
-                alt={slide.titulo}
-                className={`${styles.showcaseBgImg} ${slideActivo === slide.id ? styles.slideImgActive : ''}`}
+          {/* Fondo Dinámico con Parallax y Crossfade Cinematográfico */}
+          <motion.div
+            className={styles.showcaseBgWrapper}
+            style={{ scale: bgScale }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={slideActivo}
+                src={diapositivas[slideActivo].imagenUrl}
+                alt={diapositivas[slideActivo].titulo}
+                className={styles.showcaseBgImgActive}
+                initial={{ opacity: 0, filter: 'blur(20px) scale(1.15)' }}
+                animate={{ opacity: 1, filter: 'blur(0px) scale(1)' }}
+                exit={{ opacity: 0, filter: 'blur(20px) scale(0.95)' }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                style={{ filter: `brightness(${bgBrightness.get()})` }}
               />
-            ))}
+            </AnimatePresence>
             <div className={styles.showcaseOverlay} />
             <div className={styles.showcaseGridDecoration} />
-          </div>
+          </motion.div>
 
-          {/* Contenido de la Presentación */}
+          {/* Contenido de la Presentación Animado en Cascada (Stagger) */}
           <div className={styles.showcaseContentGrid}>
             <div className={styles.showcaseLeft}>
               <div className={styles.showcaseHeader}>
                 <MonitorPlay className={styles.showcaseIcon} />
                 <span>NUESTRO STOCK AL DETALLE</span>
               </div>
-              
+
               <div className={styles.textSliderFrame}>
-                {diapositivas.map((slide) => (
-                  <div
-                    key={slide.id}
-                    className={`${styles.textSlide} ${slideActivo === slide.id ? styles.textSlideActive : ''}`}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={slideActivo}
+                    initial={{ opacity: 0, y: 40, rotateX: -15, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, y: 0, rotateX: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: -40, rotateX: 15, filter: 'blur(10px)' }}
+                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    className={styles.textSlideActive}
                   >
-                    <span className={styles.slideTag}>// {slide.tag}</span>
-                    <h2 className={styles.slideTitle}>{slide.titulo}</h2>
-                    <p className={styles.slideDesc}>{slide.descripcion}</p>
-                    <button onClick={() => setSeccionActiva('productos')} className={styles.slideBtn}>
+                    <motion.span
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.15, duration: 0.4 }}
+                      className={styles.slideTag}
+                    >
+                      // {diapositivas[slideActivo].tag}
+                    </motion.span>
+
+                    <motion.h2
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25, duration: 0.5 }}
+                      className={styles.slideTitle}
+                    >
+                      {diapositivas[slideActivo].titulo}
+                    </motion.h2>
+
+                    <motion.p
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.35, duration: 0.5 }}
+                      className={styles.slideDesc}
+                    >
+                      {diapositivas[slideActivo].descripcion}
+                    </motion.p>
+
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.45, duration: 0.4 }}
+                      onClick={() => setSeccionActiva('productos')}
+                      className={styles.slideBtn}
+                    >
                       Explorar esta Línea <ArrowRight size={16} />
-                    </button>
-                  </div>
-                ))}
+                    </motion.button>
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
 
-            {/* Indicadores visuales de diapositiva (Puntos de progreso derecho) */}
+            {/* Indicadores Laterales */}
             <div className={styles.showcaseRight}>
               <div className={styles.progressTrack}>
                 {diapositivas.map((slide) => (
@@ -280,28 +312,28 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
                     key={slide.id}
                     className={`${styles.progressDot} ${slideActivo === slide.id ? styles.dotActive : ''}`}
                     onClick={() => {
-                      const trigger = document.querySelector(`[data-slide-id="${slide.id}"]`);
-                      trigger?.scrollIntoView({ behavior: 'smooth' });
+                      if (containerRef.current) {
+                        const containerTop = containerRef.current.offsetTop;
+                        const totalHeight = containerRef.current.scrollHeight;
+                        const targetScroll = containerTop + (totalHeight / diapositivas.length) * slide.id;
+                        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                      }
                     }}
                   >
                     <span className={styles.dotNumber}>0{slide.id + 1}</span>
-                    <div className={styles.dotLine} />
+                    <motion.div
+                      className={styles.dotLine}
+                      animate={{
+                        width: slideActivo === slide.id ? 50 : 25,
+                        backgroundColor: slideActivo === slide.id ? '#22d3ee' : '#334155'
+                      }}
+                      transition={{ duration: 0.3 }}
+                    />
                   </div>
                 ))}
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Zonas de control de scroll invisibles que manejan el avance de las diapositivas */}
-        <div className={styles.scrollTriggersContainer}>
-          {diapositivas.map((slide) => (
-            <div
-              key={slide.id}
-              className={styles.scrollTriggerZone}
-              data-slide-id={slide.id}
-            />
-          ))}
         </div>
       </section>
 
@@ -313,7 +345,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
             Categorías Populares
           </h3>
           <div className={styles.categoriesPillGrid}>
-            {categorias.slice(0, 10).map(cat => (
+            {categorias.slice(0, 10).map((cat) => (
               <div
                 key={cat.id}
                 className={styles.categoryPill}
@@ -351,7 +383,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
           </div>
           <div className={styles.sliderOuterContainer}>
             <div className={styles.sliderWrapper} ref={sliderRef}>
-              {juegos.map(juego => (
+              {juegos.map((juego) => (
                 <div key={juego.id} className={styles.gameCard} onClick={() => setSeccionActiva('productos')}>
                   {juego.imagenUrl && (
                     <img src={juego.imagenUrl} alt={juego.nombre} className={styles.gameBackground} />
