@@ -124,3 +124,51 @@ code {
 div[class*="mainWrapper"] {
   overflow-x: clip !important;
 }
+
+/* ==========================================================================
+   ESTILO GLOBAL DE SCROLL CON DEGRADADO DINÁMICO REAL (index.css)
+   ========================================================================== */
+
+/* --- NAVEGADORES WEBKIT (Chrome, Edge, Safari, Opera) --- */
+
+::-webkit-scrollbar {
+    width: 10px;  /* Le damos un par de píxeles más para que el degradado luzca brutal */
+    height: 10px;  
+}
+
+/* 1. El carril de fondo TIENE el degradado fijo. 
+      Así el color cambia físicamente de arriba a abajo en todo el panel. */
+::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, #a855f7 0%, #38bdf8 100%);
+    border-radius: 100px;
+    /* Dejamos un margen sutil para que no quede pegado al borde del contenedor */
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 2. La barrita móvil actúa como un "lente de cristal" oscuro y translúcido.
+      Al moverse, revela el color del degradado que está justo debajo. */
+::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.75); /* Color oscuro base del ERP con transparencia */
+    border-radius: 100px;
+    
+    /* El truco clave: Un borde transparente crea el espacio perfecto 
+       para que el carril degradado brille en los costados */
+    border: 2px solid transparent;
+    background-clip: padding-box; 
+    
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Brillo interno de cristal */
+    transition: background 0.2s ease;
+}
+
+/* 3. Al pasar el mouse, el vidrio se aclara un poco dejando ver más el fondo */
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 23, 42, 0.55);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* --- SOPORTE PARA FIREFOX --- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(34, 59, 100) #090d16; 
+}
