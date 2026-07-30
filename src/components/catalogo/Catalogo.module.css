@@ -1099,6 +1099,28 @@
   border-color: #047688;
 }
 
+/* ==========================================================================
+   CORRECCIÓN ESTRICTA: VISIBILIDAD DE SELECTS Y OPCIONES (NICAPLUS)
+   ========================================================================== */
+.inputGroup select {
+  cursor: pointer;
+  /* Forzamos al navegador a renderizar el componente de forma que permita estilos CSS */
+  appearance: normal; 
+  -webkit-appearance: none; /* En caso de que quieras resetearlo completo, pero requiere una flecha manual */
+}
+
+/* Forzar que las opciones del desplegable tengan fondo oscuro y texto claro */
+.inputGroup select option {
+  background-color: #110b21 !important; /* El !important es clave aquí para ganarle al agente del navegador */
+  color: #ffffff !important;            /* Texto blanco legible */
+  padding: 0.5rem;
+}
+
+/* Soporte y limpieza para estados enfocados */
+.inputGroup select:focus {
+  background-color: #110b21; /* Previene parpadeos blancos al hacer foco en móviles */
+}
+
 .totalRowView {
   font-size: 1.2rem;
   font-weight: 800;
