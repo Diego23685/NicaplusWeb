@@ -79,14 +79,6 @@ html, body {
   box-sizing: border-box;
 }
 
-#root, 
-main, 
-#center,
-div[class*="layout"], 
-div[class*="container"] {
-  overflow: visible !important;
-}
-
 h1, h2 {
   font-family: var(--heading);
   font-weight: 500;

@@ -35,30 +35,43 @@ const PanelLayout: React.FC = () => {
     }
 
     return (
-        <div style={{ display: 'flex', background: '#0f172a', height: '100vh', width: '100vw', overflow: 'hidden', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', background: '#0f172a', height: '100vh', width: '100vw', boxSizing: 'border-box', overflow: 'hidden' }}>
             <style>{`
-                @media (max-width: 913px) { .sidebar-desktop { display: none !important; } .header-mobile { display: flex !important; } main { padding: 16px !important; } }
-                @media (min-width: 1024px) { .sidebar-mobile-overlay { display: none !important; } .header-mobile { display: none !important; } }
+                /* Vista Escritorio */
+                .sidebar-desktop { display: block; height: 100%; }
+                .header-mobile { display: none !important; }
+
+                /* Vista Móvil / Tablet */
+                @media (max-width: 1024px) { 
+                    .sidebar-desktop { display: none !important; } 
+                    .header-mobile { display: flex !important; } 
+                    main { padding: 16px !important; } 
+                }
             `}</style>
-            <div className="sidebar-desktop" style={{ height: '100%', display: 'block' }}>
+            
+            <div className="sidebar-desktop">
                 <Sidebar vistaActiva={vistaActiva} setVistaActiva={setVistaActiva} />
             </div>
+
             {sidebarAbierto && (
                 <div className="sidebar-mobile-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.75)', zIndex: 9999, backdropFilter: 'blur(4px)', display: 'flex' }} onClick={() => setSidebarAbierto(false)}>
-                    <div style={{ width: '260px', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                    <div style={{ width: '260px', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', background: '#1e293b' }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => setSidebarAbierto(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', zIndex: 10000 }}><FaTimes /></button>
                         <Sidebar vistaActiva={vistaActiva} setVistaActiva={(vista) => { setVistaActiva(vista); setSidebarAbierto(false); }} />
                     </div>
                 </div>
             )}
+
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                <div className="header-mobile" style={{ height: '56px', background: '#1e293b', borderBottom: '1px solid #334155', alignItems: 'center', padding: '0 16px', boxSizing: 'border-box', display: 'none', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div className="header-mobile" style={{ height: '56px', background: '#1e293b', borderBottom: '1px solid #334155', alignItems: 'center', padding: '0 16px', boxSizing: 'border-box', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                         <FaBars style={{ fontSize: '1.25rem', cursor: 'pointer', color: '#38bdf8' }} onClick={() => setSidebarAbierto(true)} />
                         <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>NICAPLUS &gt; {vistaActiva.toUpperCase()}</h4>
                     </div>
                 </div>
-                <main style={{ flex: 1, padding: '35px', overflowY: 'auto', overflowX: 'hidden', height: '100%', boxSizing: 'border-box' }}>
+                
+                {/* Contenedor principal con scroll independiente */}
+                <main style={{ flex: 1, padding: '35px', overflowY: 'auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
                     {vistaActiva === 'inicio' && <InicioDashboard setVistaActiva={setVistaActiva} />}
                     {vistaActiva === 'caja' && <Caja />}
                     {vistaActiva === 'taller' && <Taller />}

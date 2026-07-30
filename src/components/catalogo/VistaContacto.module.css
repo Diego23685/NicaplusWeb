@@ -55,6 +55,7 @@
 
 .titleGradient {
   background: linear-gradient(135deg, #6d28d9 0%, #bf99fc 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -213,7 +214,7 @@
   height: 250px;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(109, 40, 217, 0.3); /* Púrpura sutil de base */
+  border: 1px solid hwb(263 0% 29% / 0.655); /* Púrpura sutil de base */
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
               0 0 15px rgba(109, 40, 217, 0.15);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
