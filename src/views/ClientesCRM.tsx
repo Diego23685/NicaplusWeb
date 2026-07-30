@@ -32,8 +32,8 @@ export const ClientesCRM: React.FC = () => {
     const [cliTelefono, setCliTelefono] = useState('');
     const [cliEmail, setCliEmail] = useState('');
     const [cliPuntos, setCliPuntos] = useState(0);
-    const [cliEtiquetas, setCliEtiquetas] = useState('');      // <-- Nuevo
-    const [cliObservaciones, setCliObservaciones] = useState(''); // <-- Nuevo
+    const [cliEtiquetas, setCliEtiquetas] = useState('');      
+    const [cliObservaciones, setCliObservaciones] = useState(''); 
 
     useEffect(() => {
         cargarClientes();
@@ -62,7 +62,6 @@ export const ClientesCRM: React.FC = () => {
         }
     };
 
-    // CONTROLADORES DE MODAL CRUDS
     const abrirModalClienteNuevo = () => { 
         setEditandoClienteId(null); 
         setCliNombre(''); 
@@ -95,8 +94,8 @@ export const ClientesCRM: React.FC = () => {
                 telefono: cliTelefono, 
                 email: cliEmail || 'taller@nicaplus.com', 
                 puntosAcumulados: cliPuntos,
-                etiquetas: cliEtiquetas,       // <-- Agregado al payload
-                observaciones: cliObservaciones // <-- Agregado al payload
+                etiquetas: cliEtiquetas,       
+                observaciones: cliObservaciones 
             };
             
             if (editandoClienteId) {
@@ -109,7 +108,6 @@ export const ClientesCRM: React.FC = () => {
             cargarClientes();
             
             if (clienteSeleccionado && clienteSeleccionado.id === editandoClienteId) {
-                // Forzamos la actualización completa volviendo a pedir el historial estructurado
                 seleccionarCliente({ ...clienteSeleccionado, ...payload });
             }
         } catch (err: any) { 
@@ -128,7 +126,7 @@ export const ClientesCRM: React.FC = () => {
             }
             cargarClientes();
         } catch (err: any) {
-            alert("No se pudo eliminar el cliente por restricciones de integridad (posee transacciones vigentes).");
+            alert("No se pudo eliminar el cliente por restricciones de integridad.");
         }
     };
 
@@ -142,9 +140,10 @@ export const ClientesCRM: React.FC = () => {
             
             {/* PANEL IZQUIERDO: BUSCADOR Y LISTA */}
             <div className={styles.crmSidebar}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <h3 className={styles.sidebarTitle} style={{ margin: 0 }}>Directorio CRM</h3>
-                    <button onClick={abrirModalClienteNuevo} className={styles.btnWhatsapp} style={{ background: '#581c7e', padding: '6px 10px', fontSize: '0.8rem' }}>
+                    {/* Botón Estilizado Integrado */}
+                    <button onClick={abrirModalClienteNuevo} className={styles.btnNuevoCliente}>
                         <FaUserPlus /> Nuevo
                     </button>
                 </div>
@@ -171,9 +170,9 @@ export const ClientesCRM: React.FC = () => {
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div className={styles.clientName}>{c.nombre}</div>
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                        <FaEdit size={12} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} />
-                                        <FaTrash size={12} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} />
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <FaEdit size={13} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} />
+                                        <FaTrash size={13} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} />
                                     </div>
                                 </div>
                                 <div className={styles.clientMetaRow}>
@@ -259,7 +258,6 @@ export const ClientesCRM: React.FC = () => {
                                     (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0)}
                                 </h3>
                             </div>
-                            {/* ¡MANDALO AQUÍ! Se alinea perfectamente en la rejilla */}
                             <div className={styles.kpiCardClub}>
                                 <small className={styles.kpiLabel}>PUNTOS CLUB</small>
                                 <h3 className={`${styles.kpiValue} ${styles.valueClub}`}>
@@ -268,7 +266,7 @@ export const ClientesCRM: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* SECCIÓN OBSERVACIONES (Ya no tendrá la tarjeta estorbando abajo) */}
+                        {/* SECCIÓN OBSERVACIONES */}
                         <div className={styles.observacionesBox}>
                             <h4 className={styles.observacionesTitle}>Observaciones del CRM</h4>
                             <p className={styles.observacionesContent}>
@@ -279,7 +277,6 @@ export const ClientesCRM: React.FC = () => {
 
                         {/* CONTENEDOR DE DOS COLUMNAS DE HISTORIAL */}
                         <div className={styles.crmHistoryGrid}>
-                            
                             {/* COLUMNA: HISTORIAL DE COMPRAS */}
                             <div className={styles.crmHistoryColumn}>
                                 <h4 className={styles.columnHeaderCompras}>
@@ -311,8 +308,6 @@ export const ClientesCRM: React.FC = () => {
                                     <FaCalendarAlt /> Estado de Servicios
                                 </h4>
                                 <div className={styles.listWrapper}>
-                                    
-                                    {/* ACTIVOS */}
                                     {((historialData?.serviciosActivos?.tallerEquiposEnRevision?.length > 0) || 
                                       (historialData?.serviciosActivos?.suscripcionesVigentes?.length > 0)) && (
                                         <div className={styles.sectionSubTitle}>ACTIVOS / EN CURSO</div>
@@ -341,7 +336,6 @@ export const ClientesCRM: React.FC = () => {
                                         </div>
                                     ))}
 
-                                    {/* HISTORIAL / VENCIDOS */}
                                     {((historialData?.serviciosVencidos?.tallerEquiposEntregados?.length > 0) || 
                                       (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length > 0)) && (
                                         <div className={styles.sectionSubTitle}>HISTORIAL / VENCIDOS</div>
@@ -367,7 +361,6 @@ export const ClientesCRM: React.FC = () => {
                                         </div>
                                     ))}
 
-                                    {/* SECCIÓN CUENTAS POR COBRAR / DEUDAS */}
                                     <div className={styles.deudaSection}>
                                         <h4 className={styles.deudaTitle}>Estado de Cuenta (Deudas)</h4>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -383,7 +376,7 @@ export const ClientesCRM: React.FC = () => {
                                                 </div>
                                             ))}
                                             {historialData?.historialDeudas?.filter((d: any) => d.saldoPendiente > 0).length === 0 && (
-                                                <small className={styles.noDeudaText}>El cliente no tiene saldos pendientes de pago.</small>
+                                                <small className={styles.noDeudaText}>El cliente no tiene saldos pendientes.</small>
                                             )}
                                         </div>
                                     </div>
@@ -394,53 +387,55 @@ export const ClientesCRM: React.FC = () => {
                 )}
             </div>
 
-            {/* MODAL ENTRADA/EDICIÓN DE CLIENTES INTEGRADO */}
+            {/* MODAL EN CAPA EXTERNA TOTAL (OVERLAY CORREGIDO) */}
             {mostrarModalCliente && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}> 
-                        {/* Agrega una clase .modalContent en tu CSS o usa estilos inline controlados para el tamaño base */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.15rem', fontWeight: 700 }}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>
                                 {editandoClienteId ? <><FaEdit /> Modificar Cliente</> : <><FaUserPlus /> Registrar Cliente</>}
                             </h3>
-                            <button onClick={() => setMostrarModalCliente(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+                            <button onClick={() => setMostrarModalCliente(false)} className={styles.modalCloseBtn}>
+                                <FaTimes />
+                            </button>
                         </div>
-                        <form onSubmit={guardarCliente} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nombre Completo</label>
-                                <input type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} required />
+                        
+                        <form onSubmit={guardarCliente} className={styles.modalForm}>
+                            <div className={styles.formGroup}>
+                                <label>Nombre Completo</label>
+                                <input type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} required />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Teléfono Móvil</label>
-                                <input type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} required />
+                            <div className={styles.formGroup}>
+                                <label>Teléfono Móvil</label>
+                                <input type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} required />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Email</label>
-                                <input type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} />
+                            <div className={styles.formGroup}>
+                                <label>Email</label>
+                                <input type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} />
                             </div>
-                            
-                            {/* NUEVO CAMPO: ETIQUETAS */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Etiquetas (Separadas por comas)</label>
-                                <input type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller, Mayorista" style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} />
+                            <div className={styles.formGroup}>
+                                <label>Etiquetas (Separadas por comas)</label>
+                                <input type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller" />
                             </div>
-
-                            {/* NUEVO CAMPO: OBSERVACIONES */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Observaciones Internas</label>
-                                <textarea value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={3} placeholder="Detalles de comportamiento o notas importantes del cliente..." style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px', resize: 'none', fontFamily: 'inherit' }} />
+                            <div className={styles.formGroup}>
+                                <label>Observaciones Internas</label>
+                                <textarea value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={3} placeholder="Notas de comportamiento del cliente..." />
                             </div>
 
                             {editandoClienteId && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Puntos Club</label>
-                                    <input type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} min={0} />
+                                <div className={styles.formGroup}>
+                                    <label>Puntos Club</label>
+                                    <input type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} min={0} />
                                 </div>
                             )}
                             
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <button type="submit" style={{ flex: 1, background: '#38bdf8', color: '#0f172a', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaSave /> Guardar</button>
-                                <button type="button" onClick={() => setMostrarModalCliente(false)} style={{ background: '#334155', color: '#fff', border: 'none', padding: '10px', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
+                            <div className={styles.modalActions}>
+                                <button type="submit" className={styles.btnGuardar}>
+                                    <FaSave /> Guardar Cliente
+                                </button>
+                                <button type="button" onClick={() => setMostrarModalCliente(false)} className={styles.btnCancelar}>
+                                    Cancelar
+                                </button>
                             </div>
                         </form>
                     </div>
