@@ -226,7 +226,7 @@ export const ClientesCRM: React.FC = () => {
 
                             <div>
                                 <a 
-                                    href={`https://wa.me/${historialData?.cliente.telefono.replace(/[^0-9]/g, '')}`} 
+                                    href={`https://wa.me/505${historialData?.cliente.telefono.replace(/[^0-9]/g, '')}`} 
                                     target="_blank" 
                                     rel="noreferrer"
                                     className={styles.btnWhatsapp}
