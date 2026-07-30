@@ -693,9 +693,20 @@ export const Caja: React.FC = () => {
                                     <div key={item.idProducto} className={styles.cartItem}>
                                         <div className={styles.cartItemMain}>
                                             <div className={styles.cartItemLeft}>
-                                                <button onClick={() => eliminarDelCarrito(item.idProducto)} className={styles.eliminarItem}>
-                                                    <FaTimes size={12} />
+                                                <button onClick={() => eliminarDelCarrito(item.idProducto)} className={styles.eliminarItem} title="Eliminar artículo">
+                                                    <FaTimes size={14} />
                                                 </button>
+                                                <span className={styles.cartItemName}>
+                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(🔄)</span>}
+                                                </span>
+                                            </div>
+                                            <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap' }}>C$ {item.subTotal}</strong>
+                                        </div>
+
+                                        {/* Fila secundaria de controles unificada */}
+                                        <div className={styles.cartItemSubRow}>
+                                            <div className={styles.controlGroup}>
+                                                <span className={styles.cartLabel}>Cant:</span>
                                                 <input 
                                                     type="number" 
                                                     value={item.cantidad} 
@@ -703,36 +714,34 @@ export const Caja: React.FC = () => {
                                                     onChange={(e) => cambiarCantidadManual(item.idProducto, Number(e.target.value))} 
                                                     className={styles.cantInput} 
                                                 />
-                                                <span className={styles.cartItemName}>
-                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(🔄)</span>}
-                                                </span>
                                             </div>
-                                            <strong style={{ fontSize: '0.9rem', color: '#FFFFFF' }}>C$ {item.subTotal}</strong>
-                                        </div>
 
-                                        <div className={styles.cartItemSubRow}>
-                                            <span className={`${styles.cartLabel} ${styles.labelDescuento}`}>Descuento (C$):</span>
-                                            <input 
-                                                type="number" 
-                                                min={0} 
-                                                max={item.precioUnitario} 
-                                                value={item.descuento || 0} 
-                                                onChange={(e) => cambiarDescuentoManual(item.idProducto, Number(e.target.value))} 
-                                                className={styles.smallInput} 
-                                            />
-                                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Base: C$ {item.precioUnitario}</span>
+                                            <div className={styles.controlGroup}>
+                                                <span className={`${styles.cartLabel} ${styles.labelDescuento}`}>Desc (C$):</span>
+                                                <input 
+                                                    type="number" 
+                                                    min={0} 
+                                                    max={item.precioUnitario} 
+                                                    value={item.descuento || 0} 
+                                                    onChange={(e) => cambiarDescuentoManual(item.idProducto, Number(e.target.value))} 
+                                                    className={styles.smallInput} 
+                                                />
+                                            </div>
                                         </div>
 
                                         {pBase?.esSuscripcion && (
                                             <div className={styles.cartItemSubRow}>
-                                                <span className={`${styles.cartLabel} ${styles.labelSuscripcion}`}>Días vigencia:</span>
-                                                <input 
-                                                    type="number" 
-                                                    min={1} 
-                                                    value={item.diasSuscripcion} 
-                                                    onChange={(e) => actualizarDiasItemCarrito(item.idProducto, Number(e.target.value))} 
-                                                    className={styles.smallInput} 
-                                                />
+                                                <div className={styles.controlGroup}>
+                                                    <span className={`${styles.cartLabel} ${styles.labelSuscripcion}`}>Días:</span>
+                                                    <input 
+                                                        type="number" 
+                                                        min={1} 
+                                                        value={item.diasSuscripcion} 
+                                                        onChange={(e) => actualizarDiasItemCarrito(item.idProducto, Number(e.target.value))} 
+                                                        className={styles.smallInput} 
+                                                    />
+                                                </div>
+                                                <span style={{ fontSize: '0.7rem', color: '#64748b', alignSelf: 'center' }}>Base: C$ {item.precioUnitario}</span>
                                             </div>
                                         )}
 

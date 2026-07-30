@@ -34,6 +34,20 @@
   }
 }
 
+/* Por defecto (Pantallas grandes), ocultamos las tarjetas */
+@media (min-width: 769px) {
+  .mobileContainer {
+    display: none !important;
+  }
+}
+
+/* En pantallas móviles (768px o menos), ocultamos la tabla */
+@media (max-width: 768px) {
+  .tableWrapper {
+    display: none !important;
+  }
+}
+
 /* ================= BADGES (Etiquetas de estado) ================= */
 .badge {
   display: inline-block;

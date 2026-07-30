@@ -577,57 +577,59 @@ export const Reportes: React.FC = () => {
                     {cargandoTabla ? (
                         <div style={{ color: '#38bdf8', textAlign: 'center', padding: '15px' }}>Sincronizando transacciones...</div>
                     ) : (
-                        <table className="tablaAuditoria">
-                            <thead>
-                                <tr>
-                                    <th>Factura</th>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Método</th>
-                                    <th>Desglose Items</th>
-                                    <th style={{ textAlign: 'right' }}>Monto</th>
-                                    <th style={{ textAlign: 'center' }}>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {ventasFiltradas.length === 0 ? (
+                        <div className="innerTableScroll">
+                            <table className="tablaAuditoria">
+                                <thead>
                                     <tr>
-                                        <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No se encontraron transacciones registradas.</td>
+                                        <th>Factura</th>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Método</th>
+                                        <th>Desglose Items</th>
+                                        <th style={{ textAlign: 'right' }}>Monto</th>
+                                        <th style={{ textAlign: 'center' }}>Acción</th>
                                     </tr>
-                                ) : (
-                                    ventasFiltradas.map((v) => (
-                                        <tr key={v.id}>
-                                            <td className="facturaId">#000{v.id}</td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>
-                                                {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
-                                            </td>
-                                            <td>{v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General'}</td>
-                                            <td>
-                                                <span className="badgeMetodo">{v.metodoPago}</span>
-                                            </td>
-                                            <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
-                                                {v.detalles?.map((d: any, idx: number) => {
-                                                    const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
-                                                    return (
-                                                        <div key={idx}>
-                                                            {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </td>
-                                            <td style={{ textAlign: 'right' }} className="montoTotal">
-                                                C$ {(v.total ?? 0).toLocaleString()}
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <button onClick={() => abrirEditorVenta(v)} className="btnCorregir">
-                                                    <FaEdit /> Corregir
-                                                </button>
-                                            </td>
+                                </thead>
+                                <tbody>
+                                    {ventasFiltradas.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No se encontraron transacciones registradas.</td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    ) : (
+                                        ventasFiltradas.map((v) => (
+                                            <tr key={v.id}>
+                                                <td className="facturaId">#000{v.id}</td>
+                                                <td style={{ whiteSpace: 'nowrap' }}>
+                                                    {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
+                                                </td>
+                                                <td>{v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General'}</td>
+                                                <td>
+                                                    <span className="badgeMetodo">{v.metodoPago}</span>
+                                                </td>
+                                                <td style={{ color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'normal' }}>
+                                                    {v.detalles?.map((d: any, idx: number) => {
+                                                        const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                                                        return (
+                                                            <div key={idx}>
+                                                                {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </td>
+                                                <td style={{ textAlign: 'right' }} className="montoTotal">
+                                                    C$ {(v.total ?? 0).toLocaleString()}
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <button onClick={() => abrirEditorVenta(v)} className="btnCorregir">
+                                                        <FaEdit /> Corregir
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>

@@ -217,12 +217,26 @@
   margin-left: 0;
 }
 
+/* Rediseño del contenedor para soportar el Layout Flex e Interno */
 .tablaWrapper {
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 12px;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* NUEVO: Contenedor con Scroll e Higiene de Altura Máxima */
+.innerTableScroll {
+  width: 100%;
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 65vh;
+  border: 1px solid #233249;
+  border-radius: 8px;
+  background-color: #0f172a;
+  box-sizing: border-box;
 }
 
 .tablaAuditoria {
@@ -231,19 +245,30 @@
   font-size: 0.85rem;
 }
 
+/* MODIFICADO: Soporte estricto para Headers Sticky */
 .tablaAuditoria th {
-  padding: 12px 10px;
-  border-bottom: 2px solid #334155;
+  position: sticky;
+  top: 0;
+  background-color: #1e293b;
   color: #94a3b8;
-  text-align: left;
+  padding: 12px 14px;
   font-weight: 600;
+  z-index: 10;
+  border-bottom: 2px solid #334155;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .tablaAuditoria td {
-  padding: 12px 10px;
-  border-bottom: 1px solid #334155;
+  padding: 12px 14px;
+  border-bottom: 1px solid #1e293b;
   color: #cbd5e1;
   vertical-align: middle;
+  white-space: nowrap; /* Evita roturas de línea incómodas en datos fijos */
+}
+
+.tablaAuditoria tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.01);
 }
 
 .facturaId {

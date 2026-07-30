@@ -1,46 +1,68 @@
 /* src/components/Caja.module.css */
 
-/* Contenedor Principal */
+/* Contenedor Principal: Bloquea el scroll externo en desktop */
 .container {
-  display: block;
+  display: flex;
+  flex-direction: column;
   padding: 20px;
   width: 100%;
-  max-width: 1600px;
+  max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
   color: #f1f5f9;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #0b0f19;
   min-height: 100vh;
+  height: 100vh; /* Fuerza el alto total de la pantalla */
+  overflow: hidden;
 }
 
-/* Wrapper: Apilado vertical en móviles, fila en escritorio */
+/* Wrapper: Apilado vertical en móviles, fila fluida en escritorio */
 .cajaWrapper {
   display: flex;
   flex-direction: column;
   gap: 20px;
   width: 100%;
+  flex: 1;
+  min-height: 0; /* Corrige bugs de desbordamiento de hijos Flexbox */
 }
 
-@media (min-width: 1630px) {
-  .cajaWrapper {
-    flex-direction: row;
-    align-items: flex-start;
+/* Modales e inputs responsivos en móviles */
+@media (max-width: 1023px) {
+  .container {
+    height: auto;
+    overflow: auto;
   }
+}
+
+/* --- OPTIMIZACIÓN DE PANTALLA PANORÁMICA / LAPTOPS --- */
+@media (min-width: 1024px) {
+  .cajaWrapper {
+    flex-direction: row !important;
+    align-items: stretch; /* Obliga a que ambos paneles midan lo mismo */
+    height: calc(100vh - 40px);
+  }
+  
   .productosPanel {
     flex: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Evita que el grid interno ensanche y tape al carrito */
+    height: 100% !important;
   }
+  
   .carritoPanel {
     flex: 1;
-    min-width: 350px;
-  }
-  .panel {
-    height: calc(100vh - 80px) !important;
+    min-width: 380px;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    height: 100% !important;
   }
 }
 
 /* Panel Base y Carrito Panel */
-.panel, .carritoPanel {
+.panel {
   background: #111827;
   border: 1px solid #1f2937;
   border-radius: 16px;
@@ -48,7 +70,18 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  min-height: 500px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s ease;
+}
+
+.carritoPanel {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   transition: border-color 0.2s ease;
 }
@@ -190,10 +223,10 @@
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 
-/* Listado de Productos */
+/* Listado de Productos con scroll independiente */
 .scrollContainer {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto !important;
   padding-right: 4px;
 }
 
@@ -216,7 +249,7 @@
 /* Tarjeta de Producto (Cuadrícula) */
 .productGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
   gap: 8px;
 }
 
@@ -458,14 +491,15 @@
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  width: 100%;
 }
 
 .cartItemLeft {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 75%;
-  overflow: hidden;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .eliminarItem {
@@ -483,18 +517,6 @@
   color: #f43f5e;
 }
 
-.cantInput {
-  width: 54px;
-  padding: 6px;
-  background: #030712;
-  color: #ffffff;
-  border: 1px solid #1f2937;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 0.85rem;
-  outline: none;
-}
-
 .cartItemName {
   font-size: 0.85rem;
   color: #cbd5e1;
@@ -504,13 +526,20 @@
   white-space: nowrap;
 }
 
+/* Filas secundarias organizadas e inputs flexibles */
 .cartItemSubRow {
-  margin-top: 8px;
+  margin-top: 10px;
   padding-left: 28px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 16px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .cartLabel {
@@ -521,16 +550,30 @@
 .labelDescuento { color: #fbbf24; }
 .labelSuscripcion { color: #f43f5e; }
 
+.cantInput {
+  width: 60px;
+  padding: 6px;
+  background: #030712;
+  color: #ffffff;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
 .smallInput {
   background: #030712;
   color: #ffffff;
   border: 1px solid #1f2937;
   border-radius: 6px;
-  width: 60px;
-  padding: 4px;
+  width: 70px;
+  padding: 6px;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   outline: none;
+  box-sizing: border-box;
 }
 
 .metaInput {

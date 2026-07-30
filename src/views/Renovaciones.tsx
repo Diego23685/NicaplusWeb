@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { FaWhatsapp } from 'react-icons/fa';
+import styles from '../assets/styles/Renovaciones.module.css';
 
-// Interfaces de tipado estricto
 interface Cliente {
     nombre: string;
     telefono?: string;
@@ -43,14 +43,11 @@ export const Renovaciones: React.FC = () => {
     const [suscripcionRenovar, setSuscripcionRenovar] = useState<Suscripcion | null>(null);
     const [monto, setMonto] = useState<number>(0);
     const [metodoPago, setMetodoPago] = useState<string>('Efectivo');
-    
-    // NUEVO ESTADO: Manejo manual de la fecha de pago
     const [fechaPago, setFechaPago] = useState<string>('');
 
     const [mostrarCancelar, setMostrarCancelar] = useState<boolean>(false);
     const [motivoCancelacion, setMotivoCancelacion] = useState<string>('');
 
-    // Función auxiliar para obtener la fecha de hoy en formato local YYYY-MM-DD
     const obtenerFechaLocalHoy = (): string => {
         const hoy = new Date();
         const yyyy = hoy.getFullYear();
@@ -89,7 +86,6 @@ export const Renovaciones: React.FC = () => {
             alert("Este cliente no cuenta con un teléfono registrado.");
             return;
         }
-
         const telefonoLimpio = item.cliente.telefono.replace(/[^0-9]/g, '');
         const fechaFormateada = new Date(item.fechaVencimiento).toLocaleDateString();
 
@@ -110,7 +106,6 @@ export const Renovaciones: React.FC = () => {
         try {
             setCargandoHistorial(true);
             setServicioSeleccionado(suscripcion);
-
             const res = await api.get<HistorialRenovacion[]>(`/renovaciones/suscripcion/${suscripcion.id}`);
             setHistorialRenovaciones(res.data);
             setMostrarHistorial(true);
@@ -134,16 +129,14 @@ export const Renovaciones: React.FC = () => {
                 idSuscripcion: suscripcionRenovar.id,
                 monto: monto,
                 metodoPago: metodoPago,
-                fechaPago: fechaPago, // Se envía de forma estricta la fecha manual del input
+                fechaPago: fechaPago,
                 observacion: `Renovación ${suscripcionRenovar.nombreServicio}`
             };
 
             await api.post('/renovaciones', datos);
             alert("Renovación procesada correctamente.");
-
             setMostrarRenovar(false);
             setSuscripcionRenovar(null);
-
             setCargando(true);
             await cargarSuscripciones();
         } catch (error: any) {
@@ -164,12 +157,10 @@ export const Renovaciones: React.FC = () => {
                 idSuscripcion: suscripcionRenovar.id,
                 motivo: motivoCancelacion
             });
-
             alert("Servicio cancelado correctamente");
             setMostrarCancelar(false);
             setSuscripcionRenovar(null);
             setMotivoCancelacion("");
-
             setCargando(true);
             await cargarSuscripciones();
         } catch (error: any) {
@@ -190,29 +181,25 @@ export const Renovaciones: React.FC = () => {
         return estilos[alerta] || estilos['Normal'];
     };
 
-    const inputEstilo = { padding: '10px 12px', background: '#0f172a', color: '#ffffff', border: '1px solid #334155', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' };
-
     if (cargando) return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Auditando cronología de vencimientos...</div>;
 
     return (
-        <div style={{ color: '#fff', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', textAlign: 'left' }}>
-            
+        <div className={styles.container}>
             {/* ENCABEZADO */}
-            <div>
-                <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.4rem', fontWeight: 700 }}>Control de Renovaciones y Alertas</h3>
-                <p style={{ color: '#94a3b8', margin: '2px 0 0 0', fontSize: '0.85rem' }}>Monitoreo preventivo de cuentas streaming y licencias activas.</p>
+            <div className={styles.header}>
+                <h3>Control de Renovaciones y Alertas</h3>
+                <p>Monitoreo preventivo de cuentas streaming y licencias activas.</p>
             </div>
 
             {/* FILTROS CRÍTICOS */}
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', flexWrap: 'wrap' }}>
+            <div className={styles.filterContainer}>
                 {['Todos', 'Vencido', 'Hoy', '1 Dia', '3 Dias', '7 Dias'].map((tipo) => (
                     <button 
                         key={tipo}
                         onClick={() => setFiltroAlerta(tipo)}
+                        className={styles.filterBtn}
                         style={{
-                            padding: '6px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', transition: 'all 0.2s',
-                            background: filtroAlerta === tipo ? '#581c7e' : '#1e293b',
-                            color: '#fff'
+                            background: filtroAlerta === tipo ? '#581c7e' : '#1e293b'
                         }}
                     >
                         {tipo === 'Todos' ? '👁️ Ver Todas' : tipo === 'Vencido' ? '🛑 Vencidas' : `⏰ ${tipo}`}
@@ -221,117 +208,113 @@ export const Renovaciones: React.FC = () => {
             </div>
 
             {/* BUSCADOR */}
-            <div style={{ position: 'relative', width: '100%' }}>
+            <div className={styles.searchContainer}>
                 <input 
                     type="text" 
                     placeholder="Filtrar por nombre de servicio o nombre de cliente..." 
                     value={busqueda} 
                     onChange={e => setBusqueda(e.target.value)} 
-                    style={{ ...inputEstilo, width: '100%' }} 
+                    className={styles.input} 
                 />
             </div>
 
-            {/* TABLA DE CONTENIDO */}
-            <div style={{ background: '#1e293b', padding: '16px', borderRadius: '12px', border: '1px solid #334155', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '2px solid #334155', color: '#94a3b8', textAlign: 'left' }}>
-                            <th style={{ padding: '10px' }}>Cliente</th>
-                            <th style={{ padding: '10px' }}>Servicio</th>
-                            <th style={{ padding: '10px' }}>Vencimiento</th>
-                            <th style={{ padding: '10px', textAlign: 'center' }}>Estatus Alerta</th>
-                            <th style={{ padding: '10px', textAlign: 'center' }}>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {suscripcionesFiltradas.map((s) => {
-                            const configBadge = badgeEstilo(s.alertaFiltro);
-                            return (
-                                <tr key={s.id} style={{ borderBottom: '1px solid #334155' }}>
-                                    <td style={{ padding: '10px' }}>
-                                        <strong>{s.cliente?.nombre || 'Cliente Genérico'}</strong>
-                                        <small style={{ display: 'block', color: '#64748b' }}>📞 {s.cliente?.telefono || 'Sin número'}</small>
-                                    </td>
-                                    <td style={{ padding: '10px' }}>
-                                        <strong>{s.nombreServicio}</strong>
-                                        <small style={{ display: 'block', color: '#94a3b8', fontSize: '0.75rem', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.detallesCredenciales}</small>
-                                    </td>
-                                    <td style={{ padding: '10px' }}>
-                                        {new Date(s.fechaVencimiento).toLocaleDateString()}
-                                        <small style={{ display: 'block', color: s.diasRestantes < 0 ? '#ef4444' : '#4ade80', fontWeight: 'bold' }}>
-                                            {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
-                                        </small>
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                                        <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', background: configBadge.bg, color: configBadge.color }}>
-                                            {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                                            <button 
-                                                onClick={() => dispararRecordatorioWhatsApp(s)}
-                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#25d366', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}
-                                            >
-                                                <FaWhatsapp /> Avisar
-                                            </button>
+            {/* TABLA DE CONTENIDO CON SCROLL INTELIGENTE */}
+            <div className={styles.tablePanel}>
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Servicio</th>
+                                <th>Vencimiento</th>
+                                <th style={{ textAlign: 'center' }}>Estatus Alerta</th>
+                                <th style={{ textAlign: 'center' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {suscripcionesFiltradas.map((s) => {
+                                const configBadge = badgeEstilo(s.alertaFiltro);
+                                return (
+                                    <tr key={s.id}>
+                                        <td>
+                                            <strong>{s.cliente?.nombre || 'Cliente Genérico'}</strong>
+                                            <small className={styles.subText}>📞 {s.cliente?.telefono || 'Sin número'}</small>
+                                        </td>
+                                        <td>
+                                            <strong>{s.nombreServicio}</strong>
+                                            <small className={styles.subTextCredenciales}>{s.detallesCredenciales}</small>
+                                        </td>
+                                        <td>
+                                            {new Date(s.fechaVencimiento).toLocaleDateString()}
+                                            <small style={{ display: 'block', color: s.diasRestantes < 0 ? '#ef4444' : '#4ade80', fontWeight: 'bold' }}>
+                                                {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
+                                            </small>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <span className={styles.badgeAlert} style={{ background: configBadge.bg, color: configBadge.color }}>
+                                                {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
+                                            </span>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div className={styles.actionsCellWrapper}>
+                                                <button onClick={() => dispararRecordatorioWhatsApp(s)} className={styles.btnAvisar}>
+                                                    <FaWhatsapp /> Avisar
+                                                </button>
 
-                                            <button
-                                                onClick={() => abrirHistorial(s)}
-                                                style={{ background: '#334155', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                                            >
-                                                📜
-                                            </button>
+                                                <button onClick={() => abrirHistorial(s)} className={styles.btnHistorialIcon}>
+                                                    📜
+                                                </button>
 
-                                            <button
-                                                onClick={() => {
-                                                    setSuscripcionRenovar(s);
-                                                    setMonto(s.costoRenovacion);
-                                                    setFechaPago(obtenerFechaLocalHoy()); // Se inicializa con la fecha del navegador
-                                                    setMostrarRenovar(true);
-                                                }}
-                                                style={{ background: '#1e293b', color: '#fff', border: '1px solid #334155', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
-                                            >
-                                                💵 Renovar
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setSuscripcionRenovar(s);
-                                                    setMotivoCancelacion("");
-                                                    setMostrarCancelar(true);
-                                                }}
-                                                style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}
-                                            >
-                                                ❌ Cancelar
-                                            </button>
-                                        </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setSuscripcionRenovar(s);
+                                                        setMonto(s.costoRenovacion);
+                                                        setFechaPago(obtenerFechaLocalHoy());
+                                                        setMostrarRenovar(true);
+                                                    }}
+                                                    className={styles.btnRenovar}
+                                                >
+                                                    💵 Renovar
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setSuscripcionRenovar(s);
+                                                        setMotivoCancelacion("");
+                                                        setMostrarCancelar(true);
+                                                    }}
+                                                    className={styles.btnCancelarRow}
+                                                >
+                                                    ❌ Cancelar
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {suscripcionesFiltradas.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '20px', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>
+                                        No se registran renovaciones que requieran atención bajo este criterio.
                                     </td>
                                 </tr>
-                            );
-                        })}
-                        {suscripcionesFiltradas.length === 0 && (
-                            <tr>
-                                <td colSpan={5} style={{ padding: '20px', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>
-                                    No se registran renovaciones que requieran atención bajo este criterio.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* MODAL HISTORIAL */}
+            {/* MODAL HISTORIAL SIDEBAR */}
             {mostrarHistorial && (
-                <div style={{ position: 'fixed', top: 0, right: 0, width: '380px', height: '100vh', background: '#0f172a', borderLeft: '1px solid #334155', padding: '20px', overflowY: 'auto', zIndex: 1000, boxShadow: '-5px 0 20px rgba(0,0,0,.4)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ color: '#38bdf8', margin: 0 }}>📜 Historial</h3>
-                        <button onClick={() => setMostrarHistorial(false)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', padding: '5px 10px' }}>X</button>
+                <div className={styles.sidebarHistorial}>
+                    <div className={styles.sidebarHeader}>
+                        <h3>📜 Historial</h3>
+                        <button onClick={() => setMostrarHistorial(false)} className={styles.btnCloseSidebar}>X</button>
                     </div>
-                    <hr style={{ borderColor: '#334155' }}/>
+                    <hr style={{ borderColor: '#334155', margin: '15px 0' }}/>
                     {servicioSeleccionado && (
-                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '8px', marginBottom: '15px' }}>
+                        <div className={styles.infoCard}>
                             <strong>{servicioSeleccionado.nombreServicio}</strong>
-                            <small style={{ display: 'block', color: '#94a3b8' }}>{servicioSeleccionado.cliente?.nombre}</small>
+                            <small>{servicioSeleccionado.cliente?.nombre}</small>
                         </div>
                     )}
                     {cargandoHistorial ? (
@@ -340,51 +323,51 @@ export const Renovaciones: React.FC = () => {
                         <p style={{ color: '#94a3b8' }}>Esta suscripción todavía no tiene renovaciones.</p>
                     ) : (
                         historialRenovaciones.map((r) => (
-                            <div key={r.id} style={{ background: '#1e293b', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+                            <div key={r.id} className={styles.historialCard}>
                                 <strong>💰 ${r.monto}</strong>
-                                <small style={{ display: 'block' }}>Método: {r.metodoPago}</small>
-                                <small style={{ display: 'block' }}>Fecha pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
-                                <small style={{ display: 'block', marginTop: '8px', color: '#4ade80' }}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
-                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '4px 0 0 0' }}>{r.observacion}</p>
+                                <small>Método: {r.metodoPago}</small>
+                                <small>Fecha pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
+                                <small className={styles.vencimientoFuturo}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
+                                <p>{r.observacion}</p>
                             </div>
                         ))
                     )}
                 </div>
             )}
 
-            {/* MODAL PROCESAR PAGO (CON CAMPO DE FECHA MANUAL) */}
+            {/* MODAL PROCESAR PAGO */}
             {mostrarRenovar && suscripcionRenovar && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
-                    <div style={{ width: '420px', background: '#0f172a', border: '1px solid #334155', borderRadius: '12px', padding: '25px', color: '#fff', boxShadow: '0 10px 40px rgba(0,0,0,.5)' }}>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalBox}>
                         <h3 style={{ color: '#38bdf8', marginTop: 0 }}>💵 Procesar Renovación</h3>
-                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '8px', marginBottom: '15px' }}>
+                        <div className={styles.infoCard}>
                             <strong>{suscripcionRenovar.nombreServicio}</strong>
-                            <small style={{ display: 'block', color: '#94a3b8' }}>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
-                            <small style={{ display: 'block', color: '#94a3b8' }}>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
+                            <small>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
+                            <small>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
                         </div>
 
-                        {/* NUEVO INPUT: Selección Manual de Fecha */}
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>Fecha de Pago</label>
+                        <label className={styles.label}>Fecha de Pago</label>
                         <input 
                             type="date" 
                             value={fechaPago} 
                             onChange={e => setFechaPago(e.target.value)} 
-                            style={{ ...inputEstilo, width: '100%', marginBottom: '15px' }} 
+                            className={styles.input}
+                            style={{ marginBottom: '15px' }} 
                         />
 
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>Monto</label>
-                        <input type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} style={{ ...inputEstilo, width: '100%', marginBottom: '15px' }} />
+                        <label className={styles.label}>Monto</label>
+                        <input type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} className={styles.input} style={{ marginBottom: '15px' }} />
 
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>Método de pago</label>
-                        <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ ...inputEstilo, width: '100%', marginBottom: '20px' }}>
+                        <label className={styles.label}>Método de pago</label>
+                        <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} className={styles.select} style={{ marginBottom: '20px' }}>
                             <option value="Efectivo">Efectivo</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Tarjeta">Tarjeta</option>
                         </select>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
-                            <button onClick={procesarRenovacion} style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Confirmar Pago</button>
+                        <div className={styles.modalActions}>
+                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} className={styles.btnModalClose}>Cancelar</button>
+                            <button onClick={procesarRenovacion} className={styles.btnModalConfirm}>Confirmar Pago</button>
                         </div>
                     </div>
                 </div>
@@ -392,20 +375,20 @@ export const Renovaciones: React.FC = () => {
 
             {/* MODAL CANCELAR */}
             {mostrarCancelar && suscripcionRenovar && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
-                    <div style={{ width: '420px', background: '#0f172a', padding: '25px', borderRadius: '12px', border: '1px solid #334155' }}>
-                        <h3 style={{ color: '#ef4444' }}>❌ Cancelar Servicio</h3>
-                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '8px' }}>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalBox}>
+                        <h3 style={{ color: '#ef4444', marginTop: 0 }}>❌ Cancelar Servicio</h3>
+                        <div className={styles.infoCard}>
                             <strong>{suscripcionRenovar.nombreServicio}</strong>
-                            <small style={{ display: 'block', color: '#94a3b8' }}>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
+                            <small>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
                         </div>
 
-                        <label style={{ display: 'block', marginTop: '15px', color: '#94a3b8' }}>Motivo</label>
-                        <textarea value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)} style={{ width: '100%', height: '90px', background: '#0f172a', color: '#fff', border: '1px solid #334155', borderRadius: '8px', padding: '10px', resize: 'none', outline: 'none' }} />
+                        <label className={styles.label} style={{ marginTop: '15px' }}>Motivo</label>
+                        <textarea value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)} className={styles.textarea} />
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                            <button onClick={() => setMostrarCancelar(false)} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer' }}>Volver</button>
-                            <button onClick={procesarCancelacion} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar Cancelación</button>
+                        <div className={styles.modalActions}>
+                            <button onClick={() => setMostrarCancelar(false)} className={styles.btnModalClose}>Volver</button>
+                            <button onClick={procesarCancelacion} className={styles.btnModalCancelAction}>Confirmar Cancelación</button>
                         </div>
                     </div>
                 </div>

@@ -12,6 +12,7 @@ import {
   FaTrash,
   FaTimes
 } from 'react-icons/fa';
+import styles from '../assets/styles/Proveedores.module.css';
 
 export const Proveedores: React.FC = () => {
   const [subTab, setSubTab] = useState<'registro' | 'analisis'>('registro');
@@ -23,20 +24,15 @@ export const Proveedores: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<number | null>(null);
 
-  //==============================
   // FORMULARIO PROVEEDOR
-  //==============================
   const [razonSocial, setRazonSocial] = useState('');
   const [ruc, setRuc] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
 
-  //==============================
   // FORMULARIO COMPRA
-  //==============================
   const [idProvSeleccionado, setIdProvSeleccionado] = useState('');
   const [idProdSeleccionado, setIdProdSeleccionado] = useState('');
-
   const [cantidadCompra, setCantidadCompra] = useState(1);
   const [costoUnitarioCompra, setCostoUnitarioCompra] = useState(0);
   const [garantiaCompra, setGarantiaCompra] = useState(30);
@@ -47,19 +43,6 @@ export const Proveedores: React.FC = () => {
     mensaje: string;
     compras: Array<{ id: number; fecha: string; total: number }>;
   }>({ visible: false, mensaje: '', compras: [] });
-
-  const inputEstilo = {
-    width: '100%',
-    padding: '10px 12px',
-    marginTop: '6px',
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid #334155',
-    borderRadius: '8px',
-    boxSizing: 'border-box' as const,
-    fontSize: '0.9rem',
-    outline: 'none'
-  };
 
   const limpiarFormularioProveedor = () => {
     setEditando(null);
@@ -98,10 +81,7 @@ export const Proveedores: React.FC = () => {
     setTelefono(proveedor.telefono);
     setEmail(proveedor.email);
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const eliminarProveedor = async (id: number) => {
@@ -128,26 +108,16 @@ export const Proveedores: React.FC = () => {
 
   const guardarProveedor = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const payload = {
-      razonSocial,
-      ruc,
-      telefono,
-      email
-    };
+    const payload = { razonSocial, ruc, telephone: telefono, email };
 
     try {
       if (editando === null) {
         await api.post("/proveedores", payload);
         alert("Proveedor registrado correctamente.");
       } else {
-        await api.put(`/proveedores/${editando}`, {
-          id: editando,
-          ...payload
-        });
+        await api.put(`/proveedores/${editando}`, { id: editando, ...payload });
         alert("Proveedor actualizado correctamente.");
       }
-
       limpiarFormularioProveedor();
       await cargarDatos();
     } catch (error) {
@@ -158,7 +128,6 @@ export const Proveedores: React.FC = () => {
 
   const registrarIngresoInventario = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!idProvSeleccionado || !idProdSeleccionado) return;
 
     const payload = {
@@ -178,11 +147,9 @@ export const Proveedores: React.FC = () => {
     try {
       await api.post('/proveedores/compras', payload);
       alert("Compra registrada correctamente.");
-
       setIdProdSeleccionado('');
       setCantidadCompra(1);
       setCostoUnitarioCompra(0);
-
       await cargarDatos();
     } catch {
       alert("No fue posible registrar la compra.");
@@ -190,90 +157,28 @@ export const Proveedores: React.FC = () => {
   };
 
   if (cargando) {
-    return (
-      <div
-        style={{
-          color: '#38bdf8',
-          padding: '30px',
-          fontWeight: 'bold'
-        }}
-      >
-        Analizando rentabilidad...
-      </div>
-    );
+    return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Analizando rentabilidad...</div>;
   }
 
   return (
-    <div
-      style={{
-        color: '#fff',
-        fontFamily: 'sans-serif',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-        width: '100%'
-      }}
-    >
+    <div className={styles.container}>
       {/* CABECERA */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
-          borderBottom: '1px solid #334155',
-          paddingBottom: '12px'
-        }}
-      >
-        <div>
-          <h3
-            style={{
-              margin: 0,
-              color: '#38bdf8',
-              fontSize: '1.4rem',
-              fontWeight: 700
-            }}
-          >
-            Módulo de Proveedores y Logística
-          </h3>
-          <p style={{ color: '#94a3b8', marginTop: 4 }}>
-            Administración de proveedores, abastecimiento y análisis.
-          </p>
+      <div className={styles.header}>
+        <div className={styles.headerTitle}>
+          <h3>Módulo de Proveedores y Logística</h3>
+          <p>Administración de proveedores, abastecimiento y análisis.</p>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            background: '#1e293b',
-            padding: 4,
-            borderRadius: 8,
-            border: '1px solid #334155'
-          }}
-        >
+        <div className={styles.tabContainer}>
           <button
             onClick={() => setSubTab('registro')}
-            style={{
-              padding: '8px 16px',
-              background: subTab === 'registro' ? '#581c87' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer'
-            }}
+            className={`${styles.tabBtn} ${subTab === 'registro' ? styles.tabBtnActive : ''}`}
           >
             📦 Abastecimiento
           </button>
           <button
             onClick={() => setSubTab('analisis')}
-            style={{
-              padding: '8px 16px',
-              background: subTab === 'analisis' ? '#581c87' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer'
-            }}
+            className={`${styles.tabBtn} ${subTab === 'analisis' ? styles.tabBtnActive : ''}`}
           >
             📊 Rentabilidad
           </button>
@@ -282,93 +187,37 @@ export const Proveedores: React.FC = () => {
 
       {subTab === "registro" ? (
         <>
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <div className={styles.flexLayout}>
             {/* FORMULARIO PROVEEDOR */}
-            <div
-              style={{
-                flex: "1 1 350px",
-                background: "#1e293b",
-                padding: 20,
-                borderRadius: 12,
-                border: "1px solid #334155"
-              }}
-            >
-              <h4 style={{ marginTop: 0, color: "#a855f7" }}>
-                <FaTruck /> {" "} {editando === null ? "Nuevo proveedor" : "Editar proveedor"}
+            <div className={styles.formProveedorPanel}>
+              <h4>
+                <FaTruck /> {editando === null ? "Nuevo proveedor" : "Editar proveedor"}
               </h4>
 
-              <form onSubmit={guardarProveedor} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div>
+              <form onSubmit={guardarProveedor} className={styles.verticalForm}>
+                <div className={styles.formGroup}>
                   <label>Razón Social</label>
-                  <input
-                    type="text"
-                    value={razonSocial}
-                    onChange={e => setRazonSocial(e.target.value)}
-                    style={inputEstilo}
-                    required
-                  />
+                  <input type="text" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} className={styles.input} required />
                 </div>
-
-                <div>
+                <div className={styles.formGroup}>
                   <label>RUC</label>
-                  <input
-                    type="text"
-                    value={ruc}
-                    onChange={e => setRuc(e.target.value)}
-                    style={inputEstilo}
-                  />
+                  <input type="text" value={ruc} onChange={e => setRuc(e.target.value)} className={styles.input} />
                 </div>
-
-                <div>
+                <div className={styles.formGroup}>
                   <label>Teléfono</label>
-                  <input
-                    type="text"
-                    value={telefono}
-                    onChange={e => setTelefono(e.target.value)}
-                    style={inputEstilo}
-                    required
-                  />
+                  <input type="text" value={telefono} onChange={e => setTelefono(e.target.value)} className={styles.input} required />
                 </div>
-
-                <div>
+                <div className={styles.formGroup}>
                   <label>Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    style={inputEstilo}
-                  />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={styles.input} />
                 </div>
 
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button
-                    type="submit"
-                    style={{
-                      flex: 1,
-                      padding: 12,
-                      background: "#8b5cf6",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    <FaSave /> {" "} {editando === null ? "Guardar proveedor" : "Actualizar proveedor"}
+                <div className={styles.btnActionsWrapper}>
+                  <button type="submit" className={styles.btnGuardar}>
+                    <FaSave /> {editando === null ? "Guardar proveedor" : "Actualizar proveedor"}
                   </button>
                   {editando !== null && (
-                    <button
-                      type="button"
-                      onClick={limpiarFormularioProveedor}
-                      style={{
-                        padding: "12px 18px",
-                        background: "#ef4444",
-                        border: "none",
-                        borderRadius: 8,
-                        color: "#fff",
-                        cursor: "pointer"
-                      }}
-                    >
+                    <button type="button" onClick={limpiarFormularioProveedor} className={styles.btnCancelar}>
                       <FaTimes />
                     </button>
                   )}
@@ -377,350 +226,173 @@ export const Proveedores: React.FC = () => {
             </div>
 
             {/* FORMULARIO DE COMPRA */}
-            <div
-              style={{
-                flex: "1 1 500px",
-                background: "#1e293b",
-                padding: 20,
-                borderRadius: 12,
-                border: "1px solid #334155"
-              }}
-            >
-              <h4 style={{ marginTop: 0, color: "#10b981" }}>
-                <FaShoppingCart /> Registrar compra
-              </h4>
-
-              <form
-                onSubmit={registrarIngresoInventario}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12
-                }}
-              >
-                <div style={{ gridColumn: "span 2" }}>
-                  <label>Proveedor</label>
-                  <select
-                    value={idProvSeleccionado}
-                    onChange={e => setIdProvSeleccionado(e.target.value)}
-                    style={inputEstilo}
-                    required
-                  >
-                    <option value="">Seleccionar proveedor</option>
-                    {proveedores.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.razonSocial}
-                      </option>
-                    ))}
-                  </select>
+            <div className={styles.formCompraPanel}>
+              <h4><FaShoppingCart /> Registrar compra</h4>
+              <form onSubmit={registrarIngresoInventario} className={styles.gridForm}>
+                <div className={styles.gridSpan2}>
+                  <div className={styles.formGroup}>
+                    <label>Proveedor</label>
+                    <select value={idProvSeleccionado} onChange={e => setIdProvSeleccionado(e.target.value)} className={styles.input} required>
+                      <option value="">Seleccionar proveedor</option>
+                      {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                <div style={{ gridColumn: "span 2" }}>
-                  <label>Producto</label>
-                  <select
-                    value={idProdSeleccionado}
-                    onChange={e => setIdProdSeleccionado(e.target.value)}
-                    style={inputEstilo}
-                    required
-                  >
-                    <option value="">Seleccionar producto</option>
-                    {productos.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre} (Stock: {p.stockActual})
-                      </option>
-                    ))}
-                  </select>
+                <div className={styles.gridSpan2}>
+                  <div className={styles.formGroup}>
+                    <label>Producto</label>
+                    <select value={idProdSeleccionado} onChange={e => setIdProdSeleccionado(e.target.value)} className={styles.input} required>
+                      <option value="">Seleccionar producto</option>
+                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stockActual})</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                <div>
+                <div className={styles.formGroup}>
                   <label>Cantidad</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={cantidadCompra}
-                    onChange={e => setCantidadCompra(Number(e.target.value))}
-                    style={inputEstilo}
-                  />
+                  <input type="number" min={1} value={cantidadCompra} onChange={e => setCantidadCompra(Number(e.target.value))} className={styles.input} />
                 </div>
-
-                <div>
+                <div className={styles.formGroup}>
                   <label>Costo Unitario</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={costoUnitarioCompra}
-                    onChange={e => setCostoUnitarioCompra(Number(e.target.value))}
-                    style={inputEstilo}
-                  />
+                  <input type="number" min={0} value={costoUnitarioCompra} onChange={e => setCostoUnitarioCompra(Number(e.target.value))} className={styles.input} />
                 </div>
-
-                <div>
+                <div className={styles.formGroup}>
                   <label>Días de entrega</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={tiempoEntregaDias}
-                    onChange={e => setTiempoEntregaRealDias(Number(e.target.value))}
-                    style={inputEstilo}
-                  />
+                  <input type="number" min={0} value={tiempoEntregaDias} onChange={e => setTiempoEntregaRealDias(Number(e.target.value))} className={styles.input} />
                 </div>
-
-                <div>
+                <div className={styles.formGroup}>
                   <label>Garantía (días)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={garantiaCompra}
-                    onChange={e => setGarantiaCompra(Number(e.target.value))}
-                    style={inputEstilo}
-                  />
+                  <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} className={styles.input} />
                 </div>
 
-                <button
-                  type="submit"
-                  style={{
-                    gridColumn: "span 2",
-                    padding: 12,
-                    border: "none",
-                    borderRadius: 8,
-                    background: "#10b981",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontWeight: "bold"
-                  }}
-                >
-                  <FaPlus /> {" "} Registrar compra
+                <button type="submit" className={styles.btnRegistrarCompra}>
+                  <FaPlus /> Registrar compra
                 </button>
               </form>
             </div>
           </div>
 
-          {/* TABLA DE PROVEEDORES */}
-          <div
-            style={{
-              background: "#1e293b",
-              borderRadius: 12,
-              border: "1px solid #334155",
-              padding: 20,
-              overflowX: "auto"
-            }}
-          >
-            <h4 style={{ marginTop: 0, color: "#38bdf8" }}>
-              Proveedores registrados
-            </h4>
-
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          {/* TABLA DE PROVEEDORES REGISTRADOS CON SCROLL */}
+          <div className={styles.tablePanel}>
+            <h4>Proveedores registrados</h4>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>RUC</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th style={{ textAlign: "center" }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {proveedores.map(p => (
+                    <tr key={p.id}>
+                      <td>{p.razonSocial}</td>
+                      <td>{p.ruc}</td>
+                      <td>{p.telefono}</td>
+                      <td>{p.email}</td>
+                      <td style={{ textAlign: "center" }}>
+                        <button onClick={() => editarProveedor(p)} className={styles.btnEdit}><FaEdit /></button>
+                        <button onClick={() => eliminarProveedor(p.id)} className={styles.btnDelete}><FaTrash /></button>
+                      </td>
+                    </tr>
+                  ))}
+                  {proveedores.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: 25, textAlign: "center", color: "#94a3b8" }}>
+                        No existen proveedores registrados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* TABLA DE RENDIMIENTO / RENTABILIDAD CON SCROLL */
+        <div className={styles.tablePanel}>
+          <h4><FaChartLine /> Ranking Estratégico de Proveedores</h4>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
               <thead>
-                <tr style={{ borderBottom: "2px solid #334155" }}>
-                  <th style={{ padding: 10, textAlign: "left" }}>Proveedor</th>
-                  <th style={{ padding: 10, textAlign: "left" }}>RUC</th>
-                  <th style={{ padding: 10, textAlign: "left" }}>Teléfono</th>
-                  <th style={{ padding: 10, textAlign: "left" }}>Email</th>
-                  <th style={{ padding: 10, textAlign: "center" }}>Acciones</th>
+                <tr>
+                  <th>Proveedor</th>
+                  <th style={{ textAlign: "center" }}>Órdenes</th>
+                  <th>Total Invertido</th>
+                  <th>Ganancia</th>
+                  <th>Entrega</th>
+                  <th style={{ textAlign: "center" }}>Score</th>
                 </tr>
               </thead>
               <tbody>
-                {proveedores.map(p => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #334155" }}>
-                    <td style={{ padding: 10 }}>{p.razonSocial}</td>
-                    <td style={{ padding: 10 }}>{p.ruc}</td>
-                    <td style={{ padding: 10 }}>{p.telefono}</td>
-                    <td style={{ padding: 10 }}>{p.email}</td>
-                    <td style={{ padding: 10, textAlign: "center" }}>
-                      <button
-                        onClick={() => editarProveedor(p)}
+                {metricas.map(m => (
+                  <tr key={m.id}>
+                    <td style={{ fontWeight: "bold" }}>{m.razonSocial}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className={styles.badgeMetrica}>
+                        <FaBoxes size={11} /> {m.totalOrdenes}
+                      </span>
+                    </td>
+                    <td>C$ {m.totalInvertido.toLocaleString()}</td>
+                    <td style={{ fontWeight: "bold", color: "#4ade80" }}>C$ {m.margenGananciaHistorico.toLocaleString()}</td>
+                    <td>{m.tiempoRespuestaPromedio} días</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span
+                        className={styles.badgeScore}
                         style={{
-                          marginRight: 10,
-                          padding: "6px 12px",
-                          background: "#3b82f6",
-                          border: "none",
-                          borderRadius: 6,
-                          color: "#fff",
-                          cursor: "pointer"
+                          background: m.scoreConfiabilidad >= 80
+                            ? "rgba(16,185,129,.15)"
+                            : m.scoreConfiabilidad >= 50
+                              ? "rgba(245,158,11,.15)"
+                              : "rgba(239,68,68,.15)",
+                          color: m.scoreConfiabilidad >= 80 ? "#10b981" : m.scoreConfiabilidad >= 50 ? "#f59e0b" : "#ef4444"
                         }}
                       >
-                        <FaEdit />
-                      </button>
-                      <button
-                        onClick={() => eliminarProveedor(p.id)}
-                        style={{
-                          padding: "6px 12px",
-                          background: "#ef4444",
-                          border: "none",
-                          borderRadius: 6,
-                          color: "#fff",
-                          cursor: "pointer"
-                        }}
-                      >
-                        <FaTrash />
-                      </button>
+                        <FaUserCheck size={10} /> {m.scoreConfiabilidad}%
+                      </span>
                     </td>
                   </tr>
                 ))}
-                {proveedores.length === 0 && (
+                {metricas.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: 25, textAlign: "center", color: "#94a3b8" }}>
-                      No existen proveedores registrados.
+                    <td colSpan={6} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
+                      No existen datos para analizar.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </>
-      ) : (
-        /* TABLA DE RENDIMIENTO */
-        <div
-          style={{
-            background: "#1e293b",
-            border: "1px solid #334155",
-            borderRadius: 12,
-            padding: 20,
-            overflowX: "auto"
-          }}
-        >
-          <h4 style={{ marginTop: 0, color: "#38bdf8" }}>
-            <FaChartLine /> {" "} Ranking Estratégico de Proveedores
-          </h4>
-
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #334155", color: "#94a3b8" }}>
-                <th style={{ padding: 10, textAlign: "left" }}>Proveedor</th>
-                <th style={{ padding: 10, textAlign: "center" }}>Órdenes</th>
-                <th style={{ padding: 10 }}>Total Invertido</th>
-                <th style={{ padding: 10 }}>Ganancia</th>
-                <th style={{ padding: 10 }}>Entrega</th>
-                <th style={{ padding: 10, textAlign: "center" }}>Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metricas.map(m => (
-                <tr key={m.id} style={{ borderBottom: "1px solid #334155" }}>
-                  <td style={{ padding: 10, fontWeight: "bold" }}>{m.razonSocial}</td>
-                  <td style={{ padding: 10, textAlign: "center" }}>
-                    <span style={{ background: "#0f172a", padding: "5px 10px", borderRadius: 6 }}>
-                      <FaBoxes size={11} /> {" "} {m.totalOrdenes}
-                    </span>
-                  </td>
-                  <td style={{ padding: 10 }}>C$ {m.totalInvertido.toLocaleString()}</td>
-                  <td style={{ padding: 10, fontWeight: "bold", color: "#4ade80" }}>
-                    C$ {m.margenGananciaHistorico.toLocaleString()}
-                  </td>
-                  <td style={{ padding: 10 }}>{m.tiempoRespuestaPromedio} días</td>
-                  <td style={{ padding: 10, textAlign: "center" }}>
-                    <span
-                      style={{
-                        padding: "5px 12px",
-                        borderRadius: 30,
-                        fontWeight: "bold",
-                        background: m.scoreConfiabilidad >= 80
-                          ? "rgba(16,185,129,.15)"
-                          : m.scoreConfiabilidad >= 50
-                            ? "rgba(245,158,11,.15)"
-                            : "rgba(239,68,68,.15)",
-                        color: m.scoreConfiabilidad >= 80
-                          ? "#10b981"
-                          : m.scoreConfiabilidad >= 50
-                            ? "#f59e0b"
-                            : "#ef4444"
-                      }}
-                    >
-                      <FaUserCheck size={10} /> {" "} {m.scoreConfiabilidad}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {metricas.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
-                    No existen datos para analizar.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       )}
 
-      {/* MODAL DE CONFLICTO / RESTRICCIÓN DE ELIMINACIÓN */}
+      {/* MODAL DE CONFLICTO */}
       {modalConflicto.visible && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 9999,
-            padding: '20px',
-            boxSizing: 'border-box'
-          }}
-        >
-          <div
-            style={{
-              background: '#1e293b',
-              border: '1px solid #ef4444',
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '500px',
-              width: '100%',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <span style={{ color: '#ef4444', fontSize: '1.5rem', display: 'flex' }}>
-                <FaTrash />
-              </span>
-              <h4 style={{ margin: 0, color: '#ef4444', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                Acción Bloqueada
-              </h4>
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <span style={{ color: '#ef4444', fontSize: '1.5rem', display: 'flex' }}><FaTrash /></span>
+              <h4>Acción Bloqueada</h4>
             </div>
 
             <p style={{ color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.5', margin: '0 0 16px 0' }}>
               {modalConflicto.mensaje}
             </p>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div className={styles.modalBodyList}>
               <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
                 Compras que dependen de este proveedor:
               </span>
-              
-              <div 
-                style={{ 
-                  maxHeight: '180px', 
-                  overflowY: 'auto', 
-                  marginTop: '8px',
-                  background: '#0f172a',
-                  borderRadius: '6px',
-                  border: '1px solid #334155'
-                }}
-              >
+              <div className={styles.modalScrollBox}>
                 {modalConflicto.compras.map(c => (
-                  <div 
-                    key={c.id} 
-                    style={{ 
-                      padding: '10px 12px', 
-                      borderBottom: '1px solid #334155',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: '0.85rem'
-                    }}
-                  >
-                    <span style={{ color: '#38bdf8', fontWeight: '500' }}>
-                      ID Compra: #{c.id}
-                    </span>
-                    <span style={{ color: '#94a3b8' }}>
-                      {new Date(c.fecha).toLocaleDateString()}
-                    </span>
-                    <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                      C$ {c.total.toLocaleString()}
-                    </span>
+                  <div key={c.id} className={styles.modalRow}>
+                    <span style={{ color: '#38bdf8', fontWeight: '500' }}>ID Compra: #{c.id}</span>
+                    <span style={{ color: '#94a3b8' }}>{new Date(c.fecha).toLocaleDateString()}</span>
+                    <span style={{ color: '#4ade80', fontWeight: 'bold' }}>C$ {c.total.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -729,16 +401,7 @@ export const Proveedores: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setModalConflicto({ visible: false, mensaje: '', compras: [] })}
-                style={{
-                  padding: '8px 20px',
-                  background: '#334155',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem'
-                }}
+                className={styles.btnEntendido}
               >
                 Entendido
               </button>

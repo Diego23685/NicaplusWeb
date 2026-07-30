@@ -31,6 +31,21 @@
   letter-spacing: -0.025em;
 }
 
+.loading {
+  color: #38bdf8;
+  padding: 30px;
+  font-family: system-ui, sans-serif;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-align: center;
+  background-color: #0f172a;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
 .subtitle {
   color: #94a3b8;
   margin: 4px 0 0 0;
@@ -249,11 +264,13 @@
 
 /* Tablas Modernas */
 .tableWrapper {
-  background: #1e293b;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  overflow-x: auto;
+  width: 100%;
+  overflow-x: auto;       /* Activa el scroll horizontal */
+  overflow-y: auto;       /* Activa el scroll vertical interno */
+  max-height: 70vh;       /* Limita la altura al 70% de la pantalla (ajustable) */
+  border: 1px solid #233249;
+  border-radius: 8px;
+  background-color: #0f172a;
 }
 
 .table {
@@ -268,6 +285,14 @@
   color: #94a3b8;
   text-align: left;
   font-weight: 600;
+}
+
+/* Opcional: Mantén el encabezado de la tabla fijo arriba mientras bajas */
+.table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #1e293b; /* Color de fondo para que no se trasluzca el texto al bajar */
+  z-index: 10;
 }
 
 .table td {

@@ -117,12 +117,16 @@
 
 /* ================= TABLAS CONTABLES ================= */
 .tableContainer {
+  width: 100%;
+  overflow-x: auto;       /* Activa el scroll horizontal cuando la pantalla es chica o hay muchas columnas */
+  overflow-y: auto;       /* Activa el scroll vertical interno */
+  max-height: 70vh;       /* Evita bajar hasta el fondo de los 1000 registros para mover la barra */
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 12px;
-  padding: 16px;
-  overflow-x: auto;
+  padding: 0 16px 16px 16px; /* Ajustado el padding superior para el sticky header */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .table {
@@ -132,14 +136,20 @@
   font-size: 0.9rem;
 }
 
+/* Cabecera Fija / Sticky Header */
 .table th {
-  padding: 12px 10px;
+  position: sticky;
+  top: 0;
+  background-color: #1e293b; /* Fondo sólido obligatorio para tapar las celdas inferiores al bajar */
+  padding: 16px 10px 12px 10px; /* Incrementado ligeramente el padding superior */
   border-bottom: 2px solid #334155;
   color: #94a3b8;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+  z-index: 10;                /* Mantiene los títulos por encima de los datos */
+  white-space: nowrap;        /* Evita que los títulos se rompan en dos líneas rompiendo el diseño */
 }
 
 .table tr {
@@ -154,6 +164,7 @@
 .table td {
   padding: 14px 10px;
   vertical-align: middle;
+  white-space: nowrap; /* Opcional: añade esto si no quieres que los datos de las celdas se deformen */
 }
 
 .idCell {
