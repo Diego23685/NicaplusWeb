@@ -615,3 +615,80 @@
     padding: 16px;
   }
 }
+
+/* ================= NUEVOS ESTILOS INTEGRADOS (MODAL Y COMPONENTES CRM) ================= */
+
+/* Tarjeta KPI específica para Puntos Club en el Grid */
+.kpiCardClub {
+  background: #0f172a;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid #a855f7; /* Púrpura para fidelización */
+  transition: transform 0.2s ease;
+}
+
+.kpiCardClub:hover {
+  transform: translateY(-2px);
+}
+
+.valueClub {
+  color: #a855f7;
+}
+
+/* Modales e Inputs de la interfaz enriquecida */
+.modalOverlay {
+  backdrop-filter: blur(4px); /* Suaviza el fondo oscuro del layout */
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Estilos para inputs y áreas de texto dentro del formulario modal */
+.modalOverlay input[type="text"],
+.modalOverlay input[type="email"],
+.modalOverlay input[type="number"],
+.modalOverlay textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.modalOverlay input:focus,
+.modalOverlay textarea:focus {
+  outline: none;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+/* Ajuste responsivo para botones del modal */
+.modalOverlay button {
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.modalOverlay button:active {
+  transform: scale(0.98);
+}
+
+/* Ajustes de espaciado y acoples para elementos de lista dinámica */
+.sidebarTag {
+  max-width: 90px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Consistencia adaptativa para pantallas móviles */
+@media (max-width: 640px) {
+  .modalOverlay > div {
+    width: 90% !important;
+    margin: 20px;
+    padding: 18px !important;
+  }
+}

@@ -1,15 +1,39 @@
 // ClientesCRM.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, type FormEvent } from 'react';
 import api from '../services/api';
-import { FaSearch, FaWhatsapp, FaUserTag, FaHistory, FaCalendarAlt, FaFolderOpen } from 'react-icons/fa';
-import styles from '../assets/styles/ClientesCRM.module.css'; // Importación limpia de estilos modulares
+import { 
+    FaSearch, FaWhatsapp, FaUserTag, FaHistory, FaCalendarAlt, 
+    FaFolderOpen, FaUserPlus, FaEdit, FaTrash, FaSave, FaTimes 
+} from 'react-icons/fa';
+import styles from '../assets/styles/ClientesCRM.module.css';
+
+interface Cliente {
+    id: number;
+    nombre: string;
+    telefono: string;
+    email: string;
+    puntosAcumulados: number;
+    fechaRegistro?: string;
+    etiquetas?: string;
+    observaciones?: string;
+}
 
 export const ClientesCRM: React.FC = () => {
-    const [clientes, setClientes] = useState<any[]>([]);
+    const [clientes, setClientes] = useState<Cliente[]>([]);
     const [busqueda, setBusqueda] = useState('');
     const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
     const [historialData, setHistorialData] = useState<any>(null);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
+    // ESTADOS DEL FORMULARIO / MODAL ENRIQUECIDOS
+    const [mostrarModalCliente, setMostrarModalCliente] = useState(false);
+    const [editandoClienteId, setEditandoClienteId] = useState<number | null>(null);
+    const [cliNombre, setCliNombre] = useState('');
+    const [cliTelefono, setCliTelefono] = useState('');
+    const [cliEmail, setCliEmail] = useState('');
+    const [cliPuntos, setCliPuntos] = useState(0);
+    const [cliEtiquetas, setCliEtiquetas] = useState('');      // <-- Nuevo
+    const [cliObservaciones, setCliObservaciones] = useState(''); // <-- Nuevo
 
     useEffect(() => {
         cargarClientes();
@@ -24,7 +48,7 @@ export const ClientesCRM: React.FC = () => {
         }
     };
 
-    const seleccionarCliente = async (cliente: any) => {
+    const seleccionarCliente = async (cliente: Cliente) => {
         setClienteSeleccionado(cliente);
         setCargandoHistorial(true);
         try {
@@ -38,6 +62,76 @@ export const ClientesCRM: React.FC = () => {
         }
     };
 
+    // CONTROLADORES DE MODAL CRUDS
+    const abrirModalClienteNuevo = () => { 
+        setEditandoClienteId(null); 
+        setCliNombre(''); 
+        setCliTelefono(''); 
+        setCliEmail(''); 
+        setCliPuntos(0); 
+        setCliEtiquetas('');
+        setCliObservaciones('');
+        setMostrarModalCliente(true); 
+    };
+
+    const abrirModalClienteEditor = (c: Cliente, e: React.MouseEvent) => { 
+        e.stopPropagation(); 
+        setEditandoClienteId(c.id); 
+        setCliNombre(c.nombre); 
+        setCliTelefono(c.telefono); 
+        setCliEmail(c.email); 
+        setCliPuntos(c.puntosAcumulados || 0); 
+        setCliEtiquetas(c.etiquetas || '');
+        setCliObservaciones(c.observaciones || '');
+        setMostrarModalCliente(true); 
+    };
+
+    const guardarCliente = async (e: FormEvent) => {
+        e.preventDefault();
+        try {
+            const payload = { 
+                id: editandoClienteId || 0, 
+                nombre: cliNombre, 
+                telefono: cliTelefono, 
+                email: cliEmail || 'taller@nicaplus.com', 
+                puntosAcumulados: cliPuntos,
+                etiquetas: cliEtiquetas,       // <-- Agregado al payload
+                observaciones: cliObservaciones // <-- Agregado al payload
+            };
+            
+            if (editandoClienteId) {
+                await api.put(`/clientes/${editandoClienteId}`, payload);
+            } else {
+                await api.post('/clientes', payload);
+            }
+            
+            setMostrarModalCliente(false);
+            cargarClientes();
+            
+            if (clienteSeleccionado && clienteSeleccionado.id === editandoClienteId) {
+                // Forzamos la actualización completa volviendo a pedir el historial estructurado
+                seleccionarCliente({ ...clienteSeleccionado, ...payload });
+            }
+        } catch (err: any) { 
+            alert(err.response?.data || "Fallo transaccional al guardar cliente."); 
+        }
+    };
+
+    const eliminarCliente = async (idTarget: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!window.confirm("¿Remover cliente del libro contable?")) return;
+        try {
+            await api.delete(`/clientes/${idTarget}`);
+            if (clienteSeleccionado?.id === idTarget) {
+                setClienteSeleccionado(null);
+                setHistorialData(null);
+            }
+            cargarClientes();
+        } catch (err: any) {
+            alert("No se pudo eliminar el cliente por restricciones de integridad (posee transacciones vigentes).");
+        }
+    };
+
     const clientesFiltrados = clientes.filter(c =>
         c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         c.telefono.includes(busqueda)
@@ -48,7 +142,12 @@ export const ClientesCRM: React.FC = () => {
             
             {/* PANEL IZQUIERDO: BUSCADOR Y LISTA */}
             <div className={styles.crmSidebar}>
-                <h3 className={styles.sidebarTitle}>Directorio CRM</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h3 className={styles.sidebarTitle} style={{ margin: 0 }}>Directorio CRM</h3>
+                    <button onClick={abrirModalClienteNuevo} className={styles.btnWhatsapp} style={{ background: '#581c7e', padding: '6px 10px', fontSize: '0.8rem' }}>
+                        <FaUserPlus /> Nuevo
+                    </button>
+                </div>
                 
                 <div className={styles.searchWrapper}>
                     <input 
@@ -70,7 +169,13 @@ export const ClientesCRM: React.FC = () => {
                                 onClick={() => seleccionarCliente(c)}
                                 className={`${styles.clientItem} ${esActivo ? styles.clientItemActive : ''}`}
                             >
-                                <div className={styles.clientName}>{c.nombre}</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div className={styles.clientName}>{c.nombre}</div>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        <FaEdit size={12} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} />
+                                        <FaTrash size={12} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} />
+                                    </div>
+                                </div>
                                 <div className={styles.clientMetaRow}>
                                     <span>{c.telefono}</span>
                                     {c.etiquetas && (
@@ -105,7 +210,7 @@ export const ClientesCRM: React.FC = () => {
                             <div>
                                 <h2 className={styles.clientTitle}>{historialData?.cliente.nombre}</h2>
                                 <p className={styles.registerDate}>
-                                    Registrado el: {new Date(historialData?.cliente.fechaRegistro).toLocaleDateString()}
+                                    Registrado el: {historialData?.cliente.fechaRegistro ? new Date(historialData.cliente.fechaRegistro).toLocaleDateString() : 'N/A'}
                                 </p>
                                 <div className={styles.tagContainer}>
                                     {historialData?.cliente.etiquetas ? (
@@ -132,7 +237,7 @@ export const ClientesCRM: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* KPIS FINANCIEROS DEL CLIENTE */}
+                        {/* KPIS FINANCIEROS Y DE FIDELIZACIÓN DEL CLIENTE */}
                         <div className={styles.crmKpiGrid}>
                             <div className={`${styles.kpiCard} ${styles.kpiCardInvertido}`}>
                                 <small className={styles.kpiLabel}>TOTAL INVERTIDO</small>
@@ -144,24 +249,31 @@ export const ClientesCRM: React.FC = () => {
                                 <small className={styles.kpiLabel}>SERVICIOS ACTIVOS</small>
                                 <h3 className={`${styles.kpiValue} ${styles.valueActivo}`}>
                                     {(historialData?.serviciosActivos?.tallerEquiposEnRevision?.length ?? 0) + 
-                                     (historialData?.serviciosActivos?.suscripcionesVigentes?.length ?? 0)}
+                                    (historialData?.serviciosActivos?.suscripcionesVigentes?.length ?? 0)}
                                 </h3>
                             </div>
                             <div className={styles.kpiCardVencido}>
                                 <small className={styles.kpiLabel}>SERVICIOS VENCIDOS</small>
                                 <h3 className={`${styles.kpiValue} ${styles.valueVencido}`}>
                                     {(historialData?.serviciosVencidos?.tallerEquiposEntregados?.length ?? 0) + 
-                                     (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0)}
+                                    (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0)}
+                                </h3>
+                            </div>
+                            {/* ¡MANDALO AQUÍ! Se alinea perfectamente en la rejilla */}
+                            <div className={styles.kpiCardClub}>
+                                <small className={styles.kpiLabel}>PUNTOS CLUB</small>
+                                <h3 className={`${styles.kpiValue} ${styles.valueClub}`}>
+                                    {historialData?.cliente?.puntosClub ?? 0} pts
                                 </h3>
                             </div>
                         </div>
 
-                        {/* SECCIÓN OBSERVACIONES */}
+                        {/* SECCIÓN OBSERVACIONES (Ya no tendrá la tarjeta estorbando abajo) */}
                         <div className={styles.observacionesBox}>
                             <h4 className={styles.observacionesTitle}>Observaciones del CRM</h4>
                             <p className={styles.observacionesContent}>
                                 {historialData?.cliente.observaciones || 
-                                 "No se han ingresado notas u observaciones de comportamiento de este cliente."}
+                                "No se han ingresado notas u observaciones de comportamiento de este cliente."}
                             </p>
                         </div>
 
@@ -275,21 +387,65 @@ export const ClientesCRM: React.FC = () => {
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* ESTADO VACÍO */}
-                                    {historialData?.serviciosActivos?.tallerEquiposEnRevision?.length === 0 &&
-                                     historialData?.serviciosActivos?.suscripcionesVigentes?.length === 0 &&
-                                     historialData?.serviciosVencidos?.tallerEquiposEntregados?.length === 0 &&
-                                     historialData?.serviciosVencidos?.suscripcionesExpiradas?.length === 0 && (
-                                        <small className={styles.emptyText}>Sin órdenes ni suscripciones.</small>
-                                    )}
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* MODAL ENTRADA/EDICIÓN DE CLIENTES INTEGRADO */}
+            {mostrarModalCliente && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}> 
+                        {/* Agrega una clase .modalContent en tu CSS o usa estilos inline controlados para el tamaño base */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.15rem', fontWeight: 700 }}>
+                                {editandoClienteId ? <><FaEdit /> Modificar Cliente</> : <><FaUserPlus /> Registrar Cliente</>}
+                            </h3>
+                            <button onClick={() => setMostrarModalCliente(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+                        </div>
+                        <form onSubmit={guardarCliente} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nombre Completo</label>
+                                <input type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} required />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Teléfono Móvil</label>
+                                <input type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} required />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Email</label>
+                                <input type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} />
+                            </div>
+                            
+                            {/* NUEVO CAMPO: ETIQUETAS */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Etiquetas (Separadas por comas)</label>
+                                <input type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller, Mayorista" style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} />
+                            </div>
+
+                            {/* NUEVO CAMPO: OBSERVACIONES */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Observaciones Internas</label>
+                                <textarea value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={3} placeholder="Detalles de comportamiento o notas importantes del cliente..." style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px', resize: 'none', fontFamily: 'inherit' }} />
+                            </div>
+
+                            {editandoClienteId && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Puntos Club</label>
+                                    <input type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '4px' }} min={0} />
+                                </div>
+                            )}
+                            
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                <button type="submit" style={{ flex: 1, background: '#38bdf8', color: '#0f172a', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaSave /> Guardar</button>
+                                <button type="button" onClick={() => setMostrarModalCliente(false)} style={{ background: '#334155', color: '#fff', border: 'none', padding: '10px', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
