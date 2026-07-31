@@ -1,10 +1,9 @@
-// CatalogosAdmin.tsx
 import React, { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaTv
+    FaCheckCircle, FaTv, FaBoxes
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -18,6 +17,7 @@ interface Producto {
     imagenUrl: string;
     esDigital: boolean;
     esSuscripcion: boolean;
+    controlaStock: boolean; // 🌟 Agregado
     diasDuracion: number;
     categoriaId: number | null;
     juegoId: number | null;
@@ -52,6 +52,7 @@ const productoFormInicial = {
     imagenUrl: '',
     esDigital: false,
     esSuscripcion: false,
+    controlaStock: true, // 🌟 Por defecto en true para productos físicos
     categoriaId: '',
     juegoId: '',
     diasDuracion: 30,
@@ -145,10 +146,16 @@ export const CatalogosAdmin: React.FC = () => {
 
         setFormProducto(prev => {
             const nuevoEstado = { ...prev, [name]: valorFinal };
-            if (name === 'esDigital' && !valorFinal) {
+            
+            if (name === 'esDigital' && valorFinal) {
+                // Si pasa a ser digital, comúnmente no controla stock físico por defecto
+                nuevoEstado.controlaStock = false;
+            } else if (name === 'esDigital' && !valorFinal) {
                 nuevoEstado.esSuscripcion = false;
                 nuevoEstado.juegoId = '';
+                nuevoEstado.controlaStock = true;
             }
+            
             return nuevoEstado;
         });
     };
@@ -278,7 +285,7 @@ export const CatalogosAdmin: React.FC = () => {
             ...(editandoProductoId ? { id: editandoProductoId } : {}), 
             ...formProducto,
             descripcion: formProducto.descripcion || 'Sin descripción detallada',
-            stockMinimo: 2,
+            stockMinimo: formProducto.controlaStock ? 2 : 0, // 🌟 Stock mínimo dinámico
             categoriaId: formProducto.categoriaId ? Number(formProducto.categoriaId) : null,
             juegoId: formProducto.esDigital && formProducto.juegoId ? Number(formProducto.juegoId) : null,
             visibleEnCatalogo: true,
@@ -316,6 +323,7 @@ export const CatalogosAdmin: React.FC = () => {
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
             esSuscripcion: producto.esSuscripcion || false,
+            controlaStock: producto.controlaStock ?? true, // 🌟 Agregado
             categoriaId: producto.categoriaId?.toString() || '',
             juegoId: producto.juegoId?.toString() || '',
             diasDuracion: producto.diasDuracion || 30,
@@ -521,12 +529,18 @@ export const CatalogosAdmin: React.FC = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '12px 0 0 0' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '12px 0 0 0' }}>
                                 <label className={styles.checkboxLabel}>
                                     <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Recarga / Producto Digital?
                                 </label>
+                                
+                                {/* 🌟 NUEVO: Checkbox explícito para Control de Stock */}
+                                <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
+                                    <input type="checkbox" name="controlaStock" checked={formProducto.controlaStock} onChange={handleProductoInputChange} /> <FaBoxes size={12} /> ¿Controla Stock / Inventario Físico?
+                                </label>
+
                                 {formProducto.esDigital && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '6px 0' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '4px 0' }}>
                                         <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
                                             <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 ¿Es Suscripción Recurrente?
                                         </label>
@@ -553,8 +567,18 @@ export const CatalogosAdmin: React.FC = () => {
                                     </>
                                 )}
                                 <div style={{ marginTop: '10px' }}>
-                                    <label className={styles.label}>Existencias Físicas o Lote</label>
-                                    <input type="number" name="stockActual" value={formProducto.stockActual || ''} onChange={handleProductoInputChange} className={styles.input} required />
+                                    <label className={styles.label}>
+                                        {formProducto.controlaStock ? 'Existencias Físicas o Lote' : 'Stock (Inhabilitado)'}
+                                    </label>
+                                    <input 
+                                        type="number" 
+                                        name="stockActual" 
+                                        value={formProducto.controlaStock ? (formProducto.stockActual || '') : 0} 
+                                        onChange={handleProductoInputChange} 
+                                        className={styles.input} 
+                                        disabled={!formProducto.controlaStock} // Inhabilitado si no controla stock
+                                        required={formProducto.controlaStock} 
+                                    />
                                 </div>
                             </div>
                             <div style={{ marginTop: '6px' }}>
@@ -614,12 +638,16 @@ export const CatalogosAdmin: React.FC = () => {
                                             {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
                                             <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
                                             {p.esSuscripcion && <span style={{ color: '#f43f5e', marginLeft: '6px', fontWeight: 'bold' }}>[🔄 Recurrente]</span>}
+                                            {/* 🌟 Indicador de Control de Inventario */}
+                                            <span style={{ color: p.controlaStock ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
+                                                {p.controlaStock ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
+                                            </span>
                                         </small>
                                     </td>
                                     <td style={{ color: '#94a3b8' }}>C$ {p.precioCosto}</td>
                                     <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {p.precioVenta}</td>
                                     <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
-                                    <td style={{ color: '#fb923c' }}>{p.garantiaDias} días</td>
+                                    <td style={{ color: '#fb923c' }}>{p.garantiaDias} days</td>
                                     <td style={{ color: '#cbd5e1' }}>{p.proveedor || 'N/A'}</td>
                                     <td>
                                         <span className={styles.badge} style={{
@@ -627,7 +655,10 @@ export const CatalogosAdmin: React.FC = () => {
                                             color: p.estado === 'Pausado' ? '#f59e0b' : p.estado === 'Agotado' ? '#ef4444' : '#4ade80'
                                         }}>{p.estado || 'Activo'}</span>
                                     </td>
-                                    <td style={{ color: p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>{p.stockActual} u.</td>
+                                    {/* 🌟 Celda de Stock adaptativa */}
+                                    <td style={{ color: !p.controlaStock ? '#a855f7' : p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>
+                                        {p.controlaStock ? `${p.stockActual} u.` : 'N/A'}
+                                    </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                                             {p.esSuscripcion && (
