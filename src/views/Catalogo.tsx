@@ -1,14 +1,25 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import api from '../services/api';
-import styles from '../components/catalogo/Catalogo.module.css'
-import detailStyles from '../assets/styles/CatalogoDetalle.module.css'
+import styles from '../components/catalogo/Catalogo.module.css';
+import detailStyles from '../assets/styles/CatalogoDetalle.module.css';
+import { SidebarCatalogo } from '../components/catalogo/SidebarCatalogo';
 import { 
-    FaShoppingCart, FaTrashAlt, FaWhatsapp, FaStore, 
-    FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
-    FaArrowLeft, FaMinus, FaPlus, FaSignOutAlt, FaBars, FaTimes, FaUser, FaPhone, FaTruck, FaMoneyBillWave, FaSignInAlt,
-    FaChevronLeft, FaChevronRight, FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen, FaFacebook, FaInstagram,
+    FaShoppingCart, FaStore, FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
+    FaArrowLeft, FaSignOutAlt, FaBars, FaTimes, FaSignInAlt, FaChevronLeft, FaChevronRight, 
+    FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen, FaFacebook, FaInstagram,
     FaCheckCircle, FaExclamationTriangle, FaShieldAlt
 } from 'react-icons/fa';
+
+// Importación de subcomponentes externos y hooks extraídos
+import { useInteractiveCanvas } from '../components/hooks/useInteractiveCanvas';
+import { VistaCarrito } from '../components/catalogo/VistaCarrito';
+import { HeroInicio } from '../components/catalogo/HeroInicio';
+import { VistaNosotros } from '../components/catalogo/VistaNosotros';
+import { VistaContacto } from '../components/catalogo/VistaContacto';
+import { Terminos } from './Terminos';
+
+// Constante para el número de WhatsApp (cámbialo si se maneja desde variables de entorno)
+const WHATSAPP_NUMERO = "50587870821";
 
 // Diccionario de iconos según el nombre de la categoría
 const obtenerIconoCategoria = (nombre = '') => {
@@ -23,11 +34,6 @@ const obtenerIconoCategoria = (nombre = '') => {
   
   return <FaFolderOpen size={24} />;
 };
-
-import { HeroInicio } from '../components/catalogo/HeroInicio';
-import { VistaNosotros } from '../components/catalogo/VistaNosotros';
-import { VistaContacto } from '../components/catalogo/VistaContacto';
-import { Terminos } from './Terminos';
 
 interface Producto {
     id: number;
@@ -68,12 +74,12 @@ interface CatalogoProps {
 }
 
 /* ==========================================================================
-      SUBCOMPONENTE INTERNO: DETALLE DE PRODUCTO (ESTILO AMAZON / ALIEXPRESS)
+      SUBCOMPONENTE INTERNO: DETALLE DE PRODUCTO
    ========================================================================== */
 interface ProductoDetalleProps {
     producto: Producto;
     alVolver: () => void;
-    alAgregarAlCarrito: (p: Producto) => void;
+    alAgregarAlCarrito: (p: Producto, e?: React.MouseEvent) => void;
     cantidadEnCarrito: number;
 }
 
@@ -86,7 +92,6 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
     const hayStock = producto.esDigital || producto.stockActual > 0;
 
     return (
-        // Cambiado a detailStyles 👇
         <div className={`${detailStyles.detailViewContainer} ${styles.fadeEntrance}`}>
             <button className={detailStyles.backToStoreBtn} onClick={alVolver}>
                 <FaArrowLeft /> Volver al catálogo
@@ -133,7 +138,7 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
 
                     <div className={detailStyles.detailGarantiaBox}>
                         <div className={detailStyles.garantiaItem}>
-                            <FaShieldAlt className={styles.contactIcon} /> {/* Mantiene styles para el icono global */}
+                            <FaShieldAlt className={detailStyles.contactIcon} /> 
                             <div>
                                 <h5>Garantía de Soporte Inmediato</h5>
                                 <p>Procesamiento prioritario directo a tu WhatsApp.</p>
@@ -145,7 +150,7 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                         <button 
                             className={detailStyles.detailAddCartBtn}
                             disabled={!hayStock}
-                            onClick={() => alAgregarAlCarrito(producto)}
+                            onClick={(e) => alAgregarAlCarrito(producto, e)}
                         >
                             <FaShoppingCart /> Añadir al carrito 
                             {cantidadEnCarrito > 0 && ` (${cantidadEnCarrito})`}
@@ -183,11 +188,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const [tipoEntrega, setTipoEntrega] = useState('Envío a domicilio');
     const [metodoPago, setMetodoPago] = useState('Transferencia Bancaria');
 
-    const WHATSAPP_NUMERO = "50587870821";
-
     const catRowRef = useRef<HTMLDivElement | null>(null);
     const juegoRowRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    // Integración del Canvas Extrayendo la Lógica al Hook Personalizado
+    useInteractiveCanvas(canvasRef);
 
     useEffect(() => {
         if (cliente) {
@@ -196,87 +202,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     }, [cliente]);
 
-    // Canvas Interactivo
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        let ancho = (canvas.width = window.innerWidth);
-        let alto = (canvas.height = window.innerHeight);
-
-        const mouse = { x: ancho / 2, y: alto / 2, targetX: ancho / 2, targetY: alto / 2 };
-        let particulas: Array<{ x: number; y: number; vx: number; vy: number; alpha: number; size: number; color: string }> = [];
-        const colores = ['#b002c2', '#047688', '#a855f7', '#0e7490'];
-
-        const manejarRedimension = () => {
-            ancho = canvas.width = window.innerWidth;
-            alto = canvas.height = window.innerHeight;
-        };
-
-        const manejarMovimiento = (e: MouseEvent) => {
-            mouse.targetX = e.clientX;
-            mouse.targetY = e.clientY;
-        };
-
-        window.addEventListener('resize', manejarRedimension);
-        window.addEventListener('mousemove', manejarMovimiento);
-
-        let idAnimacion: number;
-
-        const animar = () => {
-            ctx.clearRect(0, 0, ancho, alto);
-            mouse.x += (mouse.targetX - mouse.x) * 0.1;
-            mouse.y += (mouse.targetY - mouse.y) * 0.1;
-
-            if (Math.random() < 0.35 && particulas.length < 100) {
-                particulas.push({
-                    x: mouse.x,
-                    y: mouse.y,
-                    vx: (Math.random() - 0.5) * 1.8,
-                    vy: (Math.random() - 0.5) * 1.8,
-                    alpha: 1,
-                    size: Math.random() * 2.5 + 1,
-                    color: colores[Math.floor(Math.random() * colores.length)]
-                });
-            }
-
-            for (let i = particulas.length - 1; i >= 0; i--) {
-                const p = particulas[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 0.016;
-
-                if (p.alpha <= 0) {
-                    particulas.splice(i, 1);
-                    continue;
-                }
-
-                ctx.save();
-                ctx.globalAlpha = p.alpha;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.shadowBlur = 6;
-                ctx.shadowColor = p.color;
-                ctx.fill();
-                ctx.restore();
-            }
-
-            idAnimacion = requestAnimationFrame(animar);
-        };
-
-        animar();
-
-        return () => {
-            window.removeEventListener('resize', manejarRedimension);
-            window.removeEventListener('mousemove', manejarMovimiento);
-            cancelAnimationFrame(idAnimacion);
-        };
-    }, []);
-
-    // API Fetching
+    // Fetching Inicial de Catálogo
     useEffect(() => {
         setCargando(true);
         Promise.all([
@@ -304,41 +230,34 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     };
 
-    // 1. Modifica la función interna agregarAlCarrito para soportar la animación
+    // Animación de partícula física voladora al carrito
     const agregarAlCarrito = (producto: Producto, e?: React.MouseEvent) => {
-        // Si se pasa un evento de mouse, disparamos el objeto volador
         if (e) {
-            // Buscamos los selectores del carrito (soporta tanto la versión desk como mobile)
             const cartButton = document.querySelector(`.${styles.cartBtnDesk}`) || document.querySelector(`.${styles.cartBtnMobile}`);
             
             if (cartButton) {
-                const rectBotón = e.currentTarget.getBoundingClientRect();
+                const rectBoton = e.currentTarget.getBoundingClientRect();
                 const rectCarrito = cartButton.getBoundingClientRect();
 
-                // Creamos la partícula voladora elemental
                 const flyElem = document.createElement('div');
                 flyElem.className = styles.flyingParticle;
                 
-                // Si el producto tiene imagen, se la asignamos de fondo a la esfera
                 if (producto.imagenUrl) {
                     flyElem.style.backgroundImage = `url(${producto.imagenUrl})`;
                 }
 
-                // Posición inicial (donde está el botón que clickeó el usuario)
-                flyElem.style.left = `${rectBotón.left + rectBotón.width / 2 - 25}px`;
-                flyElem.style.top = `${rectBotón.top + rectBotón.height / 2 - 25}px`;
+                flyElem.style.left = `${rectBoton.left + rectBoton.width / 2 - 25}px`;
+                flyElem.style.top = `${rectBoton.top + rectBoton.height / 2 - 25}px`;
                 document.body.appendChild(flyElem);
 
-                // Pequeño delay frame para que el navegador capte la posición base antes de trasladar
                 requestAnimationFrame(() => {
-                    const xDiff = (rectCarrito.left + rectCarrito.width / 2) - (rectBotón.left + rectBotón.width / 2);
-                    const yDiff = (rectCarrito.top + rectCarrito.height / 2) - (rectBotón.top + rectBotón.height / 2);
+                    const xDiff = (rectCarrito.left + rectCarrito.width / 2) - (rectBoton.left + rectBoton.width / 2);
+                    const yDiff = (rectCarrito.top + rectCarrito.height / 2) - (rectBoton.top + rectBoton.height / 2);
 
                     flyElem.style.transform = `translate(${xDiff}px, ${yDiff}px) scale(0.3)`;
                     flyElem.style.opacity = '0.2';
                 });
 
-                // Limpieza al terminar el vuelo + Efecto Bump en el carrito
                 setTimeout(() => {
                     flyElem.remove();
                     cartButton.classList.add(styles.cartBumpAnimation);
@@ -347,7 +266,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             }
         }
 
-        // Código original tuyo que gestiona el estado del carrito
         setCarrito(prevCarrito => {
             const existe = prevCarrito.find(item => item.producto.id === producto.id);
             if (existe) {
@@ -399,7 +317,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre} (C$ ${item.producto.precioVenta})\n`;
         });
         mensaje += `\n💰 *TOTAL A PAGAR: C$ ${totalPagar}*`;
-        window.open(`https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        
+        window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMERO}&text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
     const productoPrincipal = useMemo<Producto | null>(() => {
@@ -451,41 +370,48 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             <canvas ref={canvasRef} className={styles.canvasBackground} />
 
             {/* OVERLAY & SIDEBAR MÓVIL */}
-            <div className={`${styles.sidebarOverlay} ${menuAbierto ? styles.sidebarOverlayVisible : ''}`} onClick={() => setMenuAbierto(false)} />
-            <aside className={`${styles.sidebarMobile} ${menuAbierto ? styles.sidebarMobileAbierto : ''}`}>
-                <div className={styles.sidebarHeader}>
-                    <span className={styles.brandText}>MENÚ</span>
-                    <button className={styles.closeMenuBtn} onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú">
-                        <FaTimes size={20} />
-                    </button>
-                </div>
-                <nav className={styles.sidebarNavList}>
-                    {itemsNavegacion.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => cambiarSeccion(tab.id)}
-                            className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
-                        >
-                            {tab.icon} <span>{tab.label}</span>
-                        </button>
-                    ))}
-                    <div className={styles.sidebarAuthDivider} />
-                    {cliente ? (
-                        <div className={styles.sidebarUserBlock}>
-                            <button onClick={() => { alIrAMiCuenta?.(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
-                                👤 <span>{cliente.nombre || cliente.Nombre || 'Mi Cuenta'}</span>
-                            </button>
-                            <button onClick={() => { alCerrarSesion(); setMenuAbierto(false); }} className={`${styles.sidebarNavTab} ${styles.sidebarBtnSalir}`}>
-                                <FaSignOutAlt /> <span>Cerrar Sesión</span>
+            {menuAbierto && (
+                <>
+                    <div 
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] transition-opacity duration-300 lg:hidden"
+                        onClick={() => setMenuAbierto(false)} 
+                    />
+                    <aside className={`fixed top-0 right-0 w-[280px] h-screen bg-[#0d0818]/98 backdrop-blur-xl z-[999] flex flex-col p-6 border-l-2 border-[#b002c2] shadow-2xl transition-transform duration-400 ease-out lg:hidden ${styles.sidebarMobile} ${styles.sidebarMobileAbierto}`}>
+                        <div className={styles.sidebarHeader}>
+                            <span className={styles.brandText}>MENÚ</span>
+                            <button className={styles.closeMenuBtn} onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú">
+                                <FaTimes size={20} />
                             </button>
                         </div>
-                    ) : (
-                        <button onClick={() => { alIrAlLogin(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
-                            <FaSignInAlt /> <span>Iniciar Sesión</span>
-                        </button>
-                    )}
-                </nav>
-            </aside>
+                        <nav className={styles.sidebarNavList}>
+                            {itemsNavegacion.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => cambiarSeccion(tab.id)}
+                                    className={`${styles.sidebarNavTab} ${seccionActiva === tab.id ? styles.sidebarNavTabActivo : ''}`}
+                                >
+                                    {tab.icon} <span>{tab.label}</span>
+                                </button>
+                            ))}
+                            <div className={styles.sidebarAuthDivider} />
+                            {cliente ? (
+                                <div className={styles.sidebarUserBlock}>
+                                    <button onClick={() => { alIrAMiCuenta?.(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
+                                        👤 <span>{cliente.nombre || cliente.Nombre || 'Mi Cuenta'}</span>
+                                    </button>
+                                    <button onClick={() => { alCerrarSesion(); setMenuAbierto(false); }} className={`${styles.sidebarNavTab} ${styles.sidebarBtnSalir}`}>
+                                        <FaSignOutAlt /> <span>Cerrar Sesión</span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={() => { alIrAlLogin(); setMenuAbierto(false); }} className={styles.sidebarNavTab}>
+                                    <FaSignInAlt /> <span>Iniciar Sesión</span>
+                                </button>
+                            )}
+                        </nav>
+                    </aside>
+                </>
+            )}
 
             {/* NAVBAR */}
             <header className={styles.navbar}>
@@ -574,209 +500,206 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         {seccionActiva === 'contacto' && <VistaContacto />}
                         
                         {seccionActiva === 'productos' && (
-                            <div className={styles.fadeEntrance}>
-                                {/* SECCIÓN DE ANUNCIOS DINÁMICOS */}
-                                <section className={styles.heroPromoSection}>
-                                    {productoPrincipal ? (
-                                        <div className={styles.mainPromoBanner}>
-                                            <div className={styles.promoBadge}>
-                                                {productoPrincipal.esDigital ? "DESTACADO DIGITAL" : "LO MÁS BUSCADO"}
-                                            </div>
-                                            <h2 className={styles.promoTitle} onClick={() => manejarVerDetalle(productoPrincipal)} style={{cursor: 'pointer'}}>{productoPrincipal.nombre}</h2>
-                                            <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
-                                            <button 
-                                                className={styles.promoBtn} 
-                                                onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
-                                            >
-                                                COMPRAR POR C$ {productoPrincipal.precioVenta}
-                                            </button>
-                                            <div className={styles.promoGraphicOverlay} />
-                                            {productoPrincipal.imagenUrl && (
-                                                <img 
-                                                    src={productoPrincipal.imagenUrl} 
-                                                    alt="" 
-                                                    className={styles.promoAbsoluteImage}
-                                                    onClick={() => manejarVerDetalle(productoPrincipal)}
-                                                    style={{cursor: 'pointer'}}
-                                                />
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className={styles.mainPromoBanner}>
-                                            <h2 className={styles.promoTitle}>Cargando Novedades...</h2>
-                                        </div>
-                                    )}
+                            <div className={`${styles.fadeEntrance} ${styles.catalogoLayout}`}>
+                                
+                                {/* COLUMNA IZQUIERDA: COMPONENTE SIDEBAR */}
+                                <SidebarCatalogo 
+                                    busqueda={busqueda}
+                                    setBusqueda={(val) => {
+                                        setBusqueda(val);
+                                        if(seccionActiva !== 'productos') setSeccionActiva('productos');
+                                    }}
+                                    categorias={categorias}
+                                    idCatSeleccionada={idCatSeleccionada}
+                                    setIdCatSeleccionada={setIdCatSeleccionada}
+                                    juegos={juegos}
+                                    idJuegoSeleccionado={idJuegoSeleccionado}
+                                    setIdJuegoSeleccionado={setIdJuegoSeleccionado}
+                                    obtenerIconoCategoria={obtenerIconoCategoria}
+                                />
 
-                                    <div className={styles.sidePromoContainer}>
-                                        {productosSecundarios.map((prod: Producto, index: number) => (
-                                            <div 
-                                                key={prod.id} 
-                                                className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
-                                            >
-                                                <div className={styles.sideBannerContent}>
-                                                    <span className={styles.sideTag}>
-                                                        {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
-                                                    </span>
-                                                    <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>{prod.nombre}</h3>
-                                                    <p>¡Por solo C$ {prod.precioVenta}!</p>
-                                                    <button 
-                                                        className={styles.sideLink} 
-                                                        onClick={(e) => agregarAlCarrito(prod, e)}
-                                                    >
-                                                        Añadir al carrito
-                                                    </button>
+                                {/* COLUMNA DERECHA: BANNER PROMO + BURBUJAS DE FILTRO + CUADRÍCULA */}
+                                <div className={styles.catalogoMainContent}>
+                                    
+                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS */}
+                                    <section className={styles.heroPromoSection}>
+                                        {productoPrincipal ? (
+                                            <div className={styles.mainPromoBanner}>
+                                                <div className={styles.promoBadge}>
+                                                    {productoPrincipal.esDigital ? "DESTACADO DIGITAL" : "LO MÁS BUSCADO"}
                                                 </div>
-                                                {prod.imagenUrl && (
+                                                <h2 className={styles.promoTitle} onClick={() => manejarVerDetalle(productoPrincipal)} style={{cursor: 'pointer'}}>
+                                                    {productoPrincipal.nombre}
+                                                </h2>
+                                                <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
+                                                <button 
+                                                    className={styles.promoBtn} 
+                                                    onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
+                                                >
+                                                    COMPRAR POR C$ {productoPrincipal.precioVenta}
+                                                </button>
+                                                <div className={styles.promoGraphicOverlay} />
+                                                {productoPrincipal.imagenUrl && (
                                                     <img 
-                                                        src={prod.imagenUrl} 
+                                                        src={productoPrincipal.imagenUrl} 
                                                         alt="" 
-                                                        className={styles.sideBannerImage} 
-                                                        onClick={() => manejarVerDetalle(prod)}
+                                                        className={styles.promoAbsoluteImage}
+                                                        onClick={() => manejarVerDetalle(productoPrincipal)}
                                                         style={{cursor: 'pointer'}}
                                                     />
                                                 )}
                                             </div>
-                                        ))}
-                                        {productosSecundarios.length === 0 && (
-                                            <div className={styles.sideBanner}>
-                                                <p>Explora nuestro catálogo abajo</p>
+                                        ) : (
+                                            <div className={styles.mainPromoBanner}>
+                                                <h2 className={styles.promoTitle}>Cargando Novedades...</h2>
+                                            </div>
+                                        )}
+
+                                        <div className={styles.sidePromoContainer}>
+                                            {productosSecundarios.map((prod: Producto, index: number) => (
+                                                <div 
+                                                    key={prod.id} 
+                                                    className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
+                                                >
+                                                    <div className={styles.sideBannerContent}>
+                                                        <span className={styles.sideTag}>
+                                                            {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
+                                                        </span>
+                                                        <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                            {prod.nombre}
+                                                        </h3>
+                                                        <p>¡Por solo C$ {prod.precioVenta}!</p>
+                                                        <button 
+                                                            className={styles.sideLink} 
+                                                            onClick={(e) => agregarAlCarrito(prod, e)}
+                                                        >
+                                                            Añadir al carrito
+                                                        </button>
+                                                    </div>
+                                                    {prod.imagenUrl && (
+                                                        <img 
+                                                            src={prod.imagenUrl} 
+                                                            alt="" 
+                                                            className={styles.sideBannerImage} 
+                                                            onClick={() => manejarVerDetalle(prod)}
+                                                            style={{cursor: 'pointer'}}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    {/* ==========================================================
+                                        BURBUJAS (FILTROS RÁPIDOS DE CATEGORÍAS Y JUEGOS)
+                                       ========================================================== */}
+                                    <div className={styles.filterSectionContainer}>
+                                        {/* Fila de Categorías en formato burbujas */}
+                                        <div className={styles.filterRowWrapper}>
+                                            <div className={styles.filterRowHeader}>
+                                                <h3>Categorías</h3>
+                                                <div className={styles.rowNavButtons}>
+                                                    <button onClick={() => scrollRow(catRowRef, 'left')}><FaChevronLeft /></button>
+                                                    <button onClick={() => scrollRow(catRowRef, 'right')}><FaChevronRight /></button>
+                                                </div>
+                                            </div>
+                                            <div className={styles.categoryScrollRow} ref={catRowRef}>
+                                                <div 
+                                                    className={`${styles.categoryBubble} ${idCatSeleccionada === null ? styles.categoryBubbleActive : ''}`}
+                                                    onClick={() => setIdCatSeleccionada(null)}
+                                                >
+                                                    <div className={styles.bubbleIcon}><FaTags /></div>
+                                                    <span>Todas</span>
+                                                </div>
+                                                {categorias.map(cat => (
+                                                    <div 
+                                                        key={cat.id}
+                                                        className={`${styles.categoryBubble} ${idCatSeleccionada === cat.id ? styles.categoryBubbleActive : ''}`}
+                                                        onClick={() => setIdCatSeleccionada(cat.id)}
+                                                    >
+                                                        <div className={styles.bubbleIcon}>
+                                                            {cat.imagenUrl ? <img src={cat.imagenUrl} alt={cat.nombre} /> : obtenerIconoCategoria(cat.nombre)}
+                                                        </div>
+                                                        <span>{cat.nombre}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Fila de Juegos en formato burbujas */}
+                                        {juegos.length > 0 && (
+                                            <div className={styles.filterRowWrapper}>
+                                                <div className={styles.filterRowHeader}>
+                                                    <h3>Juegos</h3>
+                                                    <div className={styles.rowNavButtons}>
+                                                        <button onClick={() => scrollRow(juegoRowRef, 'left')}><FaChevronLeft /></button>
+                                                        <button onClick={() => scrollRow(juegoRowRef, 'right')}><FaChevronRight /></button>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.gameScrollRow} ref={juegoRowRef}>
+                                                    <div 
+                                                        className={`${styles.gameBubble} ${idJuegoSeleccionado === null ? styles.gameBubbleActive : ''}`}
+                                                        onClick={() => setIdJuegoSeleccionado(null)}
+                                                    >
+                                                        <div className={styles.bubbleIcon}><FaGamepad /></div>
+                                                        <span>Todos</span>
+                                                    </div>
+                                                    {juegos.map(juego => (
+                                                        <div 
+                                                            key={juego.id}
+                                                            className={`${styles.gameBubble} ${idJuegoSeleccionado === juego.id ? styles.gameBubbleActive : ''}`}
+                                                            onClick={() => setIdJuegoSeleccionado(juego.id)}
+                                                        >
+                                                            <div className={styles.bubbleIcon}>
+                                                                {juego.imagenUrl ? <img src={juego.imagenUrl} alt={juego.nombre} /> : <FaGamepad />}
+                                                            </div>
+                                                            <span>{juego.nombre}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
-                                </section>
-
-                                {/* SECCIÓN DE CATEGORÍAS */}
-                                <section className={styles.filterSection} aria-label="Categorías">
-                                    <div className={styles.filterSectionHeader}>
-                                        <h3 className={styles.sectionTitle}><FaTags size={14} /> Categorías</h3>
-                                        <div className={styles.filterSliderControls}>
-                                            <button className={styles.filterControlBtn} onClick={() => scrollRow(catRowRef, 'left')} aria-label="Deslizar izquierda"><FaChevronLeft size={10} /></button>
-                                            <button className={styles.filterControlBtn} onClick={() => scrollRow(catRowRef, 'right')} aria-label="Deslizar derecha"><FaChevronRight size={10} /></button>
-                                        </div>
+                                    
+                                    {/* ENCABEZADO DE PRODUCTOS */}
+                                    <div className={styles.productsHeader}>
+                                        <h2 className={styles.productsHeaderTitle}>Productos Destacados</h2>
                                     </div>
-                                    <div className={styles.filterOuterContainer}>
-                                        <div className={styles.selectorScrollRow} ref={catRowRef}>
-                                            <div 
-                                                onClick={() => setIdCatSeleccionada(null)} 
-                                                className={`${styles.selectorCardItem} ${idCatSeleccionada === null ? styles.selectorActivo : ''}`}
-                                            >
-                                                <div className={`${styles.cardImagePlaceholder} ${styles.allOverlay}`}>
-                                                    <FaTags size={22} className={styles.categoryNeonIcon} />
-                                                </div>
-                                                <span className={styles.cardText}>Todas</span>
-                                            </div>
-
-                                            {categorias.map(c => (
-                                                <div 
-                                                    key={c.id} 
-                                                    onClick={() => setIdCatSeleccionada(c.id)} 
-                                                    className={`${styles.selectorCardItem} ${idCatSeleccionada === c.id ? styles.selectorActivo : ''}`}
-                                                >
-                                                    {c.imagenUrl ? (
-                                                        <img src={c.imagenUrl} alt="" className={styles.cardImage} />
-                                                    ) : (
-                                                        <div className={styles.cardImagePlaceholder}>
-                                                            <div className={styles.categoryNeonIcon}>
-                                                                {obtenerIconoCategoria(c.nombre)}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    <div className={styles.cardOverlay} />
-                                                    <span className={styles.cardText}>{c.nombre}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className={styles.filterFade} />
-                                    </div>
-                                </section>
-
-                                {/* SECCIÓN DE JUEGOS */}
-                                <section className={styles.filterSection} aria-label="Juegos">
-                                    <div className={styles.filterSectionHeader}>
-                                        <h3 className={styles.sectionTitle}><FaGamepad size={14} /> Filtrar por Juego</h3>
-                                        <div className={styles.filterSliderControls}>
-                                            <button className={styles.filterControlBtn} onClick={() => scrollRow(juegoRowRef, 'left')} aria-label="Deslizar izquierda"><FaChevronLeft size={10} /></button>
-                                            <button className={styles.filterControlBtn} onClick={() => scrollRow(juegoRowRef, 'right')} aria-label="Deslizar derecha"><FaChevronRight size={10} /></button>
-                                        </div>
-                                    </div>
-                                    <div className={styles.filterOuterContainer}>
-                                        <div className={styles.selectorScrollRow} ref={juegoRowRef}>
-                                            <div 
-                                                onClick={() => setIdJuegoSeleccionado(null)} 
-                                                className={`${styles.selectorCardItem} ${idJuegoSeleccionado === null ? styles.selectorActivo : ''}`}
-                                            >
-                                                <div className={`${styles.cardImagePlaceholder} ${styles.allOverlay}`}>%-</div>
-                                                <span className={styles.cardText}>Todos los Juegos</span>
-                                            </div>
-                                            {juegos.map(j => (
-                                                <div 
-                                                    key={j.id} 
-                                                    onClick={() => setIdJuegoSeleccionado(j.id)} 
-                                                    className={`${styles.selectorCardItem} ${idJuegoSeleccionado === j.id ? styles.selectorActivo : ''}`}
-                                                >
-                                                    {j.imagenUrl ? (
-                                                        <img src={j.imagenUrl} alt="" className={styles.cardImage} />
-                                                    ) : (
-                                                        <div className={styles.cardImagePlaceholder}>👾</div>
-                                                    )}
-                                                    <div className={styles.cardOverlay} />
-                                                    <span className={styles.cardText}>{j.nombre}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className={styles.filterFade} />
-                                    </div>
-                                </section>
-
-                                {/* CUADRÍCULA DE PRODUCTOS */}
-                                <div className={styles.productsHeader}>
-                                    <h2 className={styles.productsHeaderTitle}>Productos Destacados</h2>
-                                </div>
-                                
-                                <div className={styles.productsGrid}>
-                                    {productosFiltrados.map(p => {
-                                        const itemEnCarrito = carrito.find(item => item.producto.id === p.id);
-                                        return (
-                                            <article key={p.id} className={styles.productCard}>
-                                                <div className={styles.imageContainer} onClick={() => manejarVerDetalle(p)}>
-                                                    {p.imagenUrl ? (
-                                                        <img src={p.imagenUrl} alt={p.nombre} className={styles.productImage} loading="lazy" />
-                                                    ) : (
-                                                        <div className={styles.noImage}>SIN IMAGEN</div>
-                                                    )}
-                                                    <span className={styles.badge} style={{ background: p.esDigital ? '#581c7e' : '#047688' }}>
-                                                        {p.esDigital ? "DIGITAL" : "FÍSICO"}
+                                    
+                                    {/* CUADRÍCULA DE PRODUCTOS FILTRADOS */}
+                                    <div className={styles.productsGrid}>
+                                        {productosFiltrados.map((prod: Producto) => (
+                                            <div key={prod.id} className={styles.productCard}>
+                                                <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                    <span className={styles.productBadge} style={{ background: prod.esDigital ? '#581c7e' : '#047688' }}>
+                                                        {prod.esDigital ? "Digital" : "Físico"}
                                                     </span>
+                                                    {prod.imagenUrl ? (
+                                                        <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} />
+                                                    ) : (
+                                                        <div className={styles.noImagePlaceholder}>Nicaplus Tech</div>
+                                                    )}
                                                 </div>
-                                                <div className={styles.cardContent}>
-                                                    <div className={styles.infoWrapper} onClick={() => manejarVerDetalle(p)} style={{ cursor: 'pointer' }}>
-                                                        <h3 className={styles.productTitle}>{p.nombre}</h3>
-                                                        <p className={styles.productDescription}>{p.descripcion}</p>
-                                                    </div>
-                                                    <div className={styles.priceRow}>
-                                                        <span className={styles.price}>C$ {p.precioVenta}</span>
-                                                        {itemEnCarrito ? (
-                                                            <div className={styles.cartQtyControlsGlobal}>
-                                                                <button onClick={() => itemEnCarrito.cantidad === 1 ? removerDelCarrito(p.id) : cambiarCantidad(p.id, -1)} className={styles.qtyBtn}>
-                                                                    {itemEnCarrito.cantidad === 1 ? '🗑️' : '-'}
-                                                                </button>
-                                                                <span className={styles.qtyValue}>{itemEnCarrito.cantidad}</span>
-                                                                <button onClick={() => agregarAlCarrito(p)} className={styles.qtyBtn}>+</button>
-                                                            </div>
-                                                        ) : (
-                                                            /* Modifica el botón de añadir dentro de tu mapeo de productosFiltrados (Línea ~540 de tu archivo original) */
-                                                            <button 
-                                                                onClick={(e) => agregarAlCarrito(p, e)} 
-                                                                className={styles.addBtn}
-                                                            >
-                                                                + Añadir
-                                                            </button>
-                                                        )}
+                                                <div className={styles.productInfo}>
+                                                    <h3 className={styles.productName} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                        {prod.nombre}
+                                                    </h3>
+                                                    <p className={styles.productDescription}>{prod.descripcion}</p>
+                                                    <div className={styles.priceActionRow}>
+                                                        <span className={styles.productPrice}>C$ {prod.precioVenta}</span>
+                                                        <button 
+                                                            className={styles.addCartBtn}
+                                                            disabled={!prod.esDigital && prod.stockActual <= 0}
+                                                            onClick={(e) => agregarAlCarrito(prod, e)}
+                                                        >
+                                                            <FaShoppingCart />
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </article>
-                                        );
-                                    })}
+                                            </div>
+                                        ))}
+                                    </div>
+
                                 </div>
                             </div>
                         )}
@@ -791,120 +714,29 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                             />
                         )}
 
-                        {/* VISTA DEL CARRITO */}
+                        {/* VISTA DEL CARRITO EXTRACTADA */}
                         {seccionActiva === 'carrito' && (
-                            <div className={`${styles.cartViewContainer} ${styles.fadeEntrance}`}>
-                                <div className={styles.cartViewHeader}>
-                                    <button className={styles.backToStoreBtn} onClick={() => cambiarSeccion('productos')}>
-                                        <FaArrowLeft /> Volver a la tienda
-                                    </button>
-                                    <h2 className={styles.cartViewTitle}>Tu Carrito de Compras</h2>
-                                </div>
-
-                                {carrito.length === 0 ? (
-                                    <div className={styles.emptyCartView}>
-                                        <div className={styles.emptyIconCircle}><FaShoppingCart size={32} /></div>
-                                        <h3>Tu carrito está vacío</h3>
-                                        <button className={styles.exploreBtn} onClick={() => cambiarSeccion('productos')}>Explorar Productos</button>
-                                    </div>
-                                ) : (
-                                    <div className={styles.cartMainGrid}>
-                                        <div className={styles.cartItemsContainer}>
-                                            {carrito.map(item => (
-                                                <div key={item.producto.id} className={styles.cartItemCard}>
-                                                    <div className={styles.cartItemImgThum}>
-                                                        {item.producto.imagenUrl ? <img src={item.producto.imagenUrl} alt="" /> : <div className={styles.cartNoImg}>🎮</div>}
-                                                    </div>
-                                                    <div className={styles.cartItemDetails}>
-                                                        <div className={styles.cartItemMeta}>
-                                                            <h4>{item.producto.nombre}</h4>
-                                                            <span className={item.producto.esDigital ? styles.tagDig : styles.tagFis}>{item.producto.esDigital ? "Digital" : "Físico"}</span>
-                                                        </div>
-                                                        <p className={styles.cartItemPriceUnit}>U: C$ {item.producto.precioVenta}</p>
-                                                    </div>
-                                                    <div className={styles.cartQtyControls}>
-                                                        <button onClick={() => cambiarCantidad(item.producto.id, -1)} className={styles.qtyBtn}><FaMinus size={10} /></button>
-                                                        <span className={styles.qtyValue}>{item.cantidad}</span>
-                                                        <button onClick={() => cambiarCantidad(item.producto.id, 1)} className={styles.qtyBtn}><FaPlus size={10} /></button>
-                                                    </div>
-                                                    <div className={styles.cartItemSubtotalBlock}><span className={styles.itemSubtotalText}>C$ {item.cantidad * item.producto.precioVenta}</span></div>
-                                                    <button onClick={() => removerDelCarrito(item.producto.id)} className={styles.deleteItemBtn} aria-label="Eliminar ítem"><FaTrashAlt size={14} /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className={styles.cartSummaryCard}>
-                                            <h3>Resumen de Pedido</h3>
-                                            <div className={styles.summaryRow}><span>Subtotal</span><span>C$ {totalPagar}</span></div>
-                                            <div className={styles.dividerSummary} />
-                                            
-                                            <form onSubmit={enviarAWhatsApp} className={styles.billingForm}>
-                                                <h4 className={styles.formTitle}>Datos de Entrega</h4>
-                                                
-                                                <div className={styles.inputGroup}>
-                                                    <label><FaUser /> Nombre Completo *</label>
-                                                    <input type="text" required placeholder="Ej: Juan Pérez" value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} />
-                                                </div>
-
-                                                <div className={styles.inputGroup}>
-                                                    <label><FaPhone /> Teléfono *</label>
-                                                    <input type="tel" required placeholder="Ej: 88888888" value={telefonoCliente} onChange={(e) => setTelefonoCliente(e.target.value)} />
-                                                </div>
-
-                                                <div className={styles.inputGroup}>
-                                                    <label><FaTruck /> Tipo de Entrega</label>
-                                                    <select value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
-                                                        <option value="Envío a domicilio">Envío a domicilio</option>
-                                                        <option value="Retiro en sucursal (León)">Retiro en tienda (León)</option>
-                                                        <option value="Envío digital (Email/WhatsApp)">Entrega Inmediata (Digital)</option>
-                                                    </select>
-                                                </div>
-
-                                                {tipoEntrega === "Envío a domicilio" && (
-                                                    <div className={styles.inputGroup}>
-                                                        <label><FaMapMarkerAlt /> Dirección Exacta *</label>
-                                                        <textarea required placeholder="Barrio, dirección exacta..." value={direccionCliente} onChange={(e) => setDireccionCliente(e.target.value)} />
-                                                    </div>
-                                                )}
-
-                                                <div className={styles.inputGroup}>
-                                                    <label><FaMoneyBillWave /> Método de Pago</label>
-                                                    <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
-                                                        <option value="Transferencia Bancaria">Transferencia (LAFISE / BANPRO)</option>
-                                                        <option value="Efectivo">Efectivo (Contra Entrega)</option>
-                                                        <option value="Billetera Digital">Puntos BAC / KASH / Tigo Money</option>
-                                                    </select>
-                                                </div>
-
-                                                <div className={styles.dividerSummary} />
-                                                <div className={`${styles.summaryRow} ${styles.totalRowView}`}>
-                                                    <span>Total:</span>
-                                                    <span className={styles.totalColor}>C$ {totalPagar}</span>
-                                                </div>
-
-                                                <div className={styles.termsCheckboxGroup}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        id="term_check"
-                                                        checked={aceptoTerminos}
-                                                        onChange={(e) => setAceptoTerminos(e.target.checked)}
-                                                    />
-                                                    <label htmlFor="term_check">
-                                                        Acepto los {' '}
-                                                        <button type="button" onClick={() => setVerModalTerminos(true)}>
-                                                            términos y condiciones
-                                                        </button>
-                                                    </label>
-                                                </div>
-
-                                                <button type="submit" className={styles.finalCheckoutBtn}>
-                                                    <FaWhatsapp size={18} /> Procesar vía WhatsApp
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <VistaCarrito 
+                                carrito={carrito}
+                                totalPagar={totalPagar}
+                                nombreCliente={nombreCliente}
+                                setNombreCliente={setNombreCliente}
+                                telefonoCliente={telefonoCliente}
+                                setTelefonoCliente={setTelefonoCliente}
+                                tipoEntrega={tipoEntrega}
+                                setTipoEntrega={setTipoEntrega}
+                                direccionCliente={direccionCliente}
+                                setDireccionCliente={setDireccionCliente}
+                                metodoPago={metodoPago}
+                                setMetodoPago={setMetodoPago}
+                                aceptoTerminos={aceptoTerminos}
+                                setAceptoTerminos={setAceptoTerminos}
+                                setVerModalTerminos={setVerModalTerminos}
+                                cambiarCantidad={cambiarCantidad}
+                                removerDelCarrito={removerDelCarrito}
+                                cambiarSeccion={cambiarSeccion}
+                                enviarAWhatsApp={enviarAWhatsApp}
+                            />
                         )}
                     </div>
                 )}
@@ -923,11 +755,9 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     <div className={styles.footerInfoColumn}>
                         <h4>Contacto</h4>
                         <div className={styles.footerInfoLink}>
-                            <FaWhatsapp size={14} className={styles.contactIcon} />
                             <span>+505 8787-0821</span>
                         </div>
                         <div className={styles.footerInfoLink}>
-                            <FaMapMarkerAlt size={14} className={styles.contactIcon} />
                             <span>De la estatua de la madre 1c y media al norte, León, Nicaragua.</span>
                         </div>
                     </div>

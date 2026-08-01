@@ -1,8 +1,9 @@
 /* ==========================================================================
-   1. CONFIGURACIÓN GLOBAL Y FONDO INTERACTIVO
+   1. CONFIGURACIÓN GLOBAL, BARRAS DE SCROLL Y FONDO INTERACTIVO
    ========================================================================== */
 .mainWrapper {
   min-height: 100vh;
+  width: 100%;
   background-color: #0b0713;
   color: #ffffff;
   font-family: 'Rajdhani', system-ui, -apple-system, sans-serif;
@@ -12,18 +13,45 @@
   overflow-x: hidden;
 }
 
+/* Estilo global para las barras de scroll */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0713;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(176, 2, 194, 0.4);
+  border-radius: 4px;
+  border: 1px solid #0b0713;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b002c2;
+  box-shadow: 0 0 10px #b002c2;
+}
+
+/* Soporte Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(176, 2, 194, 0.4) #0b0713;
+}
+
 .canvasBackground {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   pointer-events: none;
   z-index: 0;
 }
 
 /* ==========================================================================
-   2. NAVBAR ESTILO RETAIL (E-COMMERCE ORDENADO)
+   2. NAVBAR ESTILO RETAIL
    ========================================================================== */
 .navbar {
   position: sticky;
@@ -51,7 +79,7 @@
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  flex-shrink: 0; /* Evita que el logo se deforme */
+  flex-shrink: 0;
 }
 
 .brandIndicator {
@@ -70,12 +98,11 @@
   text-transform: uppercase;
 }
 
-/* El menú central de navegación */
 .navigation {
   display: flex;
   gap: 1.5rem;
-  flex-grow: 1; /* Le permite tomar espacio sobrante de forma elástica */
-  justify-content: center; /* Mantiene Inicio/Tienda perfectamente centrados */
+  flex-grow: 1;
+  justify-content: center;
 }
 
 .navTab {
@@ -99,17 +126,14 @@
   text-shadow: 0 0 8px rgba(176, 2, 194, 0.6);
 }
 
-/* ==========================================================================
-   BLOQUE DERECHO COMPLETO (BUSCADOR + CARRITO + INGRESAR)
-   ========================================================================== */
+/* COMPONENTES DE BÚSQUEDA Y AUTH */
 .searchAndCartBlock {
   display: flex;
   align-items: center;
-  gap: 1.25rem; /* Espaciado fijo y seguro entre buscador, carrito y auth */
-  flex-shrink: 0; /* Prohíbe de forma estricta que este bloque colapse o se oculte */
+  gap: 1.25rem;
+  flex-shrink: 0;
 }
 
-/* Wrapper del buscador */
 .searchWrapper {
   position: relative;
   display: flex;
@@ -143,49 +167,6 @@
   box-shadow: 0 0 10px rgba(176, 2, 194, 0.3);
 }
 
-/* Botón de Carrito (Versión Escritorio) */
-.cartBtnDesktop {
-  position: relative;
-  background: rgba(176, 2, 194, 0.1);
-  border: 1px solid #b002c2;
-  color: #ffffff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.25s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.cartBtnDesktop:hover, .cartBtnActive {
-  background: #b002c2;
-  box-shadow: 0 0 15px rgba(176, 2, 194, 0.5);
-}
-
-/* La Burbuja de Notificación */
-.cartBadgeCount {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: #047688;
-  color: #ffffff;
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 10px;
-  font-weight: 800;
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Contenedor de Auth (Ingresar / Salir) */
 .userAuthContainer {
   display: flex;
   align-items: center;
@@ -202,7 +183,7 @@
   cursor: pointer;
   font-size: 0.85rem;
   transition: background 0.2s;
-  white-space: nowrap; /* Evita que la palabra "Ingresar" se rompa en dos líneas */
+  white-space: nowrap;
 }
 
 .btnIngresar:hover {
@@ -228,10 +209,7 @@
 }
 
 /* ==========================================================================
-   3. NUEVA ESTRUCTURA DE ANUNCIOS (HERO GRID 2 COLUMNAS)
-   ========================================================================== */
-/* ==========================================================================
-   3. CORRECCIÓN: ESTRUCTURA DE ANUNCIOS (HERO GRID)
+   3. HERO GRID / ESTRUCTURA DE ANUNCIOS
    ========================================================================== */
 .heroPromoSection {
   max-width: 1200px;
@@ -249,11 +227,11 @@
   padding: 3rem;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; /* Alineación limpia desde arriba hacia abajo */
+  justify-content: flex-start;
   align-items: flex-start;
   position: relative; 
   overflow: hidden;
-  min-height: 480px; /* Incrementado sutilmente para balancear con el alto de los dos banners derechos */
+  min-height: 480px;
 }
 
 .promoBadge {
@@ -296,7 +274,7 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   z-index: 2;
-  margin-bottom: auto; /* Empuja cualquier espacio sobrante hacia abajo */
+  margin-bottom: auto;
   border-radius: 10px;
 }
 
@@ -305,25 +283,20 @@
   box-shadow: 0 0 20px rgba(176, 2, 194, 0.6);
 }
 
-/* ESTA ES LA CLAVE: Manejo de la imagen de fondo para que no rompa el layout */
 .promoGraphicOverlay {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 55%; /* Ocupa la mitad derecha del banner */
-  background-image: url('tu-ruta-de-la-imagen-de-windows.jpg'); /* En caso de usarlo por CSS */
+  width: 55%;
   background-size: cover;
   background-position: center left;
   z-index: 1;
   pointer-events: none;
-  
-  /* Máscara de desvanecimiento para que se fusione suavemente con el fondo oscuro a la izquierda */
   mask-image: linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%);
   -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%);
 }
 
-/* Si usas una etiqueta <img> en tu JSX para la imagen de Windows, aplícale esta clase: */
 .promoAbsoluteImage {
   position: absolute;
   top: 0;
@@ -338,21 +311,6 @@
   -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 65%, rgba(0,0,0,0) 100%);
 }
 
-/* Capa de soporte para matizar luces de la imagen si fuese necesario */
-.promoGraphicOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, #0d0818 40%, transparent 80%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* ==========================================================================
-   BANNERS LATERALES (Mantienen consistencia de altura)
-   ========================================================================== */
 .sidePromoContainer {
   display: flex;
   flex-direction: column;
@@ -361,6 +319,7 @@
 }
 
 .sideBanner {
+  position: relative;
   background: rgba(20, 14, 36, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 4px;
@@ -369,6 +328,7 @@
   display: flex;
   align-items: center;
   transition: border-color 0.3s;
+  overflow: hidden;
 }
 
 .sideBanner:hover {
@@ -376,10 +336,25 @@
 }
 
 .sideBannerContent {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.35rem;
+  z-index: 2;
+}
+
+.sideBannerImage {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+  mask-image: linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
 }
 
 .sideTag {
@@ -574,7 +549,7 @@
 }
 
 /* ==========================================================================
-   5. GRID DE PRODUCTOS LIMPIO Y CUADRADO (ESTILO CATÁLOGO)
+   5. GRID DE PRODUCTOS (CATÁLOGO)
    ========================================================================== */
 .mainContent {
   flex: 1;
@@ -635,16 +610,14 @@
   border-color: #047688;
   box-shadow: 0 12px 30px rgba(4, 118, 136, 0.25);
   transform: translateY(-4px);
-  border-radius: 20px;
 }
 
-.imageContainer {
+.imageWrapper {
   position: relative;
   width: 100%;
   padding-top: 100%;
   background-color: #110b21;
   cursor: pointer;
-  border-radius: 20px;
 }
 
 .productImage {
@@ -661,7 +634,7 @@
   transform: scale(1.03);
 }
 
-.noImage {
+.noImagePlaceholder {
   position: absolute;
   top: 0;
   left: 0;
@@ -671,25 +644,26 @@
   align-items: center;
   justify-content: center;
   background: #18122b;
-  color: #475569;
-  font-size: 0.8rem;
+  color: #64748b;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
-.badge {
+.productBadge {
   position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
+  top: 0.75rem;
+  left: 0.75rem;
   font-size: 0.65rem;
   font-weight: 800;
   padding: 0.25rem 0.6rem;
-  border-radius: 2px;
+  border-radius: 4px;
   color: #ffffff;
   z-index: 2;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.cardContent {
+.productInfo, .cardContent {
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -699,18 +673,12 @@
   background: rgba(15, 10, 26, 0.4);
 }
 
-.infoWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.productTitle {
+.productName, .productTitle {
   font-size: 1rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1.2;
-  margin: 0 0 0.25rem 0;
+  margin: 0;
 }
 
 .productDescription {
@@ -724,25 +692,24 @@
   line-height: 1.4;
 }
 
-.priceRow {
+.priceActionRow, .priceRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
 }
 
-.price {
+.productPrice, .price {
   font-size: 1.25rem;
   font-weight: 800;
   color: #ffffff;
 }
 
-.addBtn {
+.addCartBtn, .addBtn {
   background: transparent;
   border: 1px solid #047688;
   color: #047688;
   padding: 0.45rem 0.9rem;
-  border-radius: 2px;
   font-weight: 700;
   font-size: 0.8rem;
   cursor: pointer;
@@ -751,10 +718,16 @@
   border-radius: 10px;
 }
 
-.addBtn:hover {
+.addCartBtn:hover:not(:disabled), .addBtn:hover {
   background: #047688;
   color: #ffffff;
   box-shadow: 0 0 10px rgba(4, 118, 136, 0.5);
+}
+
+.addCartBtn:disabled {
+  border-color: #334155;
+  color: #475569;
+  cursor: not-allowed;
 }
 
 .cartQtyControlsGlobal {
@@ -804,25 +777,9 @@
   box-sizing: border-box;
 }
 
-/* Tarjeta de ítem individual del carrito */
-.cartItemCard {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap; /* Permite que los controles bajen si no caben en móviles pequeños */
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 1rem;
-  border-radius: 10px;
-  margin-bottom: 1rem;
-  box-sizing: border-box;
-}
-
-/* Encabezado adaptable */
 .cartViewHeader {
   display: flex;
-  flex-direction: column; /* Se apila en móvil para evitar colisiones */
+  flex-direction: column;
   gap: 1rem;
   margin-bottom: 2rem;
 }
@@ -897,7 +854,6 @@
   background: #d904ec;
 }
 
-/* Grid Principal: Pasa de 1 columna (móvil) a 2 columnas (escritorio) */
 .cartMainGrid {
   display: flex;
   flex-direction: column;
@@ -909,7 +865,7 @@
 @media (min-width: 992px) {
   .cartMainGrid {
     display: grid;
-    grid-template-columns: 1fr 400px; /* Lista a la izquierda, formulario a la derecha */
+    grid-template-columns: 1fr 400px;
     align-items: start;
   }
 }
@@ -924,7 +880,7 @@
   background: rgba(15, 10, 26, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   gap: 1.25rem;
@@ -936,6 +892,7 @@
   border-radius: 4px;
   overflow: hidden;
   background: #110b21;
+  flex-shrink: 0;
 }
 
 .cartItemImgThum img {
@@ -1022,9 +979,9 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1rem;
   padding: 1.5rem;
-  width: 100%; /* Ocupa todo el ancho en móvil sin desbordar */
+  width: 100%;
   max-width: 100%; 
-  box-sizing: border-box; /* Crucial para que el padding no sume ancho extra */
+  box-sizing: border-box;
 }
 
 .cartSummaryCard h3 {
@@ -1083,7 +1040,7 @@
 .inputGroup input,
 .inputGroup select,
 .inputGroup textarea {
-  width: 100%; /* Se adapta perfectamente al contenedor */
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   padding: 0.75rem 1rem;
@@ -1099,26 +1056,20 @@
   border-color: #047688;
 }
 
-/* ==========================================================================
-   CORRECCIÓN ESTRICTA: VISIBILIDAD DE SELECTS Y OPCIONES (NICAPLUS)
-   ========================================================================== */
 .inputGroup select {
   cursor: pointer;
-  /* Forzamos al navegador a renderizar el componente de forma que permita estilos CSS */
-  appearance: normal; 
-  -webkit-appearance: none; /* En caso de que quieras resetearlo completo, pero requiere una flecha manual */
+  appearance: none; 
+  -webkit-appearance: none;
 }
 
-/* Forzar que las opciones del desplegable tengan fondo oscuro y texto claro */
 .inputGroup select option {
-  background-color: #110b21 !important; /* El !important es clave aquí para ganarle al agente del navegador */
-  color: #ffffff !important;            /* Texto blanco legible */
+  background-color: #110b21 !important;
+  color: #ffffff !important;
   padding: 0.5rem;
 }
 
-/* Soporte y limpieza para estados enfocados */
 .inputGroup select:focus {
-  background-color: #110b21; /* Previene parpadeos blancos al hacer foco en móviles */
+  background-color: #110b21;
 }
 
 .totalRowView {
@@ -1203,22 +1154,156 @@
   to { transform: rotate(360deg); }
 }
 
-.mobileActionsBlock {
-  display: none; /* Se oculta en escritorio */
-  gap: 0.75rem;
+/* ==========================================================================
+   8. COMPONENTES DEL NAVBAR DEL CARRITO (ESCRITORIO Y MÓVIL)
+   ========================================================================== */
+.cartBtnDesk {
+  position: relative;
+  background: rgba(176, 2, 194, 0.1);
+  border: 1px solid #b002c2;
+  color: #ffffff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  display: flex;
   align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.sidebarMobile, .sidebarOverlay {
+.cartBtnDesk:hover, .cartBtnActive {
+  background: #b002c2;
+  box-shadow: 0 0 15px rgba(176, 2, 194, 0.5);
+}
+
+.cartBadgeCount {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #b002c2; 
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px #b002c2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mobileActionsBlock {
   display: none;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cartBtnMobile {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  padding: 0;
+}
+
+.cartBtnMobile:hover, .cartBtnMobile.cartBtnActive {
+  border-color: #047688;
+  background: rgba(4, 118, 136, 0.15);
+  box-shadow: 0 0 10px rgba(4, 118, 136, 0.3);
+}
+
+.hamburgerBtn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+/* EFECTOS DE ANIMACIÓN */
+.flyingParticle {
+  position: fixed;
+  z-index: 9999;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #b002c2 0%, #047688 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 15px #b002c2, 0 0 30px #047688;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.8s cubic-bezier(0.42, 0, 0.58, 1), 
+              opacity 0.8s ease-in-out, 
+              width 0.8s ease, 
+              height 0.8s ease;
+}
+
+@keyframes cartBump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); box-shadow: 0 0 20px #b002c2; }
+  100% { transform: scale(1); }
+}
+
+.cartBumpAnimation {
+  animation: cartBump 0.3s ease-out;
+}
+
+/* ESTRUCTURAS DE LAYOUT INTERNAS */
+.catalogoLayout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 20px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.catalogoMainContent {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+@media (min-width: 768px) {
+    .catalogoLayout {
+        flex-direction: row;
+    }
+    .catalogoLayout > aside {
+        width: 280px;
+        flex-shrink: 0;
+    }
 }
 
 /* ==========================================================================
-   FOOTER PREMIUM ESTILO GAMING
+   9. FOOTER PREMIUM ESTILO GAMING
    ========================================================================== */
 .footer {
   background: #060409;
-  border-top: 2px solid rgba(176, 2, 194, 0.2); /* Sutil línea neón superior */
+  border-top: 2px solid rgba(176, 2, 194, 0.2);
   padding: 3rem 1.5rem 1.5rem 1.5rem;
   position: relative;
   z-index: 1;
@@ -1234,11 +1319,6 @@
 }
 
 .footerBrandColumn .brandText {
-  font-weight: 900;
-  font-size: 1.4rem;
-  letter-spacing: 0.08em;
-  color: #ffffff;
-  text-transform: uppercase;
   margin-bottom: 0.75rem;
 }
 
@@ -1254,7 +1334,7 @@
   font-size: 0.95rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: #047688; /* Detalle cian del e-commerce */
+  color: #047688; 
   margin: 0 0 1rem 0;
   letter-spacing: 0.05em;
 }
@@ -1269,7 +1349,7 @@
 }
 
 .contactIcon {
-  color: #b002c2; /* Detalle morado neón para los iconos decorativos */
+  color: #b002c2;
 }
 
 .socialIconsRow {
@@ -1299,7 +1379,6 @@
   transform: translateY(-2px);
 }
 
-/* Barra inferior de Copyright */
 .footerBottomBar {
   max-width: 1200px;
   margin: 0 auto;
@@ -1310,88 +1389,220 @@
   color: #475569;
 }
 
-/* Adaptación exacta para Móviles */
-@media (max-width: 768px) {
-  .footerContainer {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-    text-align: left;
-  }
-  
-  .footerDescription {
-    max-width: 100%;
-  }
+/* ==========================================================================
+   10. FILAS DE FILTROS EN BURBUJAS (CATÁLOGO PRINCIPAL)
+   ========================================================================== */
+.filterSectionContainer {
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-@media (max-width: 768px) {
-  .mobileActionsBlock {
-    display: flex; /* Se activa solo en pantallas móviles */
-  }
+.filterRowWrapper {
+  background: rgba(13, 8, 24, 0.7);
+  border: 1px solid rgba(176, 2, 194, 0.2);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+.filterRowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filterRowHeader h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  margin: 0;
+  border-left: 3px solid #047688;
+  padding-left: 0.5rem;
+}
+
+.rowNavButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rowNavButtons button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rowNavButtons button:hover {
+  background: #047688;
+  border-color: #047688;
+  box-shadow: 0 0 10px rgba(4, 118, 136, 0.5);
+}
+
+.categoryScrollRow,
+.gameScrollRow {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(176, 2, 194, 0.4) transparent;
+  scroll-behavior: smooth;
+}
+
+.categoryScrollRow::-webkit-scrollbar,
+.gameScrollRow::-webkit-scrollbar {
+  height: 6px;
+}
+
+.categoryScrollRow::-webkit-scrollbar-thumb,
+.gameScrollRow::-webkit-scrollbar-thumb {
+  background: rgba(176, 2, 194, 0.3);
+  border-radius: 3px;
+}
+
+.categoryBubble,
+.gameBubble {
+  flex: 0 0 85px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.categoryBubble:hover,
+.gameBubble:hover {
+  transform: translateY(-3px);
+}
+
+.bubbleIcon {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: #161026;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.bubbleIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.categoryBubbleActive .bubbleIcon,
+.gameBubbleActive .bubbleIcon {
+  border-color: #b002c2;
+  color: #b002c2;
+  background: rgba(176, 2, 194, 0.1);
+  box-shadow: 0 0 12px rgba(176, 2, 194, 0.6);
+}
+
+.categoryBubble span,
+.gameBubble span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+
+.categoryBubbleActive span,
+.gameBubbleActive span {
+  color: #ffffff;
+  text-shadow: 0 0 5px rgba(176, 2, 194, 0.5);
 }
 
 /* ==========================================================================
-   8. MEDIA QUERIES (ADAPTACIÓN MÓVIL EXACTA)
+   11. MEDIA QUERIES RESTRUCTURADAS Y CORREGIDAS
    ========================================================================== */
-@media (max-width: 1465px) {
+
+/* --------------------------------------------------------------------------
+   LAPTOPS / PANTALLAS PEQUEÑAS (Hasta 1024px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
   .heroPromoSection {
     grid-template-columns: 1fr;
   }
 
-  .navigation, .searchAndCartBlock .cartBtnDesktop, .userAuthContainer {
-    display: none;
+  .mainPromoBanner {
+    min-height: 380px;
+    padding: 2rem;
+  }
+
+  .promoGraphicOverlay,
+  .promoAbsoluteImage {
+    opacity: 0.25;
+    width: 65%;
+  }
+
+  .navigation, 
+  .cartBtnDesk, 
+  .userAuthContainer {
+    display: none !important;
   }
   
   .mobileActionsBlock {
-    display: flex;
+    display: flex !important;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
   }
   
   .cartBtnMobile {
-    background: transparent;
-    border: none;
-    color: #ffffff;
-    position: relative;
-    cursor: pointer;
-  }
-  
-  .hamburgerBtn {
-    background: transparent;
-    border: none;
-    color: #ffffff;
-    cursor: pointer;
+    display: flex !important;
   }
   
   .cartMainGrid {
     grid-template-columns: 1fr;
   }
 
-/* Estado base del fondo oscuro (CERRADO) */
   .sidebarOverlay {
-    display: block; /* OBLIGATORIO: Sobrescribe el display: none global */
+    display: block;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     z-index: 998;
-    
-    /* Inicialmente oculto */
     opacity: 0;
     pointer-events: none;
-    
     transition: opacity 0.3s ease;
   }
     
-  /* Estado activo del fondo oscuro (ABIERTO) */
   .sidebarOverlayVisible {
     opacity: 1;
     pointer-events: auto;
   }
 
-/* Estado base del menú (CERRADO) */
   .sidebarMobile {
     display: flex;
     position: fixed;
@@ -1399,18 +1610,14 @@
     right: 0;
     width: 280px;
     height: 100vh;
-    background: rgba(13, 8, 24, 0.98); /* Fondo oscuro profundo semi-translúcido */
+    background: rgba(13, 8, 24, 0.98);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     z-index: 999;
     flex-direction: column;
     padding: 2rem 1.5rem;
-    
-    /* Borde izquierdo brillante característico de tu marca */
     border-left: 2px solid #b002c2;
     box-shadow: -10px 0 30px rgba(176, 2, 194, 0.15);
-    
-    /* Animación de salida */
     transform: translateX(105%);
     visibility: hidden;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
@@ -1421,7 +1628,6 @@
     visibility: visible;
   }
 
-  /* Encabezado del Menú */
   .sidebarHeader {
     display: flex;
     justify-content: space-between;
@@ -1455,14 +1661,12 @@
     transform: rotate(90deg);
   }
 
-  /* Lista de Navegación */
   .sidebarNavList {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; /* Botones más juntos y estilizados */
+    gap: 0.75rem;
   }
 
-  /* Pestañas / Botones del menú */
   .sidebarNavTab {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.03);
@@ -1481,13 +1685,11 @@
     transition: all 0.2s ease;
   }
 
-  /* Iconos dentro de las pestañas */
   .sidebarNavTab svg {
-    color: #047688; /* Color cian para los iconos en reposo */
+    color: #047688;
     transition: color 0.2s;
   }
 
-  /* Efecto Hover y Pestaña Activa */
   .sidebarNavTab:hover, 
   .sidebarNavTabActivo {
     color: #ffffff;
@@ -1498,25 +1700,22 @@
 
   .sidebarNavTab:hover svg, 
   .sidebarNavTabActivo svg {
-    color: #b002c2; /* Cambian a morado neón */
+    color: #b002c2;
     filter: drop-shadow(0 0 5px #b002c2);
   }
 
-  /* Divisor de Autenticación */
   .sidebarAuthDivider {
     height: 1px;
     background: linear-gradient(90deg, rgba(176, 2, 194, 0.4), transparent);
     margin: 2rem 0 1.5rem 0;
   }
 
-  /* Bloque de Usuario / Sesión */
   .sidebarUserBlock {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
 
-  /* Botón de Cerrar Sesión específico */
   .sidebarBtnSalir {
     color: #ef4444 !important;
     background: rgba(239, 68, 68, 0.05) !important;
@@ -1533,29 +1732,25 @@
     color: #ef4444 !important;
   }
 
-  /* Forzamos a que el contenedor principal del navbar distribuya bien el espacio */
   .navContainer {
-    gap: 0.5rem; /* Reduce el espacio entre el logo y los elementos de la derecha */
+    gap: 0.75rem;
     padding: 0.75rem 1rem;
   }
 
-  /* Reducimos drásticamente el tamaño del bloque buscador en móvil */
   .searchAndCartBlock {
     display: flex;
-    flex: 1; /* Le permite tomar el espacio disponible de forma elástica */
+    flex: 1;
     justify-content: flex-end;
   }
 
-  /* Achicamos el tamaño del input para pantallas pequeñas */
   .searchWrapper {
     width: 100%;
-    max-width: 140px; /* Tamaño máximo pequeño para que no empuje el menú */
-    min-width: 100px;
+    max-width: 180px;
+    min-width: 120px;
   }
 
-  /* Reducimos el texto y el padding interno para que no se amontone */
   .searchInput {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     padding: 0.4rem 0.5rem 0.4rem 1.8rem;
   }
 
@@ -1565,204 +1760,198 @@
   }
 }
 
-@media (max-width: 480px) {
-  .productsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-    padding: 0 1rem 4rem 1rem;
+/* --------------------------------------------------------------------------
+   TABLETS Y PANTALLAS MEDIANAS (Hasta 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 1rem;
   }
-  
-  .cardContent {
-    padding: 0.75rem;
+
+  .navContainer {
+    padding: 0.5rem 0;
+  }
+
+  .mainPromoBanner {
+    min-height: auto;
+    padding: 1.5rem;
+  }
+
+  .promoTitle {
+    font-size: 2rem;
+  }
+
+  .promoSubtitle {
+    font-size: 0.95rem;
+    max-width: 100%;
+  }
+
+  .promoGraphicOverlay,
+  .promoAbsoluteImage {
+    display: none;
+  }
+
+  .cartItemCard {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
     gap: 0.75rem;
+    align-items: center;
+  }
+
+  .cartItemSubtotalBlock {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+
+  .footerContainer {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: left;
   }
   
-  .productTitle {
-    font-size: 0.85rem;
+  .footerDescription {
+    max-width: 100%;
   }
-  
-  .price {
+}
+
+/* --------------------------------------------------------------------------
+   MÓVILES (Hasta 480px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .brandText {
     font-size: 1.1rem;
+    letter-spacing: 0.04em;
   }
-}
 
-.sideBanner {
-  position: relative; /* Clave para el comportamiento absoluto */
-  overflow: hidden;
-}
+  .brandIndicator {
+    width: 10px;
+    height: 10px;
+  }
 
-.sideBannerContent {
-  position: relative;
-  z-index: 2; /* Por encima de la imagen */
-}
+  .searchWrapper {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
 
-.sideBannerImage {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 40%; /* Toma un área prudente del lateral derecho */
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-  z-index: 1;
-  mask-image: linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
-  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
+  .searchInput {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.4rem 0.35rem 1.8rem;
+  }
+
+  .productsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    padding: 0 0.75rem 3rem 0.75rem;
+  }
+  
+  .productInfo, .cardContent {
+    padding: 0.6rem;
+    gap: 0.5rem;
+  }
+  
+  .productName, .productTitle {
+    font-size: 0.8rem;
+  }
+  
+  .productPrice, .price {
+    font-size: 1rem;
+  }
+
+  .addCartBtn, .addBtn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .sidebarMobile {
+    width: 85vw;
+  }
 }
 
 /* ==========================================================================
-   ESTILOS CORREGIDOS PARA EL CARRITO EN EL NAVBAR (ESCRITORIO Y MÓVIL)
+   CORRECCIÓN GLOBAL DE DESBORDES Y CENTRADO DE CONTENIDOS
    ========================================================================== */
 
-/* Bloque contenedor que agrupa buscador y carrito en escritorio */
-.searchAndCartBlock {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-/* Botón de Carrito (Versión Escritorio) */
-.cartBtnDesk {
-  position: relative;
-  background: rgba(176, 2, 194, 0.1);
-  border: 1px solid #b002c2;
-  color: #ffffff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-weight: 700;
-  font-size: 0.9rem;
-  transition: all 0.25s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.cartBtnDesk:hover {
-  background: #b002c2;
-  box-shadow: 0 0 15px rgba(176, 2, 194, 0.5);
-}
-
-/* Estado Activo global */
-.cartBtnActive {
-  background: rgba(176, 2, 194, 0.2) !important;
-  border-color: #b002c2 !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(176, 2, 194, 0.4) !important;
-}
-
-/* Contenedor de acciones en móvil (Carrito Express + Hamburguesa) */
-.mobileActionsBlock {
-  display: none; /* Oculto por defecto en pantallas grandes */
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-/* Botón de Carrito (Versión Móvil) */
-.cartBtnMobile {
-  position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%; /* Formato circular neón ideal para móvil */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.25s ease;
+/* 1. Forzar un contenedor raíz seguro que evite desbordamientos horizontales */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  margin: 0;
   padding: 0;
 }
 
-.cartBtnMobile:hover, .cartBtnMobile.cartBtnActive {
-  border-color: #047688;
-  background: rgba(4, 118, 136, 0.15);
-  box-shadow: 0 0 10px rgba(4, 118, 136, 0.3);
+.mainWrapper {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
-/* Botón Hamburguesa */
-.hamburgerBtn {
-  background: transparent;
-  border: none;
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+/* 2. Asegurar que todos los contenedores principales respeten los márgenes y el centrado */
+.navbar,
+.navContainer,
+.heroPromoSection,
+.filterSection,
+.filterSectionContainer,
+.productsHeader,
+.productsGrid,
+.cartViewContainer,
+.footerContainer,
+.footerBottomBar,
+.catalogoLayout {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Excepción controlada para catálogos que admiten un ancho ligeramente mayor en escritorio */
+.catalogoLayout {
+  max-width: 1300px;
+}
+
+/* 3. Corrección específica para grids y elementos flexibles que causan desplazamiento */
+.productsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   justify-content: center;
-  padding: 0.5rem;
 }
 
-/* La Burbuja de Notificación (Compartida para ambos botones) */
-.cartBadgeCount {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: #b002c2; 
-  color: #ffffff;
-  font-size: 0.7rem;
-  font-weight: 900;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 8px #b002c2;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* ==========================================================================
-   CORRECCIÓN DENTRO DE RESPONSIVE (MEDIA QUERY)
-   ========================================================================== */
+/* 4. Ajustes adaptativos para prevenir fugas de contenido en pantallas medianas y móviles */
 @media (max-width: 1465px) {
-  /* Ocultamos el carrito de escritorio */
-  .cartBtnDesk {
-    display: none !important;
-  }
-
-  /* Forzamos a que el contenedor móvil aparezca en su sitio */
-  .mobileActionsBlock {
-    display: flex !important;
+  .heroPromoSection {
+    grid-template-columns: 1fr;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   
-  /* Eliminamos cualquier propiedad vieja que intente pisar al botón móvil */
-  .cartBtnMobile {
-    display: flex !important;
+  .navContainer,
+  .productsHeader,
+  .filterSectionContainer,
+  .cartViewContainer {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
-/* ==========================================================================
-   ANIMACIÓN DE OBJETO VOLADOR (FLYING TO CART EFFECT)
-   ========================================================================== */
-.flyingParticle {
-  position: fixed;
-  z-index: 9999;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #b002c2 0%, #047688 100%);
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 15px #b002c2, 0 0 30px #047688;
-  pointer-events: none;
-  background-size: cover;
-  background-position: center;
-  transition: transform 0.8s cubic-bezier(0.42, 0, 0.58, 1), 
-              opacity 0.8s ease-in-out, 
-              width 0.8s ease, 
-              height 0.8s ease;
-}
+@media (max-width: 480px) {
+  .productsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    gap: 0.75rem;
+  }
 
-/* Efecto de pulso temporal en el botón del carrito al recibir el impacto */
-@keyframes cartBump {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); box-shadow: 0 0 20px #b002c2; }
-  100% { transform: scale(1); }
-}
-
-.cartBumpAnimation {
-  animation: cartBump 0.3s ease-out;
+  .navContainer,
+  .heroPromoSection,
+  .filterSectionContainer,
+  .productsHeader,
+  .cartViewContainer,
+  .footer {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }

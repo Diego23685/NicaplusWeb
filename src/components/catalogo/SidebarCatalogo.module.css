@@ -1,0 +1,213 @@
+/* ==========================================================================
+   SIDEBAR RESPONSIVE DE CATÁLOGO
+   ========================================================================== */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 280px;
+  height: 100vh;
+  background: rgba(13, 7, 20, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(147, 51, 234, 0.3);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  color: #e5e7eb;
+  z-index: 997;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+  transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.sidebarMobileOpen {
+  left: 0;
+}
+
+.sidebarOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 996;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.sidebarOverlayVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.closeSidebarBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 15, 36, 0.6);
+  border: 1px solid rgba(88, 28, 135, 0.3);
+  color: #d8b4fe;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 0.2rem;
+  gap: 0.5rem;
+}
+
+/* Escritorio / Pantallas medianas */
+@media (min-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 6rem;
+    left: auto;
+    width: 280px;
+    height: fit-content;
+    max-height: calc(100vh - 7rem);
+    border: 1px solid rgba(147, 51, 234, 0.25);
+    border-radius: 16px;
+    box-shadow: 0 0 25px rgba(88, 28, 135, 0.15);
+  }
+
+  .sidebarOverlay,
+  .closeSidebarBtn {
+    display: none !important;
+  }
+}
+
+.sectionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(192, 132, 252, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* BUSCADOR CORREGIDO (Espaciado interno perfecto y sin duplicar iconos) */
+.searchContainer {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.searchInput {
+  width: 100%;
+  background-color: #180f24;
+  border: 1px solid rgba(88, 28, 135, 0.4);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem 0.55rem 2.25rem; /* Espacio reservado a la IZQUIERDA para la lupa */
+  font-size: 0.85rem;
+  color: #f3f4f6;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.25);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem; /* Colocada limpiamente a la izquierda del input */
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(192, 132, 252, 0.5);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+.separator {
+  height: 1px;
+  background: rgba(88, 28, 135, 0.4);
+  border: none;
+  margin: 0;
+}
+
+.scrollList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  box-sizing: border-box;
+}
+
+.scrollList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollList::-webkit-scrollbar-thumb {
+  background: rgba(147, 51, 234, 0.3);
+  border-radius: 4px;
+}
+
+.scrollList::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 51, 234, 0.6);
+}
+
+.itemButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  background: rgba(24, 15, 36, 0.4);
+  border: 1px solid rgba(88, 28, 135, 0.2);
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.itemButton:hover {
+  background: rgba(88, 28, 135, 0.2);
+  color: #f3f4f6;
+  border-color: rgba(147, 51, 234, 0.4);
+}
+
+.itemButtonActive {
+  background: rgba(76, 29, 149, 0.6) !important;
+  color: #d8b4fe !important;
+  border-color: rgba(168, 85, 247, 0.8) !important;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+}
+
+.iconWrapper {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconWrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.itemText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

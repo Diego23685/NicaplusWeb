@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck, ChevronLeft, ChevronRight, ArrowRight, MonitorPlay } from 'lucide-react';
-import { useScroll, useTransform, motion, AnimatePresence } from 'framer-motion';
+import { Gamepad2, Sparkles, ShoppingBag, Folder, ShieldCheck, ChevronLeft, ChevronRight, ArrowRight, MonitorPlay, Pause, Play } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import styles from './HeroInicio.module.css';
 
@@ -43,9 +43,9 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
   const [juegos, setJuegos] = useState<Juego[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [slideActivo, setSlideActivo] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
 
   const sliderRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const diapositivas: DiapositivaShow[] = [
     {
@@ -78,25 +78,16 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
     }
   ];
 
-  // Configuración de Scroll Driven con Framer Motion
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end end']
-  });
-
-  // Escucha continua del progreso de scroll para actualizar la diapositiva activa
+  // Autoplay inteligente interrumpible
   useEffect(() => {
-    const unsubscribe = scrollYProgress.on('change', (latest) => {
-      const total = diapositivas.length;
-      const index = Math.min(Math.floor(latest * total), total - 1);
-      setSlideActivo(index);
-    });
-    return () => unsubscribe();
-  }, [scrollYProgress, diapositivas.length]);
+    if (isPaused) return;
 
-  // Transformaciones físicas continuas ligadas directamente a la rueda del ratón
-  const bgScale = useTransform(scrollYProgress, [0, 1], [1.2, 1.05]);
-  const bgBrightness = useTransform(scrollYProgress, [0, 0.5, 1], [0.4, 0.25, 0.4]);
+    const timer = setInterval(() => {
+      setSlideActivo((prev) => (prev + 1) % diapositivas.length);
+    }, 6000);
+
+    return () => clearInterval(timer);
+  }, [isPaused, diapositivas.length]);
 
   useEffect(() => {
     Promise.all([
@@ -136,7 +127,7 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
 
   return (
     <div className={styles.heroWrapper}>
-      {/* SECCIÓN HERO ORIGINAL */}
+      {/* SECCIÓN HERO PRINCIPAL */}
       <section className={styles.heroSection}>
         <div className={styles.decorativeGrid} />
         <div className={styles.ambientLightViolet} />
@@ -220,118 +211,110 @@ export const HeroInicio: React.FC<HeroInicioProps> = ({ setSeccionActiva }) => {
         </div>
       </section>
 
-      {/* SHOWCASE CON FRAMER MOTION (CINEMÁTICA REAL) */}
-      <section ref={containerRef} className={styles.showcaseContainer}>
-        <div className={styles.stickyScene}>
-          {/* Fondo Dinámico con Parallax y Crossfade Cinematográfico */}
-          <motion.div
-            className={styles.showcaseBgWrapper}
-            style={{ scale: bgScale }}
-          >
+      {/* SHOWCASE INTERACTIVO TIPO GAMING OS (SIN SCROLL DRIVEN) */}
+      <section 
+        className={styles.interactiveShowcaseSection}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
+        <div className={styles.showcaseCard}>
+          {/* Fondo Dinámico con Parallax y Zoom */}
+          <div className={styles.showcaseBgWrapper}>
             <AnimatePresence mode="wait">
               <motion.img
                 key={slideActivo}
                 src={diapositivas[slideActivo].imagenUrl}
                 alt={diapositivas[slideActivo].titulo}
                 className={styles.showcaseBgImgActive}
-                initial={{ opacity: 0, filter: 'blur(20px) scale(1.15)' }}
-                animate={{ opacity: 1, filter: 'blur(0px) scale(1)' }}
-                exit={{ opacity: 0, filter: 'blur(20px) scale(0.95)' }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                style={{ filter: `brightness(${bgBrightness.get()})` }}
+                initial={{ opacity: 0, scale: 1.1, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.95, filter: 'blur(8px)' }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               />
             </AnimatePresence>
             <div className={styles.showcaseOverlay} />
             <div className={styles.showcaseGridDecoration} />
-          </motion.div>
+          </div>
 
-          {/* Contenido de la Presentación Animado en Cascada (Stagger) */}
+          {/* Contenido Principal */}
           <div className={styles.showcaseContentGrid}>
             <div className={styles.showcaseLeft}>
               <div className={styles.showcaseHeader}>
                 <MonitorPlay className={styles.showcaseIcon} />
-                <span>NUESTRO STOCK AL DETALLE</span>
+                <span>CATÁLOGO DESTACADO</span>
+                <button 
+                  className={styles.pauseBtn} 
+                  onClick={() => setIsPaused(!isPaused)}
+                  title={isPaused ? "Reanudar rotación" : "Pausar rotación"}
+                >
+                  {isPaused ? <Play size={12} /> : <Pause size={12} />}
+                </button>
               </div>
 
-              <div className={styles.textSliderFrame}>
+              <div className={styles.textFrame}>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={slideActivo}
-                    initial={{ opacity: 0, y: 40, rotateX: -15, filter: 'blur(10px)' }}
-                    animate={{ opacity: 1, y: 0, rotateX: 0, filter: 'blur(0px)' }}
-                    exit={{ opacity: 0, y: -40, rotateX: 15, filter: 'blur(10px)' }}
-                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: -20, filter: 'blur(5px)' }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
                     className={styles.textSlideActive}
                   >
-                    <motion.span
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15, duration: 0.4 }}
-                      className={styles.slideTag}
-                    >
+                    <span className={styles.slideTag}>
                       // {diapositivas[slideActivo].tag}
-                    </motion.span>
+                    </span>
 
-                    <motion.h2
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25, duration: 0.5 }}
-                      className={styles.slideTitle}
-                    >
+                    <h2 className={styles.slideTitle}>
                       {diapositivas[slideActivo].titulo}
-                    </motion.h2>
+                    </h2>
 
-                    <motion.p
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.35, duration: 0.5 }}
-                      className={styles.slideDesc}
-                    >
+                    <p className={styles.slideDesc}>
                       {diapositivas[slideActivo].descripcion}
-                    </motion.p>
+                    </p>
 
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.45, duration: 0.4 }}
+                    <button
                       onClick={() => setSeccionActiva('productos')}
                       className={styles.slideBtn}
                     >
                       Explorar esta Línea <ArrowRight size={16} />
-                    </motion.button>
+                    </button>
                   </motion.div>
                 </AnimatePresence>
               </div>
             </div>
 
-            {/* Indicadores Laterales */}
-            <div className={styles.showcaseRight}>
-              <div className={styles.progressTrack}>
-                {diapositivas.map((slide) => (
-                  <div
+            {/* Selector Lateral de Pestañas (Estilo Dashboard Consola) */}
+            <div className={styles.showcaseTabsRight}>
+              {diapositivas.map((slide) => {
+                const isActive = slideActivo === slide.id;
+                return (
+                  <button
                     key={slide.id}
-                    className={`${styles.progressDot} ${slideActivo === slide.id ? styles.dotActive : ''}`}
-                    onClick={() => {
-                      if (containerRef.current) {
-                        const containerTop = containerRef.current.offsetTop;
-                        const totalHeight = containerRef.current.scrollHeight;
-                        const targetScroll = containerTop + (totalHeight / diapositivas.length) * slide.id;
-                        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
-                      }
-                    }}
+                    className={`${styles.tabCard} ${isActive ? styles.tabCardActive : ''}`}
+                    onClick={() => setSlideActivo(slide.id)}
                   >
-                    <span className={styles.dotNumber}>0{slide.id + 1}</span>
-                    <motion.div
-                      className={styles.dotLine}
-                      animate={{
-                        width: slideActivo === slide.id ? 50 : 25,
-                        backgroundColor: slideActivo === slide.id ? '#22d3ee' : '#334155'
-                      }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </div>
-                ))}
-              </div>
+                    <div className={styles.tabInfo}>
+                      <span className={styles.tabNumber}>0{slide.id + 1}</span>
+                      <span className={styles.tabTitle}>{slide.titulo}</span>
+                    </div>
+
+                    {/* Barra de Progreso de Autoplay */}
+                    {isActive && (
+                      <motion.div
+                        className={styles.tabProgressBar}
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: isPaused ? 1 : 1 }}
+                        transition={{ 
+                          duration: isPaused ? 0 : 6, 
+                          ease: 'linear',
+                          repeat: 0
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
