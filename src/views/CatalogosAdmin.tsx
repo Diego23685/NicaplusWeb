@@ -17,7 +17,7 @@ interface Producto {
     imagenUrl: string;
     esDigital: boolean;
     esSuscripcion: boolean;
-    controlaStock: boolean; // 🌟 Agregado
+    controlaStock: boolean;
     diasDuracion: number;
     categoriaId: number | null;
     juegoId: number | null;
@@ -37,6 +37,7 @@ interface PerfilCuenta {
     ocupado: boolean;
     idClienteAsignado: number | null;
     nombreCliente?: string;
+    accountGroupKey?: string;
 }
 
 interface Categoria { id: number; nombre: string; imagenUrl: string; }
@@ -52,7 +53,7 @@ const productoFormInicial = {
     imagenUrl: '',
     esDigital: false,
     esSuscripcion: false,
-    controlaStock: true, // 🌟 Por defecto en true para productos físicos
+    controlaStock: true,
     categoriaId: '',
     juegoId: '',
     diasDuracion: 30,
@@ -80,7 +81,7 @@ export const CatalogosAdmin: React.FC = () => {
     const [productoIdPerfilAbierto, setProductoIdPerfilAbierto] = useState<number | null>(null);
     const [perfilesActuales, setPerfilesActuales] = useState<PerfilCuenta[]>([]);
     const [perfilEditandoId, setPerfilEditandoId] = useState<number | null>(null);
-    const [perfilEditandoDatos, setPerfilEditandoDatos] = useState({ id: 0, idProducto: 0, ExtNombrePerfil: '', pin: '', correoCuenta: '', passwordCuenta: '' });
+    const [perfilEditandoDatos, setPerfilEditandoDatos] = useState({ id: 0, idProducto: 0, ExtNombrePerfil: '', pin: '', correoCuenta: '', passwordCuenta: '', accountGroupKey: '' });
     
     const [modoIngreso, setModoIngreso] = useState('individual'); 
     const [cantidadPerfiles, setCantidadPerfiles] = useState(5);
@@ -148,7 +149,6 @@ export const CatalogosAdmin: React.FC = () => {
             const nuevoEstado = { ...prev, [name]: valorFinal };
             
             if (name === 'esDigital' && valorFinal) {
-                // Si pasa a ser digital, comúnmente no controla stock físico por defecto
                 nuevoEstado.controlaStock = false;
             } else if (name === 'esDigital' && !valorFinal) {
                 nuevoEstado.esSuscripcion = false;
@@ -189,22 +189,54 @@ export const CatalogosAdmin: React.FC = () => {
 
     const comenzarEdicionPerfil = (perfil: PerfilCuenta) => {
         setPerfilEditandoId(perfil.id);
-        setPerfilEditandoDatos({ ...perfil, ExtNombrePerfil: perfil.nombrePerfil });
+        setPerfilEditandoDatos({ 
+            ...perfil, 
+            ExtNombrePerfil: perfil.nombrePerfil,
+            accountGroupKey: perfil.accountGroupKey || ''
+        });
     };
 
+    // Eliminar cuenta completa por hash (Lote)
+    const removerCuentaCompletaManual = async (accountGroupKey: string) => {
+        if (!window.confirm('⚠️ ¿Desea eliminar la CUENTA COMPLETA (todas sus pantallas) de forma irreversible?')) return;
+        try {
+            await api.delete(`/perfilescuentas/grupo/${accountGroupKey}`);
+            if (productoIdPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
+                setPerfilesActuales(res.data);
+            }
+        } catch {
+            dispararErrorVisual(
+                "Integridad Bloqueada", 
+                "Una o más pantallas de esta cuenta están activas en suscripciones vigentes."
+            );
+        }
+    };
+
+    // Guardar cambios e incluir actualización masiva opcional
     const guardarCambiosPerfil = async () => {
         try {
+            let actualizarTodoElGrupo = false;
+
+            if (perfilEditandoDatos.accountGroupKey) {
+                actualizarTodoElGrupo = window.confirm(
+                    "¿Desea aplicar este Correo y Contraseña a TODAS las pantallas que comparten esta misma cuenta?"
+                );
+            }
+
             await api.put(`/perfilescuentas/${perfilEditandoId}`, {
                 ...perfilEditandoDatos,
-                nombrePerfil: perfilEditandoDatos.ExtNombrePerfil
+                nombrePerfil: perfilEditandoDatos.ExtNombrePerfil,
+                propagarGrupo: actualizarTodoElGrupo
             });
+
             setPerfilEditandoId(null);
             if (productoIdPerfilAbierto) {
                 const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
                 setPerfilesActuales(res.data);
             }
         } catch {
-            dispararErrorVisual("Error de Envío", "Hubo problemas al guardar el PIN o datos del perfil.");
+            dispararErrorVisual("Error de Envío", "Hubo problemas al guardar los datos del perfil o del grupo.");
         }
     };
 
@@ -285,7 +317,7 @@ export const CatalogosAdmin: React.FC = () => {
             ...(editandoProductoId ? { id: editandoProductoId } : {}), 
             ...formProducto,
             descripcion: formProducto.descripcion || 'Sin descripción detallada',
-            stockMinimo: formProducto.controlaStock ? 2 : 0, // 🌟 Stock mínimo dinámico
+            stockMinimo: formProducto.controlaStock ? 2 : 0,
             categoriaId: formProducto.categoriaId ? Number(formProducto.categoriaId) : null,
             juegoId: formProducto.esDigital && formProducto.juegoId ? Number(formProducto.juegoId) : null,
             visibleEnCatalogo: true,
@@ -323,7 +355,7 @@ export const CatalogosAdmin: React.FC = () => {
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
             esSuscripcion: producto.esSuscripcion || false,
-            controlaStock: producto.controlaStock ?? true, // 🌟 Agregado
+            controlaStock: producto.controlaStock ?? true,
             categoriaId: producto.categoriaId?.toString() || '',
             juegoId: producto.juegoId?.toString() || '',
             diasDuracion: producto.diasDuracion || 30,
@@ -534,13 +566,12 @@ export const CatalogosAdmin: React.FC = () => {
                                     <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Recarga / Producto Digital?
                                 </label>
                                 
-                                {/* 🌟 NUEVO: Checkbox explícito para Control de Stock */}
                                 <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
                                     <input type="checkbox" name="controlaStock" checked={formProducto.controlaStock} onChange={handleProductoInputChange} /> <FaBoxes size={12} /> ¿Controla Stock / Inventario Físico?
                                 </label>
 
                                 {formProducto.esDigital && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '4px 0' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
                                         <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
                                             <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 ¿Es Suscripción Recurrente?
                                         </label>
@@ -576,7 +607,7 @@ export const CatalogosAdmin: React.FC = () => {
                                         value={formProducto.controlaStock ? (formProducto.stockActual || '') : 0} 
                                         onChange={handleProductoInputChange} 
                                         className={styles.input} 
-                                        disabled={!formProducto.controlaStock} // Inhabilitado si no controla stock
+                                        disabled={!formProducto.controlaStock} 
                                         required={formProducto.controlaStock} 
                                     />
                                 </div>
@@ -638,7 +669,6 @@ export const CatalogosAdmin: React.FC = () => {
                                             {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
                                             <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
                                             {p.esSuscripcion && <span style={{ color: '#f43f5e', marginLeft: '6px', fontWeight: 'bold' }}>[🔄 Recurrente]</span>}
-                                            {/* 🌟 Indicador de Control de Inventario */}
                                             <span style={{ color: p.controlaStock ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
                                                 {p.controlaStock ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
                                             </span>
@@ -655,7 +685,6 @@ export const CatalogosAdmin: React.FC = () => {
                                             color: p.estado === 'Pausado' ? '#f59e0b' : p.estado === 'Agotado' ? '#ef4444' : '#4ade80'
                                         }}>{p.estado || 'Activo'}</span>
                                     </td>
-                                    {/* 🌟 Celda de Stock adaptativa */}
                                     <td style={{ color: !p.controlaStock ? '#a855f7' : p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>
                                         {p.controlaStock ? `${p.stockActual} u.` : 'N/A'}
                                     </td>
@@ -710,44 +739,113 @@ export const CatalogosAdmin: React.FC = () => {
                                                         const esEditando = perfilEditandoId === perfil.id;
                                                         return (
                                                             <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: '1px solid', borderColor: perfil.ocupado ? '#ef4444' : '#10b981', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                
+                                                                {/* 1. Cabecera con Nombre y Llave de Lote */}
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                                                     {esEditando ? (
-                                                                        <input type="text" value={perfilEditandoDatos.ExtNombrePerfil} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} className={styles.input} style={{ padding: '2px 6px', fontSize: '0.8rem', width: '90px' }} />
+                                                                        <input 
+                                                                            type="text" 
+                                                                            value={perfilEditandoDatos.ExtNombrePerfil} 
+                                                                            onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} 
+                                                                            className={styles.input} 
+                                                                            style={{ padding: '2px 6px', fontSize: '0.8rem', width: '110px' }} 
+                                                                        />
                                                                     ) : (
                                                                         <strong style={{ fontSize: '0.85rem' }}>{perfil.nombrePerfil}</strong>
                                                                     )}
-                                                                    {!perfil.ocupado && !esEditando && (
-                                                                        <button onClick={() => removerPerfilManual(perfil.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><FaTrash size={12} /></button>
-                                                                    )}
+                                                                    
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                        {/* Si pertenece a un lote/grupo */}
+                                                                        {perfil.accountGroupKey && (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', background: '#475569', borderRadius: '4px', overflow: 'hidden' }}>
+                                                                                <span style={{ fontSize: '0.7rem', padding: '2px 6px', color: '#cbd5e1' }} title={perfil.accountGroupKey}>
+                                                                                    🔑 {perfil.accountGroupKey.substring(0, 8)}
+                                                                                </span>
+                                                                                {!perfil.ocupado && !esEditando && (
+                                                                                    <>
+                                                                                        {/* BOTÓN AGREGADO: Eliminar SOLO este perfil del lote */}
+                                                                                        <button 
+                                                                                            type="button"
+                                                                                            onClick={() => removerPerfilManual(perfil.id)} 
+                                                                                            style={{ background: '#f59e0b', border: 'none', color: '#000', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRight: '1px solid #334155' }}
+                                                                                            title="Eliminar solo este perfil"
+                                                                                        >
+                                                                                            <FaTrash size={10} />
+                                                                                        </button>
+                                                                                        {/* Botón original: Eliminar lote completo */}
+                                                                                        <button 
+                                                                                            type="button"
+                                                                                            onClick={() => removerCuentaCompletaManual(perfil.accountGroupKey!)} 
+                                                                                            style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                                            title="Eliminar Cuenta Completa (Lote)"
+                                                                                        >
+                                                                                            <FaBoxes size={10} />
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        {/* Si es un perfil suelto sin grupo */}
+                                                                        {!perfil.accountGroupKey && !perfil.ocupado && !esEditando && (
+                                                                            <button type="button" onClick={() => removerPerfilManual(perfil.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><FaTrash size={12} /></button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
 
+                                                                {/* 2. Cuerpo de la Tarjeta */}
                                                                 <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
-                                                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {perfil.correoCuenta}</div>
-                                                                    <div>
+                                                                    {esEditando ? (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
+                                                                            <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>✉️ Correo:</label>
+                                                                            <input 
+                                                                                type="email" 
+                                                                                value={perfilEditandoDatos.correoCuenta} 
+                                                                                onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, correoCuenta: e.target.value})} 
+                                                                                className={styles.input} 
+                                                                                style={{ padding: '2px 6px', fontSize: '0.8rem' }} 
+                                                                            />
+                                                                            <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>🔒 Clave:</label>
+                                                                            <input 
+                                                                                type="text" 
+                                                                                value={perfilEditandoDatos.passwordCuenta} 
+                                                                                onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, passwordCuenta: e.target.value})} 
+                                                                                className={styles.input} 
+                                                                                style={{ padding: '2px 6px', fontSize: '0.8rem' }} 
+                                                                            />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {perfil.correoCuenta}</div>
+                                                                    )}
+                                                                    
+                                                                    <div style={{ marginTop: '4px' }}>
                                                                         🔑 PIN: {esEditando ? (
                                                                             <input type="text" value={perfilEditandoDatos.pin} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} className={styles.input} style={{ padding: '2px 6px', fontSize: '0.8rem', width: '60px' }} maxLength={6} />
                                                                         ) : (
                                                                             <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{perfil.pin || 'Sin PIN'}</span>
                                                                         )}
                                                                     </div>
+
                                                                     {perfil.ocupado && (
                                                                         <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '6px', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                             <span>👤 {perfil.nombreCliente || `ID: ${perfil.idClienteAsignado}`}</span>
-                                                                            <button onClick={() => liberarPerfilCliente(perfil.id)} className={styles.btn} style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', fontSize: '0.75rem' }}>Liberar</button>
+                                                                            <button type="button" onClick={() => liberarPerfilCliente(perfil.id)} className={styles.btn} style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', fontSize: '0.75rem' }}>Liberar</button>
                                                                         </div>
                                                                     )}
                                                                 </div>
 
+                                                                {/* 3. Acciones Inferiores */}
                                                                 <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                                                                     {esEditando ? (
                                                                         <>
-                                                                            <button onClick={guardarCambiosPerfil} className={`${styles.btn} ${styles.btnPrimary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Guardar</button>
-                                                                            <button onClick={() => setPerfilEditandoId(null)} className={`${styles.btn} ${styles.btnSecondary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Cerrar</button>
+                                                                            <button type="button" onClick={guardarCambiosPerfil} className={`${styles.btn} ${styles.btnPrimary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Guardar</button>
+                                                                            <button type="button" onClick={() => setPerfilEditandoId(null)} className={`${styles.btn} ${styles.btnSecondary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Cerrar</button>
                                                                         </>
                                                                     ) : (
-                                                                        <button onClick={() => comenzarEdicionPerfil(perfil)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Editar Info</button>
+                                                                        <button type="button" onClick={() => comenzarEdicionPerfil(perfil)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Editar Info</button>
                                                                     )}
                                                                 </div>
+
                                                             </div>
                                                         );
                                                     })}
