@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import api from '../services/api';
 import styles from '../assets/styles/ClientesLogin/ClientesLoginRegister.module.css';
 import { Cargando } from '../views/Cargando'; 
 
+// --- INTERFACES Y TIPOS ---
+export interface ClienteAuthData {
+    id?: number;
+    nombre?: string;
+    email?: string;
+    usuario?: string;
+    telefono?: string;
+    [key: string]: any;
+}
+
 interface ClientesLoginRegisterProps {
     alVolver: () => void;
-    alIniciarSesion: (datosCliente: any) => void;
+    alIniciarSesion: (datosCliente: ClienteAuthData) => void;
 }
 
 const FONDOS_HERO = [
@@ -19,23 +29,25 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
     const [esRegistro, setEsRegistro] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false); 
     const [isRegisterSuccess, setIsRegisterSuccess] = useState(false); 
+    const [cargandoRequest, setCargandoRequest] = useState(false);
+    const [errorSubmit, setErrorSubmit] = useState<string | null>(null);
     const [bgIndex, setBgIndex] = useState(0);
 
-    // Estados para control de vistas legales / soporte
+    // Vistas secundarias
     const [vistaLegal, setVistaLegal] = useState<'terminos' | 'privacidad' | 'soporte' | null>(null);
 
-    // Estados para el formulario de Login
+    // Formulario de Login
     const [loginCorreo, setLoginCorreo] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
 
-    // Estados para el formulario de Registro
+    // Formulario de Registro
     const [regNombre, setRegNombre] = useState('');
     const [regCorreo, setRegCorreo] = useState('');
     const [regUsuario, setRegUsuario] = useState('');
     const [regTelefono, setRegTelefono] = useState('');
     const [regPassword, setRegPassword] = useState('');
 
-    // Estados para el formulario de soporte técnico rápido
+    // Formulario de Soporte
     const [soporteNombre, setSoporteNombre] = useState('');
     const [soporteMensaje, setSoporteMensaje] = useState('');
 
@@ -47,8 +59,16 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
         return () => clearInterval(interval);
     }, []);
 
-    const manejarLoginSubmit = async (e: React.FormEvent) => {
+    // Limpiar errores cuando el usuario alterna entre Login y Registro
+    useEffect(() => {
+        setErrorSubmit(null);
+    }, [esRegistro, vistaLegal]);
+
+    const manejarLoginSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        setErrorSubmit(null);
+        setCargandoRequest(true);
+
         try {
             const respuesta = await api.post('/Auth/login-cliente', {
                 Email: loginCorreo,
@@ -61,33 +81,53 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             }
 
-            setIsSuccess(true);
-            const datosUsuario = respuesta.data?.cliente || respuesta.data?.usuario || { nombre: loginCorreo };
+            const datosUsuario: ClienteAuthData = respuesta.data?.cliente || respuesta.data?.usuario || { nombre: loginCorreo, email: loginCorreo };
 
+            // Activamos la animación/vista de éxito
+            setIsSuccess(true);
+            setCargandoRequest(false);
+
+            // Redirigimos solo después de mostrar la animación
             setTimeout(() => {
                 alIniciarSesion(datosUsuario);
                 alVolver();
             }, 2500);
 
+            return; // Terminamos la ejecución exitosa aquí
+
         } catch (error: any) {
             console.error('Error en login:', error);
-            alert(error.response?.data && typeof error.response.data === 'string' ? error.response.data : 'Credenciales incorrectas o error en el servidor');
+
+            // Prevenimos cualquier cambio de vista o animación de éxito
+            setIsSuccess(false);
+
+            // Extraemos el mensaje de error del backend
+            const msgError = typeof error.response?.data === 'string' 
+                ? error.response.data 
+                : error.response?.data?.mensaje || 'Credenciales incorrectas o error en el servidor.';
+            
+            // Mantenemos el error en pantalla
+            setErrorSubmit(msgError);
+            setCargandoRequest(false);
         }
     };
 
-    const manejarRegistroSubmit = async (e: React.FormEvent) => {
+    const manejarRegistroSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        setErrorSubmit(null);
+
         if (regPassword.length < 6) {
-            alert('La contraseña debe tener al menos 6 caracteres.');
+            setErrorSubmit('La contraseña debe tener al menos 6 caracteres.');
             return;
         }
+
+        setCargandoRequest(true);
 
         try {
             const datosRegistro = {
                 Nombre: regNombre,
                 Email: regCorreo,
                 Username: regUsuario,
-                Usuario: regUsuario,
                 Telefono: regTelefono,
                 Password: regPassword
             };
@@ -108,29 +148,38 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
         } catch (error: any) {
             console.error('Error en el registro:', error);
             if (error.response?.data?.errors) {
-                const listaErrores = Object.values(error.response.data.errors).flat().join('\n');
-                alert(`Errores de validación:\n${listaErrores}`);
+                const listaErrores = Object.values(error.response.data.errors).flat().join(' | ');
+                setErrorSubmit(`Validación fallida: ${listaErrores}`);
             } else {
-                alert('Hubo un problema al crear tu usuario. Inténtalo de nuevo.');
+                const msg = typeof error.response?.data === 'string' ? error.response.data : 'Hubo un problema al crear tu usuario.';
+                setErrorSubmit(msg);
             }
+        } finally {
+            setCargandoRequest(false);
         }
     };
 
-    const manejarSoporteWhatsApp = (e: React.FormEvent) => {
+    const manejarSoporteWhatsApp = (e: FormEvent) => {
         e.preventDefault();
         const textoBase = `¡Hola Nicaplus! Mi nombre es *${soporteNombre}*.\n\nNecesito soporte técnico con lo siguiente:\n"${soporteMensaje}"`;
         const textoCodificado = encodeURIComponent(textoBase);
         
-        // Reemplaza el número por el oficial de tu pasarela de atención
         const urlWhatsapp = `https://api.whatsapp.com/send?phone=50587870821&text=${textoCodificado}`;
         window.open(urlWhatsapp, '_blank', 'noopener,noreferrer');
+    };
+
+    const manejarKeyDownLink = (e: KeyboardEvent, accion: () => void) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            accion();
+        }
     };
 
     if (isSuccess) {
         return <Cargando username={loginCorreo.split('@')[0]} />; 
     }
 
-    // RENDERIZADO CONDICIONAL 1: Vistas Legales y Soporte Técnico
+    // --- RENDERIZADO CONDICIONAL 1: VISTAS LEGALES Y SOPORTE ---
     if (vistaLegal) {
         return (
             <div className={styles.authBody}>
@@ -139,7 +188,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                         <img
                             key={idx}
                             src={url}
-                            alt="Background Asset"
+                            alt="Fondo decorativo"
                             className={`${styles.showcaseBgImg} ${bgIndex === idx ? styles.slideBgActive : ''}`}
                             style={{ filter: 'blur(8px)' }}
                         />
@@ -166,7 +215,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
 
                                     <h4>2. Garantías Transparentes</h4>
                                     <p>
-                                        Todos nuestros productos premium cuentan con garantía segura. Si tienes algún inconveniente con una licencia digital, cuenta o artículo físico, puedes abrir un ticket de garantía desde tu perfil. Nos comprometemos a revisar y darte una solución rápida o reemplazo según el caso correspondiente, no ofrecemos garantias en el caso de articulos fisicos genéricos o no originales.
+                                        Todos nuestros productos premium cuentan con garantía segura. Si tienes algún inconveniente con una licencia digital, cuenta o artículo físico, puedes abrir un ticket de garantía desde tu perfil. Nos comprometemos a revisar y darte una solución rápida o reemplazo según el caso correspondiente; no ofrecemos garantías en el caso de artículos físicos genéricos o no originales.
                                     </p>
 
                                     <h4>3. Soporte y Órdenes de Servicio</h4>
@@ -249,7 +298,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
         );
     }
 
-    // RENDERIZADO CONDICIONAL 2: Vista Principal (Login / Registro)
+    // --- RENDERIZADO CONDICIONAL 2: ACCESO PRINCIPAL ---
     return (
         <div className={styles.authBody}>
             <div className={styles.showcaseBgWrapper}>
@@ -257,7 +306,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                     <img
                         key={idx}
                         src={url}
-                        alt="Background Asset"
+                        alt="Fondo decorativo"
                         className={`${styles.showcaseBgImg} ${bgIndex === idx ? styles.slideBgActive : ''}`}
                     />
                 ))}
@@ -287,7 +336,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                         Regístrate hoy mismo para realizar tus pedidos de forma inmediata, guardar tu carrito y gestionar tus suscripciones premium.
                                     </p>
                                     <div className={styles.toggleContainer}>
-                                        <button onClick={() => setEsRegistro(true)} className={styles.btnToggle}>
+                                        <button onClick={() => setEsRegistro(true)} className={styles.btnToggle} disabled={cargandoRequest}>
                                             Crear una Cuenta
                                         </button>
                                     </div>
@@ -301,7 +350,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                         Inicia sesión para acceder a tu catálogo personalizado, ver tus licencias digitales y consultar tu historial de compras.
                                     </p>
                                     <div className={styles.toggleContainer}>
-                                        <button onClick={() => setEsRegistro(false)} className={styles.btnToggle}>
+                                        <button onClick={() => setEsRegistro(false)} className={styles.btnToggle} disabled={cargandoRequest}>
                                             Iniciar Sesión
                                         </button>
                                     </div>
@@ -327,6 +376,12 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                     <h3 className={styles.formTitle}>Acceso de Clientes</h3>
                                     <p className={styles.formSubtitle}>Ingresa tus credenciales para continuar</p>
                                     
+                                    {errorSubmit && (
+                                        <div style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem' }}>
+                                            {errorSubmit}
+                                        </div>
+                                    )}
+
                                     <form onSubmit={manejarLoginSubmit}>
                                         <div className={styles.inputGroup}>
                                             <input 
@@ -336,6 +391,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={loginCorreo}
                                                 onChange={(e) => setLoginCorreo(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
                                         <div className={styles.inputGroup}>
@@ -346,9 +402,12 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={loginPassword}
                                                 onChange={(e) => setLoginPassword(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
-                                        <button type="submit" className={styles.btnSubmit}>Ingresar Seguro</button>
+                                        <button type="submit" className={styles.btnSubmit} disabled={cargandoRequest}>
+                                            {cargandoRequest ? 'Verificando...' : 'Ingresar Seguro'}
+                                        </button>
                                     </form>
                                 </div>
                             ) : (
@@ -356,6 +415,12 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                     <h3 className={styles.formTitle}>Registro de Usuario</h3>
                                     <p className={styles.formSubtitle}>Únete a la experiencia NICAPLUS GAMING</p>
                                     
+                                    {errorSubmit && (
+                                        <div style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem' }}>
+                                            {errorSubmit}
+                                        </div>
+                                    )}
+
                                     <form onSubmit={manejarRegistroSubmit}>
                                         <div className={styles.inputGroup}>
                                             <input 
@@ -365,6 +430,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={regNombre}
                                                 onChange={(e) => setRegNombre(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
                                         <div className={styles.inputGroup}>
@@ -375,6 +441,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={regCorreo}
                                                 onChange={(e) => setRegCorreo(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
                                         <div className={styles.inputGroup}>
@@ -385,6 +452,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={regUsuario}
                                                 onChange={(e) => setRegUsuario(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
                                         <div className={styles.inputGroup}>
@@ -395,6 +463,7 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={regTelefono}
                                                 onChange={(e) => setRegTelefono(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
                                         <div className={styles.inputGroup}>
@@ -405,9 +474,12 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                                                 className={styles.inputField}
                                                 value={regPassword}
                                                 onChange={(e) => setRegPassword(e.target.value)}
+                                                disabled={cargandoRequest}
                                             />
                                         </div>
-                                        <button type="submit" className={styles.btnSubmit}>Completar Registro</button>
+                                        <button type="submit" className={styles.btnSubmit} disabled={cargandoRequest}>
+                                            {cargandoRequest ? 'Procesando...' : 'Completar Registro'}
+                                        </button>
                                     </form>
                                 </div>
                             )}
@@ -418,11 +490,32 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                 <footer className={styles.authFooter}>
                     <p>© {new Date().getFullYear()} Nicaplus Gaming. Todos los derechos reservados.</p>
                     <div className={styles.footerLinks}>
-                        <span onClick={() => setVistaLegal('terminos')}>Términos de Servicio</span>
+                        <span 
+                            role="button" 
+                            tabIndex={0} 
+                            onClick={() => setVistaLegal('terminos')}
+                            onKeyDown={(e) => manejarKeyDownLink(e, () => setVistaLegal('terminos'))}
+                        >
+                            Términos de Servicio
+                        </span>
                         <span className={styles.dotDivider}>•</span>
-                        <span onClick={() => setVistaLegal('privacidad')}>Políticas de Privacidad</span>
+                        <span 
+                            role="button" 
+                            tabIndex={0} 
+                            onClick={() => setVistaLegal('privacidad')}
+                            onKeyDown={(e) => manejarKeyDownLink(e, () => setVistaLegal('privacidad'))}
+                        >
+                            Políticas de Privacidad
+                        </span>
                         <span className={styles.dotDivider}>•</span>
-                        <span onClick={() => setVistaLegal('soporte')}>Soporte Técnico</span>
+                        <span 
+                            role="button" 
+                            tabIndex={0} 
+                            onClick={() => setVistaLegal('soporte')}
+                            onKeyDown={(e) => manejarKeyDownLink(e, () => setVistaLegal('soporte'))}
+                        >
+                            Soporte Técnico
+                        </span>
                     </div>
                 </footer>
             </div>

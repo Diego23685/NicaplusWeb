@@ -1,5 +1,4 @@
-// src/components/Caja.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../services/api';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
@@ -35,9 +34,18 @@ interface ItemCarrito {
     subTotal: number;
     metadataDigital: string;
     diasSuscripcion: number;
-    descuento?: number; 
+    descuento: number; 
     idCombo?: number; 
 }
+
+const escapeHtml = (unsafe: string) => {
+    return (unsafe || '')
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
 
 const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => {
     const d = fechaBaseStr ? new Date(fechaBaseStr + "T00:00:00") : new Date();
@@ -92,8 +100,8 @@ export const imprimirTicketTermico = (datosVenta: any) => {
             <div>
                 Factura: #000${datosVenta.ventaId || 1}<br>
                 Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
-                Condición: ${metodoUsado.toUpperCase()}<br>
-                Cliente: ${(datosVenta.cliente?.nombre || "Mostrador").substring(0, 18)}
+                Condición: ${escapeHtml(metodoUsado.toUpperCase())}<br>
+                Cliente: ${escapeHtml((datosVenta.cliente?.nombre || "Mostrador").substring(0, 18))}
             </div>
             <div class="linea"></div>
             <table class="tabla-detalles">
@@ -110,7 +118,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                         
                         return `
                             <tr>
-                                <td>${item.cantidad}x ${(item.nombre || 'Producto').substring(0, 15)}</td>
+                                <td>${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 15))}</td>
                                 <td align="right">C$ ${item.subTotal}</td>
                             </tr>
                             ${item.descuento && item.descuento > 0 ? `
@@ -123,7 +131,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                             ${item.metadataDigital ? `
                             <tr>
                                 <td colspan="2" style="font-size:9px; padding-left:10px; color:#333; word-break: break-all;">
-                                    ID: ${item.metadataDigital.replace(/^DIAS:\d+\|/, '')}
+                                    ID: ${escapeHtml(item.metadataDigital.replace(/^DIAS:\d+\|/, ''))}
                                 </td>
                             </tr>
                             ` : ''}
@@ -169,10 +177,10 @@ export const imprimirTicketTermico = (datosVenta: any) => {
     ventanaImpresion.document.write(contenidoTicket);
     ventanaImpresion.document.close();
     ventanaImpresion.focus();
-    ventanaImpresion.setTimeout(() => {
+    setTimeout(() => {
         ventanaImpresion.print();
         ventanaImpresion.close();
-    }, 250);
+    }, 300);
 };
 
 export const Caja: React.FC = () => {
@@ -195,7 +203,6 @@ export const Caja: React.FC = () => {
     const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
     const [diasCredito, setDiasCredito] = useState(15);
 
-    // Estado para controlar el modal bonito de errores
     const [mensajeErrorModal, setMensajeErrorModal] = useState<string | null>(null);
 
     const mostrarError = (mensaje: string) => {
@@ -203,49 +210,66 @@ export const Caja: React.FC = () => {
     };
 
     useEffect(() => {
-        api.get('/products')
-            .then(res => setProductos(res.data))
-            .catch(err => console.error(err));
-            
-        api.get('/categorias')
-            .then(res => setCategorias(res.data))
-            .catch(err => console.error(err));
-
-        api.get('/clientes')
-            .then(res => setListaClientes(res.data))
-            .catch(err => console.error(err));
+        Promise.all([
+            api.get('/products'),
+            api.get('/categorias'),
+            api.get('/clientes')
+        ]).then(([resProd, resCat, resCli]) => {
+            setProductos(resProd.data || []);
+            setCategorias(resCat.data || []);
+            setListaClientes(resCli.data || []);
+        }).catch(err => {
+            console.error("Error cargando catálogos de Caja:", err);
+            mostrarError("No se pudieron obtener los datos iniciales del punto de venta.");
+        });
     }, []);
 
-    const productosFiltrados = productos
-        .filter(p => {
-            const coincideTexto = p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase());
-            const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
-            return coincideTexto && coincideCategoria;
-        })
-        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const productosFiltrados = useMemo(() => {
+        return productos
+            .filter(p => {
+                const coincideTexto = p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase());
+                const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
+                return coincideTexto && coincideCategoria;
+            })
+            .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }, [productos, busquedaProducto, categoriaFiltroActiva]);
 
-    const clientesFiltrados = listaClientes.filter(c => 
-        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || c.telefono.includes(busquedaCliente)
-    );
+    const clientesFiltrados = useMemo(() => {
+        if (!busquedaCliente.trim()) return listaClientes.slice(0, 30);
+        const termino = busquedaCliente.toLowerCase();
+        return listaClientes.filter(c => 
+            c.nombre.toLowerCase().includes(termino) || (c.telefono && c.telefono.includes(termino))
+        ).slice(0, 30);
+    }, [listaClientes, busquedaCliente]);
 
-    const totalVenta = carrito.reduce((sum, item) => sum + item.subTotal, 0);
-    const totalCostoVenta = carrito.reduce((sum, item) => sum + (item.precioCostoUnitario * item.cantidad), 0);
-    const margenGananciaTotal = totalVenta - totalCostoVenta;
+    const totalVenta = useMemo(() => carrito.reduce((sum, item) => sum + item.subTotal, 0), [carrito]);
+    const totalCostoVenta = useMemo(() => carrito.reduce((sum, item) => sum + (item.precioCostoUnitario * item.cantidad), 0), [carrito]);
+    const margenGananciaTotal = useMemo(() => totalVenta - totalCostoVenta, [totalVenta, totalCostoVenta]);
 
     const agregarAlCarrito = (producto: Producto) => {
         const existe = carrito.find(item => item.idProducto === producto.id);
 
         if (existe) {
             if (!producto.esDigital && !producto.requiereServicio && producto.stockActual <= existe.cantidad) {
-                mostrarError("No hay suficiente stock en inventario para agregar más unidades.");
+                mostrarError(`No hay suficiente stock en inventario de "${producto.nombre}". Máximo disponible: ${producto.stockActual}.`);
                 return;
             }
-            setCarrito(carrito.map(item => 
-                item.idProducto === producto.id 
-                    ? { ...item, cantidad: item.cantidad + 1, subTotal: (item.cantidad + 1) * item.precioUnitario }
-                    : item
-            ));
+            setCarrito(carrito.map(item => {
+                if (item.idProducto === producto.id) {
+                    const nuevaCant = item.cantidad + 1;
+                    return { 
+                        ...item, 
+                        cantidad: nuevaCant, 
+                        subTotal: (item.precioUnitario - item.descuento) * nuevaCant 
+                    };
+                }
+                return item;
+            }));
         } else {
+            if (!producto.esDigital && !producto.requiereServicio && producto.stockActual < 1) {
+                mostrarError(`El producto "${producto.nombre}" no cuenta con existencias disponibles.`);
+                return;
+            }
             setCarrito([...carrito, {
                 idProducto: producto.id,
                 nombre: producto.nombre,
@@ -261,20 +285,36 @@ export const Caja: React.FC = () => {
     };
 
     const cambiarDescuentoManual = (idProducto: number, descuento: number) => {
+        const descValidado = Math.max(0, descuento);
         setCarrito(prev => prev.map(item => {
             if (item.idProducto === idProducto) {
-                const precioConDescuento = item.precioUnitario - descuento;
-                return { ...item, descuento: descuento, subTotal: precioConDescuento * item.cantidad };
+                const descFinal = descValidado > item.precioUnitario ? item.precioUnitario : descValidado;
+                return { 
+                    ...item, 
+                    descuento: descFinal, 
+                    subTotal: (item.precioUnitario - descFinal) * item.cantidad 
+                };
             }
             return item;
         }));
     };
 
     const cambiarCantidadManual = (idProducto: number, cantidad: number) => {
+        const cantValida = Math.max(1, cantidad);
+        const productoBase = productos.find(p => p.id === idProducto);
+
+        if (productoBase && !productoBase.esDigital && !productoBase.requiereServicio && cantValida > productoBase.stockActual) {
+            mostrarError(`Stock insuficiente para "${productoBase.nombre}". Existencias: ${productoBase.stockActual}.`);
+            return;
+        }
+
         setCarrito(prev => prev.map(item => {
             if (item.idProducto === idProducto) {
-                const desc = item.descuento || 0;
-                return { ...item, cantidad: cantidad, subTotal: (item.precioUnitario - desc) * cantidad };
+                return { 
+                    ...item, 
+                    cantidad: cantValida, 
+                    subTotal: (item.precioUnitario - item.descuento) * cantValida 
+                };
             }
             return item;
         }));
@@ -293,7 +333,7 @@ export const Caja: React.FC = () => {
         setCarrito(carrito.map(item => item.idProducto === idProducto ? { ...item, metadataDigital: valor } : item));
     };
 
-    const limpiarCarrito = () => setCarrito([]);
+    const limpiarCarrito = useCallback(() => setCarrito([]), []);
 
     const enviarCredencialesWhatsApp = () => {
         if (!datosUltimaVenta || !datosUltimaVenta.detalles) {
@@ -314,53 +354,29 @@ export const Caja: React.FC = () => {
         
         const separador = "--------------------------------------------------------------------";
 
-        const getEmojiSeguro = (codigoWeb: string) => {
-            try {
-                return decodeURIComponent(codigoWeb);
-            } catch (e) {
-                return "";
-            }
-        };
-
-        const emojiMando       = getEmojiSeguro("%F0%9F%8E%AE");
-        const emojiRecibo      = getEmojiSeguro("%F0%9F%93%9D");
-        const emojiCandado     = getEmojiSeguro("%F0%9F%94%92");
-        const emojiFlecha      = getEmojiSeguro("%F0%9F%94%B9");
-        const emojiCorreo      = getEmojiSeguro("%F0%9F%93%A7");
-        const emojiLlave       = getEmojiSeguro("%F0%9F%94%91");
-        const emojiUser        = getEmojiSeguro("%F0%9F%91%A4");
-        const emojiCalendario  = getEmojiSeguro("%F0%9F%93%85");
-        const emojiVerde       = getEmojiSeguro("%F0%9F%99%A2");
-        const emojiRojo        = getEmojiSeguro("%F0%9F%94%B4");
-        const emojiReloj       = "\u{23F3}";
-        const emojiDolar       = getEmojiSeguro("%F0%9F%92%B0");
-        const emojiCheck       = getEmojiSeguro("%E2%9C%85");
-        const emojiNota        = getEmojiSeguro("%F0%9F%93%8C");
-        const emojiManos       = getEmojiSeguro("%F0%9F%A4%9D");
-
-        const lineas: string[] = [];
-
-        lineas.push(`${emojiMando} *NICAPLUS GAMING & TECH*`);
-        lineas.push("");
-        lineas.push(`¡Hola, ${clienteObj.nombre}! Gracias por tu compra.`);
-        lineas.push("");
-        lineas.push(separador);
-        lineas.push("");
-        lineas.push(`${emojiRecibo} *COMPROBANTE DIGITAL DE COMPRA*`);
-        lineas.push(`Factura: #000${datosUltimaVenta.ventaId}`);
-        lineas.push(`Fecha de compra: ${new Date().toLocaleDateString('es-NI')}`);
-        lineas.push(`Condición: ${metodoUsado.toUpperCase()}`);
-        lineas.push("");
-        lineas.push(separador);
-        lineas.push("");
-        lineas.push(`${emojiCandado} *CREDENCIALES DE ACCESO*`);
-        lineas.push("");
+        const lineas: string[] = [
+            "🎮 *NICAPLUS GAMING & TECH*",
+            "",
+            `¡Hola, ${clienteObj.nombre}! Gracias por tu compra.`,
+            "",
+            separador,
+            "",
+            "📝 *COMPROBANTE DIGITAL DE COMPRA*",
+            `Factura: #000${datosUltimaVenta.ventaId}`,
+            `Fecha de compra: ${new Date().toLocaleDateString('es-NI')}`,
+            `Condición: ${metodoUsado.toUpperCase()}`,
+            "",
+            separador,
+            "",
+            "🔒 *CREDENCIALES DE ACCESO*",
+            ""
+        ];
 
         let descuentoTotalAcumulado = 0;
 
         datosUltimaVenta.detalles.forEach((item: any, idx: number) => {
             lineas.push(`*Servicio ${idx + 1}:* ${item.nombre || 'Servicio Digital'}`);
-            lineas.push(`${emojiFlecha} *Cantidad:* ${item.cantidad}`);
+            lineas.push(`🔹 *Cantidad:* ${item.cantidad}`);
             
             if (item.descuento && item.descuento > 0) {
                 const descPorItem = item.descuento * item.cantidad;
@@ -381,19 +397,19 @@ export const Caja: React.FC = () => {
                     if (fragmentos[2]) {
                         const accesoLimpio = fragmentos[2].replace(/acceso:\s*/i, '');
                         const subPartes = accesoLimpio.split('/');
-                        if (subPartes[0]) lineas.push(`${emojiCorreo} *Correo:* ${subPartes[0].trim()}`);
-                        if (subPartes[1]) lineas.push(`${emojiLlave} *Contraseña:* ${subPartes[1].trim()}`);
+                        if (subPartes[0]) lineas.push(`📧 *Correo:* ${subPartes[0].trim()}`);
+                        if (subPartes[1]) lineas.push(`🔑 *Contraseña:* ${subPartes[1].trim()}`);
                     }
                     if (fragmentos[0]) {
                         const perfilLimpio = fragmentos[0].replace(/perfil:\s*/i, '');
-                        lineas.push(`${emojiUser} *Perfil asignado:* ${perfilLimpio}`);
+                        lineas.push(`👤 *Perfil asignado:* ${perfilLimpio}`);
                     }
                     if (fragmentos[1]) {
                         const pinLimpio = fragmentos[1].replace(/pin:\s*/i, '');
-                        lineas.push(`${emojiCandado} *PIN:* ${pinLimpio}`);
+                        lineas.push(`🔒 *PIN:* ${pinLimpio}`);
                     }
                 } else {
-                    lineas.push(`${emojiUser} *Acceso/ID:* _${accesosReales}_`);
+                    lineas.push(`👤 *Acceso/ID:* _${accesosReales}_`);
                 }
             }
             lineas.push("");
@@ -401,7 +417,7 @@ export const Caja: React.FC = () => {
 
         lineas.push(separador);
         lineas.push("");
-        lineas.push(`${emojiCalendario} *VIGENCIA DEL SERVICIO*`);
+        lineas.push("📅 *VIGENCIA DEL SERVICIO*");
         lineas.push("");
 
         const primerItem = datosUltimaVenta.detalles[0];
@@ -409,13 +425,13 @@ export const Caja: React.FC = () => {
         const fInicio = new Date();
         const fVence = new Date(fInicio.getTime() + (diasSuscripcion * 24 * 60 * 60 * 1000));
 
-        lineas.push(`${emojiVerde} *Fecha de activación:* ${fInicio.toLocaleDateString('es-NI')}`);
-        lineas.push(`${emojiRojo} *Fecha de vencimiento:* ${fVence.toLocaleDateString('es-NI')}`);
-        lineas.push(`${emojiReloj} *Duración:* ${diasSuscripcion} días`);
+        lineas.push(`🟢 *Fecha de activación:* ${fInicio.toLocaleDateString('es-NI')}`);
+        lineas.push(`🔴 *Fecha de vencimiento:* ${fVence.toLocaleDateString('es-NI')}`);
+        lineas.push(`⏳ *Duración:* ${diasSuscripcion} días`);
         lineas.push("");
         lineas.push(separador);
         lineas.push("");
-        lineas.push(`${emojiDolar} *INFORMACIÓN FINANCIERA*`);
+        lineas.push("💰 *INFORMACIÓN FINANCIERA*");
         lineas.push("");
         
         if (descuentoTotalAcumulado > 0) {
@@ -425,22 +441,22 @@ export const Caja: React.FC = () => {
         lineas.push(`*Total a Pagar: C$ ${totalReal}*`);
         
         if (esVentaCredito) {
-            lineas.push(`Estado: ${emojiReloj} Cuenta por cobrar`);
+            lineas.push(`Estado: ⏳ Cuenta por cobrar`);
             if (datosUltimaVenta.fechaVencimientoCreditoCongelado) {
                 const fLimite = new Date(datosUltimaVenta.fechaVencimientoCreditoCongelado + "T12:00:00");
                 lineas.push(`Fecha límite de pago: ${fLimite.toLocaleDateString('es-NI')}`);
             }
         } else {
-            lineas.push(`Estado: ${emojiCheck} Factura Cancelada / Pagada`);
+            lineas.push(`Estado: ✅ Factura Cancelada / Pagada`);
         }
 
         lineas.push("");
         lineas.push(separador);
         lineas.push("");
-        lineas.push(`${emojiNota} *INFORMACIÓN OPERATIVA*:`);
+        lineas.push("📌 *INFORMACIÓN OPERATIVA*:");
         lineas.push("- Las caídas de perfiles o contraseñas deben reportarse inmediatamente.");
         lineas.push("");
-        lineas.push(`¡Muchas gracias por su preferencia! ${emojiManos}`);
+        lineas.push("¡Muchas gracias por su preferencia! 🤝");
 
         const mensajeFinal = lineas.join("\n");
         const urlWhatsApp = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeFinal)}`;
@@ -505,7 +521,7 @@ export const Caja: React.FC = () => {
                 };
             });
 
-            const clienteFacturado = listaClientes.find(c => c.id == idClienteSeleccionado);
+            const clienteFacturado = listaClientes.find(c => c.id === idClienteSeleccionado);
             
             setDatosUltimaVenta({
                 ventaId: res.data.id || res.data.ventaId,
@@ -529,9 +545,8 @@ export const Caja: React.FC = () => {
             const refreshRes = await api.get('/products');
             setProductos(refreshRes.data);
         } catch (err: any) {
-            console.error(err);
+            console.error("Error al procesar factura:", err);
 
-            // Extracción limpia del mensaje devuelto por el backend
             let mensajeExtraido = "Ocurrió un error en el servidor al intentar procesar la venta.";
 
             if (err.response?.data) {
@@ -795,14 +810,17 @@ export const Caja: React.FC = () => {
                             <select 
                                 value={idClienteSeleccionado || 0} 
                                 onChange={e => { 
-                                    setIdClienteSeleccionado(Number(e.target.value)); 
+                                    const val = Number(e.target.value);
+                                    setIdClienteSeleccionado(val); 
                                     const selectText = e.target.options[e.target.selectedIndex].text; 
-                                    if(Number(e.target.value) !== 0) setBusquedaCliente(selectText.split(' (')[0]); 
+                                    if (val !== 0) setBusquedaCliente(selectText.split(' (')[0]); 
                                 }} 
                                 className={styles.selectControl}
                             >
                                 <option value={0}>Venta de Mostrador (Genérico)</option>
-                                {clientesFiltrados.map((c: any) => <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>)}
+                                {clientesFiltrados.map((c: any) => (
+                                    <option key={c.id} value={c.id}>{c.nombre} ({c.telefono || 'Sin tel'})</option>
+                                ))}
                             </select>
                         </div>
 
@@ -888,7 +906,7 @@ export const Caja: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL FLOTANTE DE ERROR / ADVERTENCIA */}
+            {/* MODAL FLOTANTE DE ERROR */}
             {mensajeErrorModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent} style={{ borderTop: '4px solid #ef4444' }}>
@@ -940,7 +958,7 @@ export const Caja: React.FC = () => {
                                 <FaPrint /> Imprimir Copia Física (Ticketera)
                             </button>
                             <button 
-                                onClick={() => { setMostrarModalDespacho(false); setDatosUltimaVenta(null); limpiarCarrito(); }} 
+                                onClick={() => { setMostrarModalDespacho(false); setDatosUltimaVenta(null); }} 
                                 className={`${styles.modalBtn} ${styles.btnClose}`}
                             >
                                 Cerrar Caja POS y Siguiente Venta

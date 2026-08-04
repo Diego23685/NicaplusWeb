@@ -1,5 +1,4 @@
-// ClientesCRM.tsx
-import React, { useState, useEffect, type FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, type FormEvent, type MouseEvent } from 'react';
 import api from '../services/api';
 import { 
     FaSearch, FaWhatsapp, FaUserTag, FaHistory, FaCalendarAlt, 
@@ -8,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import styles from '../assets/styles/ClientesCRM.module.css';
 
+// --- INTERFACES Y TIPOS ---
 interface Cliente {
     id: number;
     nombre: string;
@@ -19,20 +19,85 @@ interface Cliente {
     observaciones?: string;
 }
 
+interface CompraHistorial {
+    id: number;
+    fecha: string;
+    total: number;
+}
+
+interface EquipoTaller {
+    id: number;
+    dispositivo: string;
+    estado?: string;
+    diagnostico?: string;
+    notas?: string;
+    fechaIngreso?: string;
+    fechaEntrega?: string;
+}
+
+interface SuscripcionServicio {
+    id: number;
+    nombreServicio: string;
+    detallesCredenciales?: string;
+    estado?: string;
+    fechaVencimiento: string;
+}
+
+interface DeudaCliente {
+    id: number;
+    estado: string;
+    fechaVencimiento: string;
+    saldoPendiente: number;
+}
+
+interface ExpedienteClienteData {
+    cliente: Cliente & { puntosClub?: number };
+    totalGastado: number;
+    serviciosActivos: {
+        tallerEquiposEnRevision: EquipoTaller[];
+        suscripcionesVigentes: SuscripcionServicio[];
+    };
+    serviciosVencidos: {
+        tallerEquiposEntregados: EquipoTaller[];
+        suscripcionesExpiradas: SuscripcionServicio[];
+    };
+    historialCompras: CompraHistorial[];
+    historialDeudas: DeudaCliente[];
+}
+
 interface ErrorIntegridadDetalles {
     tieneVentas?: boolean;
     tieneTaller?: boolean;
     tieneDeudas?: boolean;
 }
 
+// --- HELPERS DE FORMATEO ---
+const formatearFecha = (fechaStr?: string): string => {
+    if (!fechaStr) return 'N/A';
+    const d = new Date(fechaStr);
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('es-NI');
+};
+
+const formatearCordobas = (monto?: number): string => {
+    return `C$ ${(monto || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const sanitizarTelefonoWhatsapp = (num: string): string => {
+    const soloNumeros = num.replace(/\D/g, '');
+    if (soloNumeros.startsWith('505') && soloNumeros.length === 11) {
+        return soloNumeros;
+    }
+    return `505${soloNumeros}`;
+};
+
 export const ClientesCRM: React.FC = () => {
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [busqueda, setBusqueda] = useState('');
-    const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
-    const [historialData, setHistorialData] = useState<any>(null);
+    const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
+    const [historialData, setHistorialData] = useState<ExpedienteClienteData | null>(null);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
-    // ESTADOS DEL FORMULARIO / MODAL ENRIQUECIDOS
+    // FORMULARIO Y MODALES
     const [mostrarModalCliente, setMostrarModalCliente] = useState(false);
     const [editandoClienteId, setEditandoClienteId] = useState<number | null>(null);
     const [cliNombre, setCliNombre] = useState('');
@@ -42,30 +107,30 @@ export const ClientesCRM: React.FC = () => {
     const [cliEtiquetas, setCliEtiquetas] = useState('');      
     const [cliObservaciones, setCliObservaciones] = useState(''); 
 
-    // ESTADO PARA MODAL DE ERROR / INTEGRIDAD
+    // MODAL DE INTEGRIDAD DE ELIMINACIÓN
     const [errorEliminacion, setErrorEliminacion] = useState<{
         mensajePrincipal: string;
         detalles?: ErrorIntegridadDetalles;
     } | null>(null);
 
-    useEffect(() => {
-        cargarClientes();
-    }, []);
-
-    const cargarClientes = async () => {
+    const cargarClientes = useCallback(async () => {
         try {
-            const res = await api.get('/clientes');
+            const res = await api.get<Cliente[]>('/clientes');
             setClientes(res.data);
         } catch (err) {
             console.error("Error cargando base de clientes", err);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        cargarClientes();
+    }, [cargarClientes]);
 
     const seleccionarCliente = async (cliente: Cliente) => {
         setClienteSeleccionado(cliente);
         setCargandoHistorial(true);
         try {
-            const res = await api.get(`/clientes/${cliente.id}/historial`);
+            const res = await api.get<ExpedienteClienteData>(`/clientes/${cliente.id}/historial`);
             setHistorialData(res.data);
         } catch (err) {
             console.error("Error al obtener la historia del cliente", err);
@@ -86,7 +151,7 @@ export const ClientesCRM: React.FC = () => {
         setMostrarModalCliente(true); 
     };
 
-    const abrirModalClienteEditor = (c: Cliente, e: React.MouseEvent) => { 
+    const abrirModalClienteEditor = (c: Cliente, e: MouseEvent) => { 
         e.stopPropagation(); 
         setEditandoClienteId(c.id); 
         setCliNombre(c.nombre); 
@@ -124,12 +189,12 @@ export const ClientesCRM: React.FC = () => {
                 seleccionarCliente({ ...clienteSeleccionado, ...payload });
             }
         } catch (err: any) { 
-            alert(err.response?.data?.mensaje || err.response?.data || "Fallo transaccional al guardar cliente."); 
+            const msg = err.response?.data?.mensaje || err.response?.data || "Fallo transaccional al guardar cliente.";
+            alert(typeof msg === 'string' ? msg : JSON.stringify(msg)); 
         }
     };
 
-    // FUNCIÓN DE ELIMINACIÓN CON MANEJO DE INTEGRIDAD COMPLETO
-    const eliminarCliente = async (idTarget: number, e: React.MouseEvent) => {
+    const eliminarCliente = async (idTarget: number, e: MouseEvent) => {
         e.stopPropagation();
         if (!window.confirm("¿Está seguro de remover a este cliente de la base de datos?")) return;
         
@@ -142,9 +207,7 @@ export const ClientesCRM: React.FC = () => {
             cargarClientes();
         } catch (err: any) {
             const data = err.response?.data;
-            
             if (data && data.detalles) {
-                // Captura la estructura JSON devuelta por el Backend
                 setErrorEliminacion({
                     mensajePrincipal: data.mensaje || "No se puede eliminar el cliente porque posee historial activo o saldos asociados.",
                     detalles: data.detalles
@@ -197,8 +260,8 @@ export const ClientesCRM: React.FC = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div className={styles.clientName}>{c.nombre}</div>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <FaEdit size={13} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} />
-                                        <FaTrash size={13} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} />
+                                        <FaEdit size={13} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} title="Editar" />
+                                        <FaTrash size={13} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} title="Eliminar" />
                                     </div>
                                 </div>
                                 <div className={styles.clientMetaRow}>
@@ -233,17 +296,19 @@ export const ClientesCRM: React.FC = () => {
                         {/* ENCABEZADO EXPEDIENTE CLIENTE */}
                         <div className={styles.crmHeaderActions}>
                             <div>
-                                <h2 className={styles.clientTitle}>{historialData?.cliente.nombre}</h2>
+                                <h2 className={styles.clientTitle}>{historialData?.cliente.nombre || clienteSeleccionado.nombre}</h2>
                                 <p className={styles.registerDate}>
-                                    Registrado el: {historialData?.cliente.fechaRegistro ? new Date(historialData.cliente.fechaRegistro).toLocaleDateString() : 'N/A'}
+                                    Registrado el: {formatearFecha(historialData?.cliente.fechaRegistro || clienteSeleccionado.fechaRegistro)}
                                 </p>
                                 <div className={styles.tagContainer}>
-                                    {historialData?.cliente.etiquetas ? (
-                                        historialData.cliente.etiquetas.split(',').map((tag: string, i: number) => (
-                                            <span key={i} className={styles.tag}>
-                                                <FaUserTag /> {tag.trim()}
-                                            </span>
-                                        ))
+                                    {(historialData?.cliente.etiquetas || clienteSeleccionado.etiquetas) ? (
+                                        (historialData?.cliente.etiquetas || clienteSeleccionado.etiquetas || '')
+                                            .split(',')
+                                            .map((tag: string, i: number) => (
+                                                <span key={i} className={styles.tag}>
+                                                    <FaUserTag /> {tag.trim()}
+                                                </span>
+                                            ))
                                     ) : (
                                         <span className={styles.noTags}>Sin etiquetas asignadas</span>
                                     )}
@@ -252,7 +317,7 @@ export const ClientesCRM: React.FC = () => {
 
                             <div>
                                 <a 
-                                    href={`https://wa.me/505${historialData?.cliente.telefono.replace(/[^0-9]/g, '')}`} 
+                                    href={`https://wa.me/${sanitizarTelefonoWhatsapp(historialData?.cliente.telefono || clienteSeleccionado.telefono)}`} 
                                     target="_blank" 
                                     rel="noreferrer"
                                     className={styles.btnWhatsapp}
@@ -262,12 +327,12 @@ export const ClientesCRM: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* KPIS FINANCIEROS Y DE FIDELIZACIÓN DEL CLIENTE */}
+                        {/* KPIS FINANCIEROS Y DE FIDELIZACIÓN */}
                         <div className={styles.crmKpiGrid}>
                             <div className={`${styles.kpiCard} ${styles.kpiCardInvertido}`}>
                                 <small className={styles.kpiLabel}>TOTAL INVERTIDO</small>
                                 <h3 className={`${styles.kpiValue} ${styles.valueInvertido}`}>
-                                    C$ {historialData?.totalGastado.toLocaleString('es-NI')}
+                                    {formatearCordobas(historialData?.totalGastado)}
                                 </h3>
                             </div>
                             <div className={styles.kpiCardActivo}>
@@ -287,7 +352,7 @@ export const ClientesCRM: React.FC = () => {
                             <div className={styles.kpiCardClub}>
                                 <small className={styles.kpiLabel}>PUNTOS CLUB</small>
                                 <h3 className={`${styles.kpiValue} ${styles.valueClub}`}>
-                                    {historialData?.cliente?.puntosClub ?? 0} pts
+                                    {historialData?.cliente?.puntosClub ?? historialData?.cliente?.puntosAcumulados ?? clienteSeleccionado.puntosAcumulados ?? 0} pts
                                 </h3>
                             </div>
                         </div>
@@ -296,7 +361,7 @@ export const ClientesCRM: React.FC = () => {
                         <div className={styles.observacionesBox}>
                             <h4 className={styles.observacionesTitle}>Observaciones del CRM</h4>
                             <p className={styles.observacionesContent}>
-                                {historialData?.cliente.observaciones || 
+                                {historialData?.cliente.observaciones || clienteSeleccionado.observaciones || 
                                 "No se han ingresado notas u observaciones de comportamiento de este cliente."}
                             </p>
                         </div>
@@ -309,20 +374,20 @@ export const ClientesCRM: React.FC = () => {
                                     <FaHistory /> Historial de Compras
                                 </h4>
                                 <div className={styles.listWrapper}>
-                                    {historialData?.historialCompras.map((compra: any) => (
+                                    {historialData?.historialCompras?.map((compra) => (
                                         <div key={compra.id} className={styles.compraItem}>
                                             <div className={styles.compraInfo}>
                                                 <strong className={styles.compraTitle}>Factura #{compra.id}</strong>
                                                 <small className={styles.compraSub}>
-                                                    {new Date(compra.fecha).toLocaleDateString()}
+                                                    {formatearFecha(compra.fecha)}
                                                 </small>
                                             </div>
                                             <span className={styles.compraPrice}>
-                                                C$ {compra.total.toLocaleString()}
+                                                {formatearCordobas(compra.total)}
                                             </span>
                                         </div>
                                     ))}
-                                    {historialData?.historialCompras.length === 0 && (
+                                    {(!historialData?.historialCompras || historialData.historialCompras.length === 0) && (
                                         <small className={styles.emptyText}>El cliente no registra compras.</small>
                                     )}
                                 </div>
@@ -334,55 +399,55 @@ export const ClientesCRM: React.FC = () => {
                                     <FaCalendarAlt /> Estado de Servicios
                                 </h4>
                                 <div className={styles.listWrapper}>
-                                    {((historialData?.serviciosActivos?.tallerEquiposEnRevision?.length > 0) || 
-                                      (historialData?.serviciosActivos?.suscripcionesVigentes?.length > 0)) && (
+                                    {(((historialData?.serviciosActivos?.tallerEquiposEnRevision?.length ?? 0) > 0) || 
+                                      ((historialData?.serviciosActivos?.suscripcionesVigentes?.length ?? 0) > 0)) && (
                                         <div className={styles.sectionSubTitle}>ACTIVOS / EN CURSO</div>
                                     )}
 
-                                    {historialData?.serviciosActivos?.tallerEquiposEnRevision?.map((srv: any) => (
+                                    {historialData?.serviciosActivos?.tallerEquiposEnRevision?.map((srv) => (
                                         <div key={`taller-act-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceTallerAct}`}>
                                             <div className={styles.serviceTallerActHeader}>
                                                 <strong className={styles.serviceTallerActTitle}>{srv.dispositivo}</strong>
-                                                <span className={styles.badgeService}>{srv.estado}</span>
+                                                <span className={styles.badgeService}>{srv.estado || 'En Revisión'}</span>
                                             </div>
-                                            <div className={styles.serviceTallerActDesc}>{srv.diagnostico}</div>
+                                            <div className={styles.serviceTallerActDesc}>{srv.diagnostico || 'Diagnóstico pendiente'}</div>
                                             <small className={styles.serviceDateMeta}>
-                                                Ingresó: {new Date(srv.fechaIngreso).toLocaleDateString()}
+                                                Ingresó: {formatearFecha(srv.fechaIngreso)}
                                             </small>
                                         </div>
                                     ))}
 
-                                    {historialData?.serviciosActivos?.suscripcionesVigentes?.map((srv: any) => (
+                                    {historialData?.serviciosActivos?.suscripcionesVigentes?.map((srv) => (
                                         <div key={`susc-act-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceSuscripAct}`}>
                                             <strong className={styles.serviceSuscripActTitle}>{srv.nombreServicio}</strong>
                                             <div className={styles.serviceSuscripActSub}>{srv.detallesCredenciales}</div>
                                             <small className={styles.dateActiveMeta}>
-                                                Vence: {new Date(srv.fechaVencimiento).toLocaleDateString()}
+                                                Vence: {formatearFecha(srv.fechaVencimiento)}
                                             </small>
                                         </div>
                                     ))}
 
-                                    {((historialData?.serviciosVencidos?.tallerEquiposEntregados?.length > 0) || 
-                                      (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length > 0)) && (
+                                    {(((historialData?.serviciosVencidos?.tallerEquiposEntregados?.length ?? 0) > 0) || 
+                                      ((historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0) > 0)) && (
                                         <div className={styles.sectionSubTitle}>HISTORIAL / VENCIDOS</div>
                                     )}
 
-                                    {historialData?.serviciosVencidos?.tallerEquiposEntregados?.map((srv: any) => (
+                                    {historialData?.serviciosVencidos?.tallerEquiposEntregados?.map((srv) => (
                                         <div key={`taller-ven-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceTallerHist}`}>
                                             <div className={styles.serviceTallerHistTitle}>{srv.dispositivo} (Entregado)</div>
-                                            <div className={styles.serviceTallerHistDesc}>{srv.notas}</div>
+                                            <div className={styles.serviceTallerHistDesc}>{srv.notas || 'Sin notas adicionadas'}</div>
                                             <small className={styles.serviceDateMeta}>
-                                                Entregado: {new Date(srv.fechaEntrega).toLocaleDateString()}
+                                                Entregado: {formatearFecha(srv.fechaEntrega)}
                                             </small>
                                         </div>
                                     ))}
 
-                                    {historialData?.serviciosVencidos?.suscripcionesExpiradas?.map((srv: any) => (
+                                    {historialData?.serviciosVencidos?.suscripcionesExpiradas?.map((srv) => (
                                         <div key={`susc-ven-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceSuscripExp}`}>
                                             <strong className={styles.serviceSuscripExpTitle}>{srv.nombreServicio}</strong>
-                                            <div className={styles.serviceSuscripExpSub}>Estado: {srv.estado}</div>
+                                            <div className={styles.serviceSuscripExpSub}>Estado: {srv.estado || 'Expirado'}</div>
                                             <small className={styles.serviceDateMeta}>
-                                                Expiró: {new Date(srv.fechaVencimiento).toLocaleDateString()}
+                                                Expiró: {formatearFecha(srv.fechaVencimiento)}
                                             </small>
                                         </div>
                                     ))}
@@ -390,18 +455,18 @@ export const ClientesCRM: React.FC = () => {
                                     <div className={styles.deudaSection}>
                                         <h4 className={styles.deudaTitle}>Estado de Cuenta (Deudas)</h4>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {historialData?.historialDeudas?.filter((d: any) => d.saldoPendiente > 0).map((deuda: any) => (
+                                            {historialData?.historialDeudas?.filter(d => d.saldoPendiente > 0).map((deuda) => (
                                                 <div key={deuda.id} className={styles.deudaCard}>
                                                     <div>
                                                         <span className={styles.deudaCode}>Deuda #{deuda.id} ({deuda.estado})</span>
                                                         <small className={styles.deudaDate}>
-                                                            Vence el: {new Date(deuda.fechaVencimiento).toLocaleDateString()}
+                                                            Vence el: {formatearFecha(deuda.fechaVencimiento)}
                                                         </small>
                                                     </div>
-                                                    <span className={styles.deudaMonto}>C$ {deuda.saldoPendiente}</span>
+                                                    <span className={styles.deudaMonto}>{formatearCordobas(deuda.saldoPendiente)}</span>
                                                 </div>
                                             ))}
-                                            {historialData?.historialDeudas?.filter((d: any) => d.saldoPendiente > 0).length === 0 && (
+                                            {(!historialData?.historialDeudas || historialData.historialDeudas.filter(d => d.saldoPendiente > 0).length === 0) && (
                                                 <small className={styles.noDeudaText}>El cliente no tiene saldos pendientes.</small>
                                             )}
                                         </div>
@@ -428,30 +493,30 @@ export const ClientesCRM: React.FC = () => {
                         
                         <form onSubmit={guardarCliente} className={styles.modalForm}>
                             <div className={styles.formGroup}>
-                                <label>Nombre Completo</label>
-                                <input type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} required />
+                                <label htmlFor="cliNombre">Nombre Completo</label>
+                                <input id="cliNombre" type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} required />
                             </div>
                             <div className={styles.formGroup}>
-                                <label>Teléfono Móvil</label>
-                                <input type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} required />
+                                <label htmlFor="cliTelefono">Teléfono Móvil</label>
+                                <input id="cliTelefono" type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} required />
                             </div>
                             <div className={styles.formGroup}>
-                                <label>Email</label>
-                                <input type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} />
+                                <label htmlFor="cliEmail">Email</label>
+                                <input id="cliEmail" type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} />
                             </div>
                             <div className={styles.formGroup}>
-                                <label>Etiquetas (Separadas por comas)</label>
-                                <input type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller" />
+                                <label htmlFor="cliEtiquetas">Etiquetas (Separadas por comas)</label>
+                                <input id="cliEtiquetas" type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller" />
                             </div>
                             <div className={styles.formGroup}>
-                                <label>Observaciones Internas</label>
-                                <textarea value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={3} placeholder="Notas de comportamiento del cliente..." />
+                                <label htmlFor="cliObservaciones">Observaciones Internas</label>
+                                <textarea id="cliObservaciones" value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={3} placeholder="Notas de comportamiento del cliente..." />
                             </div>
 
                             {editandoClienteId && (
                                 <div className={styles.formGroup}>
-                                    <label>Puntos Club</label>
-                                    <input type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} min={0} />
+                                    <label htmlFor="cliPuntos">Puntos Club</label>
+                                    <input id="cliPuntos" type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} min={0} />
                                 </div>
                             )}
                             
@@ -468,7 +533,7 @@ export const ClientesCRM: React.FC = () => {
                 </div>
             )}
 
-            {/* MODAL DE ADVERTENCIA: ERROR DE INTEGRIDAD / HISTORIAL ACTIVO */}
+            {/* MODAL DE ADVERTENCIA: ERROR DE INTEGRIDAD */}
             {errorEliminacion && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent} style={{ maxWidth: '460px', borderTop: '4px solid #ef4444' }}>
@@ -500,7 +565,7 @@ export const ClientesCRM: React.FC = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         {errorEliminacion.detalles.tieneTaller ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
                                         <span style={{ color: errorEliminacion.detalles.tieneTaller ? '#f87171' : '#94a3b8' }}>
-                                            {errorEliminacion.detalles.tieneTaller ? "Tiene ordenes o equipos en taller" : "Sin servicios de taller"}
+                                            {errorEliminacion.detalles.tieneTaller ? "Tiene órdenes o equipos en taller" : "Sin servicios de taller"}
                                         </span>
                                     </div>
 

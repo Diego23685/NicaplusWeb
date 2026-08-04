@@ -18,7 +18,7 @@ import { VistaNosotros } from '../components/catalogo/VistaNosotros';
 import { VistaContacto } from '../components/catalogo/VistaContacto';
 import { Terminos } from './Terminos';
 
-// Constante para el número de WhatsApp (cámbialo si se maneja desde variables de entorno)
+// Constante para el número de WhatsApp
 const WHATSAPP_NUMERO = "50587870821";
 
 // Diccionario de iconos según el nombre de la categoría
@@ -114,7 +114,7 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                     
                     <div className={detailStyles.detailPriceRow}>
                         <span className={detailStyles.detailPriceLabel}>Precio:</span>
-                        <span className={detailStyles.detailPriceValue}>C$ {producto.precioVenta}</span>
+                        <span className={detailStyles.detailPriceValue}>C$ {producto.precioVenta.toLocaleString('es-NI')}</span>
                     </div>
 
                     <div className={detailStyles.detailDivider} />
@@ -230,7 +230,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     };
 
-    // Animación de partícula física voladora al carrito
+    // Animación de partícula física voladora al carrito con manejo seguro del DOM
     const agregarAlCarrito = (producto: Producto, e?: React.MouseEvent) => {
         if (e) {
             const cartButton = document.querySelector(`.${styles.cartBtnDesk}`) || document.querySelector(`.${styles.cartBtnMobile}`);
@@ -259,9 +259,13 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 });
 
                 setTimeout(() => {
-                    flyElem.remove();
-                    cartButton.classList.add(styles.cartBumpAnimation);
-                    setTimeout(() => cartButton.classList.remove(styles.cartBumpAnimation), 300);
+                    if (document.body.contains(flyElem)) {
+                        flyElem.remove();
+                    }
+                    if (cartButton) {
+                        cartButton.classList.add(styles.cartBumpAnimation);
+                        setTimeout(() => cartButton.classList.remove(styles.cartBumpAnimation), 300);
+                    }
                 }, 800);
             }
         }
@@ -314,24 +318,25 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         mensaje += `💳 *Pago:* ${metodoPago}\n\n🛒 *DETALLE*\n`;
 
         carrito.forEach(item => {
-            mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre} (C$ ${item.producto.precioVenta})\n`;
+            mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre} (C$ ${item.producto.precioVenta.toLocaleString('es-NI')})\n`;
         });
-        mensaje += `\n💰 *TOTAL A PAGAR: C$ ${totalPagar}*`;
+        mensaje += `\n💰 *TOTAL A PAGAR: C$ ${totalPagar.toLocaleString('es-NI')}*`;
         
         window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMERO}&text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
     const productoPrincipal = useMemo<Producto | null>(() => {
-        if (productos.length === 0) return null;
+        if (!Array.isArray(productos) || productos.length === 0) return null;
         return [...productos].sort((a, b) => b.precioVenta - a.precioVenta)[0];
     }, [productos]);
 
     const productosSecundarios = useMemo<Producto[]>(() => {
-        if (productos.length < 3) return [];
+        if (!Array.isArray(productos) || productos.length < 3) return [];
         return [...productos].sort((a, b) => b.precioVenta - a.precioVenta).slice(1, 3);
     }, [productos]);
 
     const productosFiltrados = useMemo(() => {
+        if (!Array.isArray(productos)) return [];
         return productos.filter(p => {
             const cumpleBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
             const cumpleCategoria = idCatSeleccionada ? p.categoriaId === idCatSeleccionada : true;
@@ -357,6 +362,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             setIdJuegoSeleccionado(null);
         }
         setMenuAbierto(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const manejarVerDetalle = (p: Producto) => {
@@ -425,6 +431,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         <button 
                             className={`${styles.cartBtnMobile} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
                             onClick={() => cambiarSeccion('carrito')} 
+                            aria-label="Abrir carrito"
                         >
                             <FaShoppingCart size={14} /> 
                             <span className={styles.cartBadgeCount}>{totalCarritoItems}</span>
@@ -536,13 +543,13 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     className={styles.promoBtn} 
                                                     onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
                                                 >
-                                                    COMPRAR POR C$ {productoPrincipal.precioVenta}
+                                                    COMPRAR POR C$ {productoPrincipal.precioVenta.toLocaleString('es-NI')}
                                                 </button>
                                                 <div className={styles.promoGraphicOverlay} />
                                                 {productoPrincipal.imagenUrl && (
                                                     <img 
                                                         src={productoPrincipal.imagenUrl} 
-                                                        alt="" 
+                                                        alt={productoPrincipal.nombre} 
                                                         className={styles.promoAbsoluteImage}
                                                         onClick={() => manejarVerDetalle(productoPrincipal)}
                                                         style={{cursor: 'pointer'}}
@@ -568,7 +575,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                         <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
                                                             {prod.nombre}
                                                         </h3>
-                                                        <p>¡Por solo C$ {prod.precioVenta}!</p>
+                                                        <p>¡Por solo C$ {prod.precioVenta.toLocaleString('es-NI')}!</p>
                                                         <button 
                                                             className={styles.sideLink} 
                                                             onClick={(e) => agregarAlCarrito(prod, e)}
@@ -579,7 +586,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     {prod.imagenUrl && (
                                                         <img 
                                                             src={prod.imagenUrl} 
-                                                            alt="" 
+                                                            alt={prod.nombre} 
                                                             className={styles.sideBannerImage} 
                                                             onClick={() => manejarVerDetalle(prod)}
                                                             style={{cursor: 'pointer'}}
@@ -590,17 +597,19 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         </div>
                                     </section>
 
-                                    {/* ==========================================================
-                                        BURBUJAS (FILTROS RÁPIDOS DE CATEGORÍAS Y JUEGOS)
-                                       ========================================================== */}
+                                    {/* BURBUJAS (FILTROS RÁPIDOS DE CATEGORÍAS Y JUEGOS) */}
                                     <div className={styles.filterSectionContainer}>
                                         {/* Fila de Categorías en formato burbujas */}
                                         <div className={styles.filterRowWrapper}>
                                             <div className={styles.filterRowHeader}>
                                                 <h3>Categorías</h3>
                                                 <div className={styles.rowNavButtons}>
-                                                    <button onClick={() => scrollRow(catRowRef, 'left')}><FaChevronLeft /></button>
-                                                    <button onClick={() => scrollRow(catRowRef, 'right')}><FaChevronRight /></button>
+                                                    <button onClick={() => scrollRow(catRowRef, 'left')} aria-label="Desplazar categorías a la izquierda">
+                                                        <FaChevronLeft />
+                                                    </button>
+                                                    <button onClick={() => scrollRow(catRowRef, 'right')} aria-label="Desplazar categorías a la derecha">
+                                                        <FaChevronRight />
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div className={styles.categoryScrollRow} ref={catRowRef}>
@@ -632,8 +641,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                 <div className={styles.filterRowHeader}>
                                                     <h3>Juegos</h3>
                                                     <div className={styles.rowNavButtons}>
-                                                        <button onClick={() => scrollRow(juegoRowRef, 'left')}><FaChevronLeft /></button>
-                                                        <button onClick={() => scrollRow(juegoRowRef, 'right')}><FaChevronRight /></button>
+                                                        <button onClick={() => scrollRow(juegoRowRef, 'left')} aria-label="Desplazar juegos a la izquierda">
+                                                            <FaChevronLeft />
+                                                        </button>
+                                                        <button onClick={() => scrollRow(juegoRowRef, 'right')} aria-label="Desplazar juegos a la derecha">
+                                                            <FaChevronRight />
+                                                        </button>
                                                     </div>
                                                 </div>
                                                 <div className={styles.gameScrollRow} ref={juegoRowRef}>
@@ -686,11 +699,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     </h3>
                                                     <p className={styles.productDescription}>{prod.descripcion}</p>
                                                     <div className={styles.priceActionRow}>
-                                                        <span className={styles.productPrice}>C$ {prod.precioVenta}</span>
+                                                        <span className={styles.productPrice}>C$ {prod.precioVenta.toLocaleString('es-NI')}</span>
                                                         <button 
                                                             className={styles.addCartBtn}
                                                             disabled={!prod.esDigital && prod.stockActual <= 0}
                                                             onClick={(e) => agregarAlCarrito(prod, e)}
+                                                            aria-label={`Añadir ${prod.nombre} al carrito`}
                                                         >
                                                             <FaShoppingCart />
                                                         </button>

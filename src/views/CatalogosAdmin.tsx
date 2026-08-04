@@ -1,9 +1,9 @@
-import React, { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent, type FormEvent } from 'react';
 import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaTv, FaBoxes, FaSearch, FaFilter
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -94,7 +94,7 @@ export const CatalogosAdmin: React.FC = () => {
     const [perfCorreo, setPerfCorreo] = useState('');
     const [perfPassword, setPerfPassword] = useState('');
 
-    // ESTRUCTURAS AUXILIARES (JUEGOS / CATEGORIAS)
+    // ESTRUCTURAS AUXILIARES
     const [editandoJuego, setEditandoJuego] = useState<number | null>(null);
     const [nuevoJuego, setNuevoJuego] = useState('');
     const [juegoImagen, setJuegoImagen] = useState('');
@@ -102,7 +102,7 @@ export const CatalogosAdmin: React.FC = () => {
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [categoriaImagen, setCategoriaImagen] = useState('');
     
-    // QUERIES DE FILTROS PRODUCTOS
+    // FILTROS
     const [filtroProd, setFiltroProd] = useState('');
     const [juegoFiltroActivo, setJuegoFiltroActivo] = useState<number | null>(null);
     const [categoriaFiltroActiva, setCategoriaFiltroActiva] = useState<number | null>(null);
@@ -112,11 +112,11 @@ export const CatalogosAdmin: React.FC = () => {
         visible: false, mensaje: '', detalles: '', elementosVinculados: [] as string[]
     });
 
-    const dispararErrorVisual = (mensaje: string, detalles: string, vinculados: string[] = []) => {
+    const dispararErrorVisual = useCallback((mensaje: string, detalles: string, vinculados: string[] = []) => {
         setErrorModal({ visible: true, mensaje, detalles, elementosVinculados: vinculados });
-    };
+    }, []);
 
-    const cargarSincronizacionMaster = async () => {
+    const cargarSincronizacionMaster = useCallback(async () => {
         try {
             const [resProd, resCat, resJue, resProv] = await Promise.all([
                 api.get('/products'),
@@ -128,51 +128,56 @@ export const CatalogosAdmin: React.FC = () => {
             setCategorias(resCat.data);
             setJuegos(resJue.data);
             setListaProveedores(resProv.data);
-        } catch (err) { 
+        } catch (err: any) { 
             console.error("Error al sincronizar catálogos:", err); 
-            dispararErrorVisual("Error de Red", "No se pudo sincronizar la información del servidor central.");
+            dispararErrorVisual("Error de Red", err.response?.data?.message || "No se pudo sincronizar la información del servidor central.");
         } finally {
             setCargando(false);
         }
-    };
+    }, [dispararErrorVisual]);
 
-    useEffect(() => { cargarSincronizacionMaster(); }, []);
+    useEffect(() => { cargarSincronizacionMaster(); }, [cargarSincronizacionMaster]);
 
-    const prodsFiltrados = productos.filter(p => {
-        const coincideTexto = p.nombre.toLowerCase().includes(filtroProd.toLowerCase());
-        const coincideJuego = juegoFiltroActivo ? p.juegoId === juegoFiltroActivo : true;
-        const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
-        return coincideTexto && coincideJuego && coincideCategoria;
-    });
-
-    // PROCESAMIENTO Y FILTRADO DE PERFILES EN TIEMPO REAL
-    const perfilesFiltradosYOrdenados = perfilesActuales
-        .filter((perfil) => {
-            if (!busquedaPerfil.trim()) return true;
-            const q = busquedaPerfil.toLowerCase();
-            return (
-                perfil.nombrePerfil.toLowerCase().includes(q) ||
-                perfil.correoCuenta.toLowerCase().includes(q) ||
-                (perfil.nombreCliente && perfil.nombreCliente.toLowerCase().includes(q)) ||
-                (perfil.pin && perfil.pin.includes(q))
-            );
-        })
-        .sort((a, b) => {
-            switch (ordenPerfil) {
-                case 'a-z':
-                    return a.nombrePerfil.localeCompare(b.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
-                case 'z-a':
-                    return b.nombrePerfil.localeCompare(a.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
-                case 'correo':
-                    return a.correoCuenta.localeCompare(b.correoCuenta);
-                case 'disponibles':
-                    return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? 1 : -1;
-                case 'ocupados':
-                    return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? -1 : 1;
-                default:
-                    return 0;
-            }
+    // FILTRADO DE PRODUCTOS MEMOIZADO
+    const prodsFiltrados = useMemo(() => {
+        return productos.filter(p => {
+            const coincideTexto = p.nombre.toLowerCase().includes(filtroProd.toLowerCase());
+            const coincideJuego = juegoFiltroActivo ? p.juegoId === juegoFiltroActivo : true;
+            const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
+            return coincideTexto && coincideJuego && coincideCategoria;
         });
+    }, [productos, filtroProd, juegoFiltroActivo, categoriaFiltroActiva]);
+
+    // FILTRADO Y ORDENAMIENTO DE PERFILES MEMOIZADO
+    const perfilesFiltradosYOrdenados = useMemo(() => {
+        return perfilesActuales
+            .filter((perfil) => {
+                if (!busquedaPerfil.trim()) return true;
+                const q = busquedaPerfil.toLowerCase();
+                return (
+                    perfil.nombrePerfil.toLowerCase().includes(q) ||
+                    perfil.correoCuenta.toLowerCase().includes(q) ||
+                    (perfil.nombreCliente && perfil.nombreCliente.toLowerCase().includes(q)) ||
+                    (perfil.pin && perfil.pin.includes(q))
+                );
+            })
+            .sort((a, b) => {
+                switch (ordenPerfil) {
+                    case 'a-z':
+                        return a.nombrePerfil.localeCompare(b.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
+                    case 'z-a':
+                        return b.nombrePerfil.localeCompare(a.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
+                    case 'correo':
+                        return a.correoCuenta.localeCompare(b.correoCuenta);
+                    case 'disponibles':
+                        return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? 1 : -1;
+                    case 'ocupados':
+                        return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? -1 : 1;
+                    default:
+                        return 0;
+                }
+            });
+    }, [perfilesActuales, busquedaPerfil, ordenPerfil]);
 
     const handleProductoInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -193,7 +198,6 @@ export const CatalogosAdmin: React.FC = () => {
         });
     };
 
-    // POOL DE OPERACIONES: PERFILES
     const abrirGestionPerfiles = async (producto: Producto) => {
         if (productoIdPerfilAbierto === producto.id) {
             setProductoIdPerfilAbierto(null);
@@ -203,7 +207,7 @@ export const CatalogosAdmin: React.FC = () => {
         setProductoIdPerfilAbierto(producto.id);
         setPerfNombre(`Perfil ${(producto.perfilesCount ?? 0) + 1}`);
         setPerfPin('');
-        setBusquedaPerfil(''); // Reiniciar buscador al cambiar de producto
+        setBusquedaPerfil('');
         setOrdenPerfil('a-z');
         
         try {
@@ -239,10 +243,10 @@ export const CatalogosAdmin: React.FC = () => {
                 const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
                 setPerfilesActuales(res.data);
             }
-        } catch {
+        } catch (err: any) {
             dispararErrorVisual(
                 "Integridad Bloqueada", 
-                "Una o más pantallas de esta cuenta están activas en suscripciones vigentes."
+                err.response?.data?.message || "Una o más pantallas de esta cuenta están activas en suscripciones vigentes."
             );
         }
     };
@@ -268,8 +272,8 @@ export const CatalogosAdmin: React.FC = () => {
                 const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
                 setPerfilesActuales(res.data);
             }
-        } catch {
-            dispararErrorVisual("Error de Envío", "Hubo problemas al guardar los datos del perfil o del grupo.");
+        } catch (err: any) {
+            dispararErrorVisual("Error de Envío", err.response?.data?.message || "Hubo problemas al guardar los datos del perfil o del grupo.");
         }
     };
 
@@ -281,8 +285,8 @@ export const CatalogosAdmin: React.FC = () => {
                 const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
                 setPerfilesActuales(res.data);
             }
-        } catch {
-            dispararErrorVisual("Error Operacional", "No se logró desvincular al cliente de la pantalla.");
+        } catch (err: any) {
+            dispararErrorVisual("Error Operacional", err.response?.data?.message || "No se logró desvincular al cliente de la pantalla.");
         }
     };
 
@@ -304,8 +308,8 @@ export const CatalogosAdmin: React.FC = () => {
             const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
             setPerfilesActuales(res.data);
             setPerfNombre(`Perfil ${res.data.length + 1}`);
-        } catch {
-            dispararErrorVisual("Fallo de Registro", "Imposible inyectar perfil.");
+        } catch (err: any) {
+            dispararErrorVisual("Fallo de Registro", err.response?.data?.message || "Imposible inyectar perfil.");
         }
     };
 
@@ -316,8 +320,8 @@ export const CatalogosAdmin: React.FC = () => {
             const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
             setPerfilesActuales(res.data);
             setPerfNombre(`Perfil ${res.data.length + 1}`);
-        } catch {
-            dispararErrorVisual("Integridad Bloqueada", "El perfil se encuentra activo dentro de una suscripción vigente.");
+        } catch (err: any) {
+            dispararErrorVisual("Integridad Bloqueada", err.response?.data?.message || "El perfil se encuentra activo dentro de una suscripción vigente.");
         }
     };
 
@@ -338,12 +342,11 @@ export const CatalogosAdmin: React.FC = () => {
             
             const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
             setPerfilesActuales(res.data);
-        } catch {
-            dispararErrorVisual("Fallo Multipantalla", "No se generó el lote completo.");
+        } catch (err: any) {
+            dispararErrorVisual("Fallo Multipantalla", err.response?.data?.message || "No se generó el lote completo.");
         }
     };
 
-    // CRUD: INVENTARIO
     const guardarProducto = async (e: FormEvent) => {
         e.preventDefault();
         const payload = {
@@ -354,7 +357,7 @@ export const CatalogosAdmin: React.FC = () => {
             categoriaId: formProducto.categoriaId ? Number(formProducto.categoriaId) : null,
             juegoId: formProducto.esDigital && formProducto.juegoId ? Number(formProducto.juegoId) : null,
             visibleEnCatalogo: true,
-            diasDuracion: formProducto.esDigital ? Number(formProducto.diasDuracion) : 0,
+            diasDuracion: formProducto.esDigital ? Number(formProducto.diasDuracion) : (Number(formProducto.diasDuracion) || 1),
             garantiaDias: Number(formProducto.garantiaDias)
         };
 
@@ -367,8 +370,8 @@ export const CatalogosAdmin: React.FC = () => {
             limpiarFormularioProducto();
             setMostrarFormularioProducto(false);
             cargarSincronizacionMaster();
-        } catch { 
-            dispararErrorVisual("Fallo de Procesamiento", "Error crítico al guardar la ficha técnica."); 
+        } catch (err: any) { 
+            dispararErrorVisual("Fallo de Procesamiento", err.response?.data?.message || "Error crítico al guardar la ficha técnica."); 
         }
     };
 
@@ -405,12 +408,11 @@ export const CatalogosAdmin: React.FC = () => {
         try {
             await api.delete(`/products/${id}`);
             cargarSincronizacionMaster();
-        } catch { 
-            dispararErrorVisual("Acción Denegada", "Integridad referencial activa: Este producto tiene facturas o perfiles anclados."); 
+        } catch (err: any) { 
+            dispararErrorVisual("Acción Denegada", err.response?.data?.message || "Integridad referencial activa: Este producto tiene facturas o perfiles anclados."); 
         }
     };
 
-    // CRUD: AUXILIARES
     const guardarJuego = async (e: FormEvent) => {
         e.preventDefault();
         try {
@@ -419,7 +421,9 @@ export const CatalogosAdmin: React.FC = () => {
             else await api.post('/juegos', payload);
             setNuevoJuego(''); setJuegoImagen(''); setEditandoJuego(null);
             cargarSincronizacionMaster();
-        } catch { dispararErrorVisual("Error", "No se procesó el título."); }
+        } catch (err: any) { 
+            dispararErrorVisual("Error", err.response?.data?.message || "No se procesó el título."); 
+        }
     };
 
     const eliminarJuego = async (id: number) => {
@@ -441,7 +445,9 @@ export const CatalogosAdmin: React.FC = () => {
             else await api.post('/categorias', payload);
             setNuevaCategoria(''); setCategoriaImagen(''); setEditandoCategoria(null);
             cargarSincronizacionMaster();
-        } catch { dispararErrorVisual("Error", "No se guardó la categoría."); }
+        } catch (err: any) { 
+            dispararErrorVisual("Error", err.response?.data?.message || "No se guardó la categoría."); 
+        }
     };
 
     const eliminarCategoria = async (id: number) => {
@@ -545,14 +551,14 @@ export const CatalogosAdmin: React.FC = () => {
                     <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}><FaBoxOpen /> {editandoProductoId ? 'Modificando Ficha Técnica' : 'Ficha de Asignación de Inventario'}</h4>
                     <form onSubmit={guardarProducto} className={styles.formGrid}>
                         <div className={styles.formGroup}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Nombre Comercial</label>
-                                <input type="text" name="nombre" value={formProducto.nombre} onChange={handleProductoInputChange} className={styles.input} required />
-                            </div>
-                            <div className={styles.formGroup} style={{ marginTop: '10px' }}>
+                            <label className={styles.label}>Nombre Comercial</label>
+                            <input type="text" name="nombre" value={formProducto.nombre} onChange={handleProductoInputChange} className={styles.input} required />
+                            
+                            <div style={{ marginTop: '10px' }}>
                                 <label className={styles.label}>Descripción / Notas</label>
                                 <textarea name="descripcion" value={formProducto.descripcion} onChange={handleProductoInputChange} placeholder="Especificaciones físicas..." className={styles.textarea} />
                             </div>
+
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <div style={{ flex: 1 }}>
                                     <label className={styles.label}>Precio Compra (C$)</label>
@@ -566,13 +572,12 @@ export const CatalogosAdmin: React.FC = () => {
                         </div>
 
                         <div className={styles.formGroup}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Categoría Estructural</label>
-                                <select name="categoriaId" value={formProducto.categoriaId} onChange={handleProductoInputChange} className={styles.select} required>
-                                    <option value="">-- Seleccionar --</option>
-                                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                                </select>
-                            </div>
+                            <label className={styles.label}>Categoría Estructural</label>
+                            <select name="categoriaId" value={formProducto.categoriaId} onChange={handleProductoInputChange} className={styles.select} required>
+                                <option value="">-- Seleccionar --</option>
+                                {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                            </select>
+
                             <div style={{ marginTop: '10px' }}>
                                 <label className={styles.label}><FaTruck /> Proveedor Homologado</label>
                                 <select name="proveedor" value={formProducto.proveedor} onChange={handleProductoInputChange} className={styles.select} required>
@@ -580,6 +585,7 @@ export const CatalogosAdmin: React.FC = () => {
                                     {listaProveedores.map(p => <option key={p.id} value={p.razonSocial}>{p.razonSocial}</option>)}
                                 </select>
                             </div>
+
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <div style={{ flex: 1 }}>
                                     <label className={styles.label}><FaShieldAlt /> Garantía (Días)</label>
@@ -594,6 +600,7 @@ export const CatalogosAdmin: React.FC = () => {
                                     </select>
                                 </div>
                             </div>
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '12px 0 0 0' }}>
                                 <label className={styles.checkboxLabel}>
                                     <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Recarga / Producto Digital?
@@ -710,7 +717,7 @@ export const CatalogosAdmin: React.FC = () => {
                                     <td style={{ color: '#94a3b8' }}>C$ {p.precioCosto}</td>
                                     <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {p.precioVenta}</td>
                                     <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
-                                    <td style={{ color: '#fb923c' }}>{p.garantiaDias} days</td>
+                                    <td style={{ color: '#fb923c' }}>{p.garantiaDias} días</td>
                                     <td style={{ color: '#cbd5e1' }}>{p.proveedor || 'N/A'}</td>
                                     <td>
                                         <span className={styles.badge} style={{
