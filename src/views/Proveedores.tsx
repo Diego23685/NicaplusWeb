@@ -205,7 +205,7 @@ export const Proveedores: React.FC = () => {
                 </div>
                 <div className={styles.formGroup}>
                   <label>Teléfono</label>
-                  <input type="text" value={telefono} onChange={e => setTelefono(e.target.value)} className={styles.input} required />
+                  <input type="text" value={telefono} onChange={e => setTelefono(e.target.value)} className={styles.input} />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Email</label>
