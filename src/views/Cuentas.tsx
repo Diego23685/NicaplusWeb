@@ -19,6 +19,7 @@ export const Cuentas: React.FC = () => {
     const [mostrarModalProveedor, setMostrarModalProveedor] = useState(false);
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState<any | null>(null);
     const [montoAbono, setMontoAbono] = useState<string>('');
+    const [metodoPago, setMetodoPago] = useState<string>('Efectivo');
 
     // Formulario: Nueva Cuenta por Pagar
     const [idProveedor, setIdProveedor] = useState('');
@@ -103,14 +104,21 @@ export const Cuentas: React.FC = () => {
         if (!cuentaSeleccionada || !montoAbono || Number(montoAbono) <= 0) return;
 
         const endpoint = subModulo === 'cobrar' ? 'CuentasPorCobrar' : 'CuentasPorPagar';
+        
+        const payload = {
+            montoAbono: Number(montoAbono),
+            metodoPago: metodoPago || 'Efectivo'
+        };
+
         try {
-            await api.put(`/${endpoint}/${cuentaSeleccionada.id}/abonar?montoAbono=${montoAbono}`);
+            await api.put(`/${endpoint}/${cuentaSeleccionada.id}/abonar`, payload);
             alert("Abono procesado con éxito.");
             setCuentaSeleccionada(null);
             setMontoAbono('');
+            setMetodoPago('Efectivo');
             cargarDatos();
         } catch (err: any) {
-            alert(err.response?.data || "Error al aplicar el abono contable.");
+            alert(err.response?.data?.mensaje || err.response?.data || "Error al aplicar el abono contable.");
         }
     };
 
@@ -191,8 +199,8 @@ export const Cuentas: React.FC = () => {
                                     <tr key={c.id}>
                                         <td className={styles.idCell}>#{c.id}</td>
                                         <td>
-                                            <span className={styles.bold}>{c.cliente?.nombre || 'Desconocido'}</span>
-                                            <div className={styles.subText}>Tel: {c.cliente?.telefono || 'N/A'}</div>
+                                            <span className={styles.bold}>{c.nombreCliente || c.cliente?.nombre || 'Desconocido'}</span>
+                                            <div className={styles.subText}>Tel: {c.telefonoCliente || c.cliente?.telefono || 'N/A'}</div>
                                         </td>
                                         <td className={styles.bold}>C$ {c.montoTotal}</td>
                                         <td className={c.saldoPendiente > 0 ? styles.saldoPendiente : styles.saldoSaldado}>
@@ -470,6 +478,19 @@ export const Cuentas: React.FC = () => {
                                 className={styles.input}
                                 required 
                             />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Método de Pago</label>
+                            <select 
+                                value={metodoPago} 
+                                onChange={e => setMetodoPago(e.target.value)}
+                                className={styles.select}
+                            >
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia Bancaria</option>
+                                <option value="Tarjeta">Tarjeta de Débito/Crédito</option>
+                            </select>
                         </div>
 
                         <div className={styles.modalActions}>

@@ -67,13 +67,14 @@ export const TicketsSoporteCRM: React.FC = () => {
         setMostrarModalEstado(true);
     };
 
+    // ✅ REEMPLAZAR LA FUNCIÓN EN TicketsSoporteCRM.tsx
     const guardarCambioEstado = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.put(`/ticketssoporte/${ticketSeleccionado.id}/estado?nuevoEstado=${nuevoEstado}`, 
-                JSON.stringify(notasResolucion), 
-                { headers: { 'Content-Type': 'application/json' } }
-            );
+            await api.put(`/ticketssoporte/${ticketSeleccionado.id}/estado`, {
+                nuevoEstado: nuevoEstado,
+                notasResolucion: notasResolucion
+            });
             alert("Estado del reclamo actualizado.");
             setMostrarModalEstado(false);
             cargarDatos();

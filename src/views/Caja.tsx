@@ -1,11 +1,10 @@
 // src/components/Caja.tsx
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
   FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
-  FaTags, FaThList 
+  FaTags, FaThList, FaExclamationTriangle 
 } from 'react-icons/fa';
 import styles from '../assets/styles/Caja.module.css';
 
@@ -177,7 +176,6 @@ export const imprimirTicketTermico = (datosVenta: any) => {
 };
 
 export const Caja: React.FC = () => {
-    const { usuario } = useAuth();
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -196,6 +194,13 @@ export const Caja: React.FC = () => {
     const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
     const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
     const [diasCredito, setDiasCredito] = useState(15);
+
+    // Estado para controlar el modal bonito de errores
+    const [mensajeErrorModal, setMensajeErrorModal] = useState<string | null>(null);
+
+    const mostrarError = (mensaje: string) => {
+        setMensajeErrorModal(mensaje);
+    };
 
     useEffect(() => {
         api.get('/products')
@@ -232,7 +237,7 @@ export const Caja: React.FC = () => {
 
         if (existe) {
             if (!producto.esDigital && !producto.requiereServicio && producto.stockActual <= existe.cantidad) {
-                alert("No hay suficiente stock en inventario.");
+                mostrarError("No hay suficiente stock en inventario para agregar más unidades.");
                 return;
             }
             setCarrito(carrito.map(item => 
@@ -292,13 +297,13 @@ export const Caja: React.FC = () => {
 
     const enviarCredencialesWhatsApp = () => {
         if (!datosUltimaVenta || !datosUltimaVenta.detalles) {
-            alert("No hay datos de una venta reciente para enviar.");
+            mostrarError("No hay datos de una venta reciente para enviar.");
             return;
         }
 
         const clienteObj = datosUltimaVenta.cliente;
         if (!clienteObj || !clienteObj.telefono) {
-            alert("Venta genérica de mostrador: No hay un cliente con número de WhatsApp vinculado a esta venta.");
+            mostrarError("Venta genérica de mostrador: No hay un cliente con número de WhatsApp vinculado a esta venta.");
             return;
         }
 
@@ -448,11 +453,11 @@ export const Caja: React.FC = () => {
 
         const faltaMetadata = carrito.some(item => {
             const p = productos.find(prod => prod.id === item.idProducto);
-            return p?.esDigital && !item.metadataDigital.trim();
+            return p?.esDigital && !p?.esSuscripcion && !item.metadataDigital.trim();
         });
 
         if (faltaMetadata) {
-            alert("Error: Debe ingresar el ID del jugador para todos los productos digitales.");
+            mostrarError("Debe ingresar el ID del jugador o la referencia requerida para todos los productos digitales.");
             return;
         }
 
@@ -462,7 +467,7 @@ export const Caja: React.FC = () => {
         });
 
         if ((llevaSuscripcion || metodoPago === "Crédito") && (!idClienteSeleccionado || idClienteSeleccionado === 0)) {
-            alert("Operación Denegada: Las ventas al crédito o configuradas como Suscripción requieren obligatoriamente asociar un cliente real.");
+            mostrarError("Operación Denegada: Las ventas al crédito o configuradas como Suscripción requieren obligatoriamente asociar un cliente real.");
             return;
         }
 
@@ -473,7 +478,7 @@ export const Caja: React.FC = () => {
             return {
                 idProducto: item.idProducto,
                 cantidad: item.cantidad,
-                precioUnitario: item.precioUnitario - (item.descuento || 0),
+                precioUnitario: item.precioUnitario,
                 subTotal: (item.precioUnitario - (item.descuento || 0)) * item.cantidad,
                 descuento: item.descuento || 0,
                 metadataDigital: metaFinal || ''
@@ -481,11 +486,9 @@ export const Caja: React.FC = () => {
         });
 
         const payload = {
-            idUsuario: usuario?.id || 1,
             idCliente: idClienteSeleccionado === 0 ? null : idClienteSeleccionado, 
             metodoPago: metodoPago,
             fechaVenta: new Date(fechaVenta + "T00:00:00"),
-            total: totalVenta,
             detalles: detallesMapeados,
             fechaVencimientoCreditoManual: metodoPago === "Crédito" ? new Date(fechaVencimientoCredito + "T00:00:00") : null
         };
@@ -527,7 +530,26 @@ export const Caja: React.FC = () => {
             setProductos(refreshRes.data);
         } catch (err: any) {
             console.error(err);
-            alert(err.response?.data || "Error en el servidor al intentar procesar la venta.");
+
+            // Extracción limpia del mensaje devuelto por el backend
+            let mensajeExtraido = "Ocurrió un error en el servidor al intentar procesar la venta.";
+
+            if (err.response?.data) {
+                const data = err.response.data;
+                if (typeof data === 'string') {
+                    mensajeExtraido = data;
+                } else if (data.mensaje) {
+                    mensajeExtraido = data.mensaje;
+                } else if (data.title) {
+                    mensajeExtraido = data.title;
+                } else {
+                    mensajeExtraido = JSON.stringify(data);
+                }
+            } else if (err.message) {
+                mensajeExtraido = err.message;
+            }
+
+            mostrarError(mensajeExtraido);
         }
     };
 
@@ -703,7 +725,6 @@ export const Caja: React.FC = () => {
                                             <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap' }}>C$ {item.subTotal}</strong>
                                         </div>
 
-                                        {/* Fila secundaria de controles unificada */}
                                         <div className={styles.cartItemSubRow}>
                                             <div className={styles.controlGroup}>
                                                 <span className={styles.cartLabel}>Cant:</span>
@@ -745,10 +766,10 @@ export const Caja: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {pBase?.esDigital && (
+                                        {pBase?.esDigital && !pBase?.esSuscripcion && (
                                             <input 
                                                 type="text" 
-                                                placeholder={pBase.esSuscripcion ? "Referencia/Correo Cuenta (Obligatorio)" : "ID del Jugador (Obligatorio)"} 
+                                                placeholder="ID del Jugador / Referencia (Obligatorio)" 
                                                 value={item.metadataDigital} 
                                                 onChange={(e) => actualizarMetadata(item.idProducto, e.target.value)} 
                                                 className={styles.metaInput} 
@@ -867,7 +888,31 @@ export const Caja: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL INTERACTIVO FLOTANTE: DESPACHO */}
+            {/* MODAL FLOTANTE DE ERROR / ADVERTENCIA */}
+            {mensajeErrorModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent} style={{ borderTop: '4px solid #ef4444' }}>
+                        <div className={styles.modalIcon} style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
+                            <FaExclamationTriangle />
+                        </div>
+                        <h3 className={styles.modalTitle} style={{ color: '#f87171' }}>Operación Denegada</h3>
+                        <p className={styles.modalText} style={{ fontSize: '0.95rem', color: '#e2e8f0' }}>
+                            {mensajeErrorModal}
+                        </p>
+                        <div className={styles.modalActions}>
+                            <button 
+                                onClick={() => setMensajeErrorModal(null)} 
+                                className={`${styles.modalBtn}`}
+                                style={{ background: '#334155', color: '#fff' }}
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL INTERACTIVO FLOTANTE: DESPACHO EXITOSO */}
             {mostrarModalDespacho && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>

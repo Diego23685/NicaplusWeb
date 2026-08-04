@@ -20,10 +20,18 @@ export const ContabilidadCaja: React.FC = () => {
                 api.get('/caja/movimientos'),
                 api.get('/caja/reporte-utilidades')
             ]);
-            setMovimientos(resMovs.data);
+            
+            // Si la API devuelve { items: [...] } o datos envueltos, los extraemos.
+            // Si no es un array, se asigna [] por defecto para evitar que rompa el .map()
+            const datosMovimientos = Array.isArray(resMovs.data) 
+                ? resMovs.data 
+                : (resMovs.data?.items || resMovs.data?.$values || []);
+
+            setMovimientos(datosMovimientos);
             setReporte(resRep.data);
         } catch (err) {
             console.error("Error cargando flujos de caja:", err);
+            setMovimientos([]); // En caso de fallo de red, resetea a arreglo vacío
         } finally {
             setCargando(false);
         }
@@ -122,22 +130,30 @@ export const ContabilidadCaja: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {movimientos.map((m) => {
-                                    const esIngreso = m.tipo === 'Ingreso';
-                                    return (
-                                        <tr key={m.id} className={esIngreso ? styles.rowIngreso : styles.rowEgreso}>
-                                            <td>
-                                                <strong style={{ color: '#fff' }}>{m.detalle}</strong>
-                                                <span className={styles.subRowText}>
-                                                    📂 {m.concepto} • 📅 {new Date(m.fecha).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className={`${styles.txtMonto} ${esIngreso ? styles.txtIngreso : styles.txtEgreso}`}>
-                                                {esIngreso ? '+' : '-'} C$ {m.monto.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {Array.isArray(movimientos) && movimientos.length > 0 ? (
+                                    movimientos.map((m) => {
+                                        const esIngreso = m.tipo === 'Ingreso';
+                                        return (
+                                            <tr key={m.id} className={esIngreso ? styles.rowIngreso : styles.rowEgreso}>
+                                                <td>
+                                                    <strong style={{ color: '#fff' }}>{m.detalle}</strong>
+                                                    <span className={styles.subRowText}>
+                                                        📂 {m.concepto} • 📅 {new Date(m.fecha).toLocaleString()}
+                                                    </span>
+                                                </td>
+                                                <td className={`${styles.txtMonto} ${esIngreso ? styles.txtIngreso : styles.txtEgreso}`}>
+                                                    {esIngreso ? '+' : '-'} C$ {m.monto.toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={2} style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>
+                                            No hay movimientos de caja registrados.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

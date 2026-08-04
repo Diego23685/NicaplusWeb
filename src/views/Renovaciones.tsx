@@ -17,6 +17,7 @@ interface Suscripcion {
     alertaFiltro: string;
     costoRenovacion: number;
     cliente?: Cliente;
+    estado?: string;
 }
 
 interface HistorialRenovacion {
@@ -153,11 +154,13 @@ export const Renovaciones: React.FC = () => {
         }
 
         try {
-            await api.post('/renovaciones/cancelar', {
+            const res = await api.post('/renovaciones/cancelar', {
                 idSuscripcion: suscripcionRenovar.id,
                 motivo: motivoCancelacion
             });
-            alert("Servicio cancelado correctamente");
+            
+            alert(res.data.mensaje || "Operación procesada correctamente."); 
+            
             setMostrarCancelar(false);
             setSuscripcionRenovar(null);
             setMotivoCancelacion("");
@@ -165,7 +168,7 @@ export const Renovaciones: React.FC = () => {
             await cargarSuscripciones();
         } catch (error: any) {
             console.error(error);
-            alert(error.response?.data || "No se pudo cancelar el servicio.");
+            alert(error.response?.data?.mensaje || error.response?.data || "No se pudo cancelar el servicio.");
         }
     };
 
@@ -250,11 +253,19 @@ export const Renovaciones: React.FC = () => {
                                                 {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
                                             </small>
                                         </td>
+                                        
                                         <td style={{ textAlign: 'center' }}>
                                             <span className={styles.badgeAlert} style={{ background: configBadge.bg, color: configBadge.color }}>
                                                 {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
                                             </span>
+                                            
+                                            {s.estado === 'NoRenovar' && (
+                                                <small style={{ display: 'block', color: '#f59e0b', marginTop: '4px', fontWeight: 'bold' }}>
+                                                    🚫 No renovará
+                                                </small>
+                                            )}
                                         </td>
+
                                         <td style={{ textAlign: 'center' }}>
                                             <div className={styles.actionsCellWrapper}>
                                                 <button onClick={() => dispararRecordatorioWhatsApp(s)} className={styles.btnAvisar}>
@@ -276,15 +287,21 @@ export const Renovaciones: React.FC = () => {
                                                 >
                                                     💵 Renovar
                                                 </button>
+
                                                 <button
+                                                    disabled={s.estado === 'NoRenovar'}
                                                     onClick={() => {
                                                         setSuscripcionRenovar(s);
                                                         setMotivoCancelacion("");
                                                         setMostrarCancelar(true);
                                                     }}
                                                     className={styles.btnCancelarRow}
+                                                    style={{
+                                                        opacity: s.estado === 'NoRenovar' ? 0.5 : 1,
+                                                        cursor: s.estado === 'NoRenovar' ? 'not-allowed' : 'pointer'
+                                                    }}
                                                 >
-                                                    ❌ Cancelar
+                                                    {s.estado === 'NoRenovar' ? '🚫 Cancelado' : '❌ Cancelar'}
                                                 </button>
                                             </div>
                                         </td>

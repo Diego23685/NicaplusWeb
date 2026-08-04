@@ -3,7 +3,8 @@ import React, { useState, useEffect, type FormEvent } from 'react';
 import api from '../services/api';
 import { 
     FaSearch, FaWhatsapp, FaUserTag, FaHistory, FaCalendarAlt, 
-    FaFolderOpen, FaUserPlus, FaEdit, FaTrash, FaSave, FaTimes 
+    FaFolderOpen, FaUserPlus, FaEdit, FaTrash, FaSave, FaTimes, 
+    FaExclamationTriangle, FaCheckCircle, FaBan
 } from 'react-icons/fa';
 import styles from '../assets/styles/ClientesCRM.module.css';
 
@@ -16,6 +17,12 @@ interface Cliente {
     fechaRegistro?: string;
     etiquetas?: string;
     observaciones?: string;
+}
+
+interface ErrorIntegridadDetalles {
+    tieneVentas?: boolean;
+    tieneTaller?: boolean;
+    tieneDeudas?: boolean;
 }
 
 export const ClientesCRM: React.FC = () => {
@@ -34,6 +41,12 @@ export const ClientesCRM: React.FC = () => {
     const [cliPuntos, setCliPuntos] = useState(0);
     const [cliEtiquetas, setCliEtiquetas] = useState('');      
     const [cliObservaciones, setCliObservaciones] = useState(''); 
+
+    // ESTADO PARA MODAL DE ERROR / INTEGRIDAD
+    const [errorEliminacion, setErrorEliminacion] = useState<{
+        mensajePrincipal: string;
+        detalles?: ErrorIntegridadDetalles;
+    } | null>(null);
 
     useEffect(() => {
         cargarClientes();
@@ -111,13 +124,15 @@ export const ClientesCRM: React.FC = () => {
                 seleccionarCliente({ ...clienteSeleccionado, ...payload });
             }
         } catch (err: any) { 
-            alert(err.response?.data || "Fallo transaccional al guardar cliente."); 
+            alert(err.response?.data?.mensaje || err.response?.data || "Fallo transaccional al guardar cliente."); 
         }
     };
 
+    // FUNCIÓN DE ELIMINACIÓN CON MANEJO DE INTEGRIDAD COMPLETO
     const eliminarCliente = async (idTarget: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!window.confirm("¿Remover cliente del libro contable?")) return;
+        if (!window.confirm("¿Está seguro de remover a este cliente de la base de datos?")) return;
+        
         try {
             await api.delete(`/clientes/${idTarget}`);
             if (clienteSeleccionado?.id === idTarget) {
@@ -126,7 +141,19 @@ export const ClientesCRM: React.FC = () => {
             }
             cargarClientes();
         } catch (err: any) {
-            alert("No se pudo eliminar el cliente por restricciones de integridad.");
+            const data = err.response?.data;
+            
+            if (data && data.detalles) {
+                // Captura la estructura JSON devuelta por el Backend
+                setErrorEliminacion({
+                    mensajePrincipal: data.mensaje || "No se puede eliminar el cliente porque posee historial activo o saldos asociados.",
+                    detalles: data.detalles
+                });
+            } else {
+                setErrorEliminacion({
+                    mensajePrincipal: typeof data === 'string' ? data : "No se pudo completar la eliminación del cliente por vinculación de datos."
+                });
+            }
         }
     };
 
@@ -142,7 +169,6 @@ export const ClientesCRM: React.FC = () => {
             <div className={styles.crmSidebar}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <h3 className={styles.sidebarTitle} style={{ margin: 0 }}>Directorio CRM</h3>
-                    {/* Botón Estilizado Integrado */}
                     <button onClick={abrirModalClienteNuevo} className={styles.btnNuevoCliente}>
                         <FaUserPlus /> Nuevo
                     </button>
@@ -387,7 +413,7 @@ export const ClientesCRM: React.FC = () => {
                 )}
             </div>
 
-            {/* MODAL EN CAPA EXTERNA TOTAL (OVERLAY CORREGIDO) */}
+            {/* MODAL CREACIÓN / EDICIÓN DE CLIENTE */}
             {mostrarModalCliente && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}> 
@@ -441,6 +467,65 @@ export const ClientesCRM: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* MODAL DE ADVERTENCIA: ERROR DE INTEGRIDAD / HISTORIAL ACTIVO */}
+            {errorEliminacion && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent} style={{ maxWidth: '460px', borderTop: '4px solid #ef4444' }}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FaExclamationTriangle /> No se puede eliminar
+                            </h3>
+                            <button onClick={() => setErrorEliminacion(null)} className={styles.modalCloseBtn}>
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '16px 0', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.5' }}>
+                            <p style={{ margin: '0 0 14px 0' }}>{errorEliminacion.mensajePrincipal}</p>
+
+                            {errorEliminacion.detalles && (
+                                <div style={{ background: '#0f172a', padding: '12px 14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                        Motivos detectados en el sistema:
+                                    </span>
+                                    
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {errorEliminacion.detalles.tieneVentas ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
+                                        <span style={{ color: errorEliminacion.detalles.tieneVentas ? '#f87171' : '#94a3b8' }}>
+                                            {errorEliminacion.detalles.tieneVentas ? "Tiene ventas o facturas registradas" : "Sin historial de ventas"}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {errorEliminacion.detalles.tieneTaller ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
+                                        <span style={{ color: errorEliminacion.detalles.tieneTaller ? '#f87171' : '#94a3b8' }}>
+                                            {errorEliminacion.detalles.tieneTaller ? "Tiene ordenes o equipos en taller" : "Sin servicios de taller"}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {errorEliminacion.detalles.tieneDeudas ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
+                                        <span style={{ color: errorEliminacion.detalles.tieneDeudas ? '#f87171' : '#94a3b8' }}>
+                                            {errorEliminacion.detalles.tieneDeudas ? "Mantiene saldos o deudas pendientes" : "Sin cuentas por cobrar"}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px' }}>
+                            <button 
+                                onClick={() => setErrorEliminacion(null)} 
+                                style={{ padding: '8px 18px', background: '#334155', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

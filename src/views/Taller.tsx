@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
-    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract 
+    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle 
 } from 'react-icons/fa';
 import styles from '../assets/styles/Taller.module.css'; // Importación de estilos modulares
 
@@ -31,6 +31,20 @@ export const Taller: React.FC = () => {
     const [diagnostico, setDiagnostico] = useState('');
     const [notasGarantia, setNotasGarantia] = useState('Garantía de 30 días sobre la reparación efectuada. No cubre sellos rotos o humedad.');
     
+    // Sistema de Notificaciones / Toast en lugar de Alerts
+    const [notificacion, setNotificacion] = useState<{ mostrar: boolean; mensaje: string; tipo: 'exito' | 'error' | 'warning' }>({
+        mostrar: false,
+        mensaje: '',
+        tipo: 'exito'
+    });
+
+    const mostrarToast = (mensaje: string, tipo: 'exito' | 'error' | 'warning' = 'exito') => {
+        setNotificacion({ mostrar: true, mensaje, tipo });
+        setTimeout(() => {
+            setNotificacion(prev => ({ ...prev, mostrar: false }));
+        }, 4000);
+    };
+
     // Gestión de Cliente (Selección o Registro Nuevo)
     const [modoNuevoCliente, setModoNuevoCliente] = useState(false);
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
@@ -63,6 +77,7 @@ export const Taller: React.FC = () => {
             setClientes(resClientes.data);
         } catch (err) {
             console.error("Error al cargar datos del taller:", err);
+            mostrarToast("No se pudieron cargar los datos del taller.", "error");
         }
     };
 
@@ -73,7 +88,6 @@ export const Taller: React.FC = () => {
         c.telefono.includes(busquedaCliente)
     );
 
-    // NUEVA FUNCIÓN: Genera una hoja entera A4/Carta independiente para la póliza de garantía formal
     const imprimirContratoGarantiaCompleto = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
         if (!ventana) return;
@@ -132,7 +146,6 @@ export const Taller: React.FC = () => {
                 </style>
             </head>
             <body>
-                <!-- Encabezado de Empresa -->
                 <table class="header-table">
                     <tr>
                         <td>
@@ -153,7 +166,6 @@ export const Taller: React.FC = () => {
                     </tr>
                 </table>
 
-                <!-- Información del Cliente -->
                 <div class="section-title">Información del Beneficiario / Cliente</div>
                 <table class="info-grid">
                     <tr>
@@ -168,7 +180,6 @@ export const Taller: React.FC = () => {
                     </tr>
                 </table>
 
-                <!-- Detalles del Servicio Técnico -->
                 <div class="section-title">Especificaciones del Equipo y Trabajo Realizado</div>
                 <table class="info-grid">
                     <tr>
@@ -193,7 +204,6 @@ export const Taller: React.FC = () => {
                     ` : ''}
                 </table>
 
-                <!-- Términos y Condiciones Completo -->
                 <div class="section-title">Cláusulas y Condiciones de la Garantía Limitada</div>
                 <div class="terms-box">
                     <ol>
@@ -210,7 +220,6 @@ export const Taller: React.FC = () => {
                     </ol>
                 </div>
 
-                <!-- Firmas -->
                 <table class="signatures-table">
                     <tr>
                         <td>
@@ -338,7 +347,7 @@ export const Taller: React.FC = () => {
 
     const abrirEnlaceWhatsApp = (orden: Orden, tipo: 'Listo' | 'Entregado', datosAdicionales?: any) => {
         if (!orden.cliente?.telefono) {
-            alert("El cliente no tiene un teléfono válido registrado.");
+            mostrarToast("El cliente no tiene un teléfono válido registrado.", "warning");
             return;
         }
 
@@ -356,7 +365,6 @@ export const Taller: React.FC = () => {
             textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${orden.cliente.nombre}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${costo.toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
         }
 
-        // Usamos api.whatsapp.com con codificación URL segura para emojis, enters y negritas
         const url = `https://api.whatsapp.com/send/?phone=${telefono}&text=${encodeURIComponent(textoMensaje)}&type=phone_number&app_absent=0`;
         window.open(url, '_blank');
     };
@@ -365,7 +373,7 @@ export const Taller: React.FC = () => {
         e.preventDefault();
         
         if (!dispositivo || !diagnostico) {
-            alert("Complete los datos del dispositivo.");
+            mostrarToast("Complete los datos requeridos del dispositivo.", "warning");
             return;
         }
 
@@ -374,7 +382,7 @@ export const Taller: React.FC = () => {
         try {
             if (modoNuevoCliente) {
                 if (!nombreCliente || !telefonoCliente) {
-                    alert("Complete los datos obligatorios del nuevo cliente.");
+                    mostrarToast("Complete los datos obligatorios del nuevo cliente.", "warning");
                     return;
                 }
                 const resCliente = await api.post('/clientes', {
@@ -387,22 +395,24 @@ export const Taller: React.FC = () => {
             }
 
             if (!idClienteFinal || idClienteFinal === 0) {
-                alert("Debe seleccionar un cliente de la base de datos o registrar uno nuevo.");
+                mostrarToast("Debe seleccionar un cliente de la base de datos o registrar uno nuevo.", "warning");
                 return;
             }
 
             const clienteAsociado = clientes.find(c => c.id === idClienteFinal) || { nombre: nombreCliente, telefono: telefonoCliente, email: emailCliente };
 
+            const usuarioLogueado = JSON.parse(localStorage.getItem('usuario') || '{}');
+
             const resOrden = await api.post('/ordenesservicio', {
                 idCliente: idClienteFinal,
+                idUsuario: usuarioLogueado.id, // <-- Enviar el ID aquí
                 dispositivo,
                 diagnostico,
                 notas: notasGarantia
             });
 
-            alert("Equipo registrado con éxito.");
+            mostrarToast(`Equipo #${resOrden.data.id} ingresado correctamente.`, "exito");
             
-            // Imprime el tique de control para conservar en el taller/falla
             imprimirDocumentosSoporte(resOrden.data.id, {
                 dispositivo,
                 diagnostico,
@@ -410,7 +420,6 @@ export const Taller: React.FC = () => {
                 cliente: { nombre: clienteAsociado.nombre, telefono: clienteAsociado.telefono }
             });
 
-            // OPCIONAL: Imprime directamente el contrato entero de garantía al ingresar el equipo
             imprimirContratoGarantiaCompleto(resOrden.data.id, {
                 dispositivo,
                 diagnostico,
@@ -418,7 +427,6 @@ export const Taller: React.FC = () => {
                 cliente: clienteAsociado
             });
 
-            // Limpieza de campos
             setDispositivo(''); 
             setDiagnostico(''); 
             setIdClienteSeleccionado(null);
@@ -430,7 +438,7 @@ export const Taller: React.FC = () => {
             
             cargarDatos();
         } catch (err) {
-            alert("Error en el flujo de registro del taller.");
+            mostrarToast("Error en el flujo de registro del taller.", "error");
         }
     };
 
@@ -454,16 +462,20 @@ export const Taller: React.FC = () => {
         else return;
 
         try {
-            await api.put(`/ordenesservicio/${id}/estado?nuevoEstado=${siguienteEstado}`, "");
+            const payload = { nuevoEstado: siguienteEstado };
+
+            await api.put(`/ordenesservicio/${id}/estado`, payload);
             cargarDatos();
 
             if (siguienteEstado === 'Listo') {
                 setOrdenParaAccion(orden);
                 setTipoAccionContexto('AlListo');
                 setMostrarModalAccion(true);
+            } else {
+                mostrarToast(`Orden #${id} movida a ${siguienteEstado}.`, "exito");
             }
         } catch (err) {
-            alert("Error al actualizar el estado técnico.");
+            mostrarToast("Error al actualizar el estado técnico.", "error");
         }
     };
 
@@ -505,7 +517,7 @@ export const Taller: React.FC = () => {
 
             setMostrarModalAccion(true);
         } catch (err) {
-            alert("Error al procesar la entrega final del equipo.");
+            mostrarToast("Error al procesar la entrega final del equipo.", "error");
         }
     };
 
@@ -518,6 +530,34 @@ export const Taller: React.FC = () => {
     return (
         <div className={styles.tallerContainer}>
             
+            {/* NOTIFICACIÓN TIPO TOAST ELEGANTE */}
+            {notificacion.mostrar && (
+                <div 
+                    style={{
+                        position: 'fixed',
+                        bottom: '24px',
+                        right: '24px',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '12px 20px',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
+                        backgroundColor: notificacion.tipo === 'exito' ? '#10b981' : notificacion.tipo === 'warning' ? '#f59e0b' : '#ef4444',
+                        transition: 'all 0.3s ease'
+                    }}
+                >
+                    {notificacion.tipo === 'exito' && <FaCheckCircle size={18} />}
+                    {notificacion.tipo === 'warning' && <FaExclamationTriangle size={18} />}
+                    {notificacion.tipo === 'error' && <FaTimes size={18} />}
+                    <span>{notificacion.mensaje}</span>
+                </div>
+            )}
+
             {/* FORMULARIO AVANZADO DE INGRESO */}
             <form onSubmit={registrarIngresoTaller} className={styles.formIngreso}>
                 <h3 className={styles.formTitle}>
@@ -812,7 +852,6 @@ export const Taller: React.FC = () => {
                                 <FaPrint size={18} /> Imprimir Ticket Comercial (Térmico)
                             </button>
 
-                            {/* NUEVO BOTÓN: Permite imprimir el contrato de garantía A4 directamente desde las acciones comerciales */}
                             <button 
                                 onClick={() => {
                                     const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo' 
