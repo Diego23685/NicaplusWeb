@@ -156,29 +156,90 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
                                         <div className={styles.noDatos}>No registras compras registradas a tu nombre.</div>
                                     ) : (
                                         compras.map((venta: any) => (
-                                            <div key={venta.id} style={{ border: '1px solid #1e293b', padding: '12px', borderRadius: '8px', marginBottom: '12px', background: '#0f172a' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                    <strong>Factura #000{venta.id}</strong>
-                                                    <span>{new Date(venta.fecha).toLocaleDateString('es-NI')}</span>
-                                                    <strong style={{ color: '#4ade80' }}>C$ {venta.total}</strong>
+                                            <div 
+                                                key={venta.id} 
+                                                style={{ 
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)', 
+                                                    padding: '16px', 
+                                                    borderRadius: '12px', 
+                                                    marginBottom: '16px', 
+                                                    background: 'rgba(15, 23, 42, 0.6)' 
+                                                }}
+                                            >
+                                                {/* Encabezado de la factura */}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                    <div>
+                                                        <strong style={{ fontSize: '1rem', color: '#ffffff' }}>Factura #000{venta.id}</strong>
+                                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '10px' }}>
+                                                            {new Date(venta.fecha).toLocaleDateString('es-NI')}
+                                                        </span>
+                                                    </div>
+                                                    <strong style={{ color: '#4ade80', fontSize: '1.1rem' }}>C$ {venta.total}</strong>
                                                 </div>
                                                 <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Método de Pago: {venta.metodoPago}</div>
-                                                <hr style={{ borderColor: '#1e293b', margin: '8px 0' }} />
                                                 
+                                                <hr style={{ borderColor: 'rgba(255, 255, 255, 0.06)', margin: '12px 0' }} />
+                                                
+                                                {/* Lista de Ítems Comprados */}
                                                 <div style={{ fontSize: '0.85rem' }}>
-                                                    <strong>Items comprados:</strong>
-                                                    <ul>
+                                                    <strong style={{ color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Items comprados:</strong>
+                                                    
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                         {venta.detalles.map((d: any, idx: number) => (
-                                                            <li key={idx}>
-                                                                Cant: {d.cantidad} | Subtotal: C$ {d.subTotal}
+                                                            <div 
+                                                                key={idx} 
+                                                                style={{ 
+                                                                    background: 'rgba(255, 255, 255, 0.02)', 
+                                                                    border: '1px solid rgba(255, 255, 255, 0.04)', 
+                                                                    borderRadius: '8px', 
+                                                                    padding: '12px', 
+                                                                    display: 'flex', 
+                                                                    flexDirection: 'column', 
+                                                                    gap: '6px' 
+                                                                }}
+                                                            >
+                                                                {/* Fila 1: Nombre del Producto */}
+                                                                <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#f8fafc' }}>
+                                                                    {d.nombreProducto || 'Producto / Servicio'}
+                                                                </div>
+
+                                                                {/* Fila 2: Cantidad y Subtotal */}
+                                                                <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+                                                                    Cantidad: <strong>{d.cantidad}</strong> &nbsp;|&nbsp; Subtotal: <strong style={{ color: '#38bdf8' }}>C$ {d.subTotal}</strong>
+                                                                </div>
+                                                                
+                                                                {/* Fila 3: Credencial estructurada en líneas separadas */}
                                                                 {d.metadataDigital && (
-                                                                    <div style={{ color: '#38bdf8', fontSize: '0.8rem', background: '#0284c715', padding: '4px', borderRadius: '4px', marginTop: '2px' }}>
-                                                                        🔑 Credencial: {d.metadataDigital}
+                                                                    <div 
+                                                                        style={{ 
+                                                                            marginTop: '4px', 
+                                                                            background: 'rgba(2, 132, 199, 0.1)', 
+                                                                            borderLeft: '3px solid #38bdf8', 
+                                                                            padding: '8px 12px', 
+                                                                            borderRadius: '4px', 
+                                                                            fontFamily: 'monospace', 
+                                                                            fontSize: '0.8rem', 
+                                                                            color: '#e0f2fe', 
+                                                                            display: 'flex', 
+                                                                            flexDirection: 'column', 
+                                                                            gap: '4px' 
+                                                                        }}
+                                                                    >
+                                                                        <span style={{ fontWeight: 'bold', color: '#38bdf8', marginBottom: '2px' }}>
+                                                                            🔑 Credencial de Acceso:
+                                                                        </span>
+                                                                        
+                                                                        {/* Divide la cadena por '|' para que PERFIL, PIN y Acceso aparezcan en su propia fila */}
+                                                                        {d.metadataDigital.split('|').map((linea: string, indexLine: number) => (
+                                                                            <div key={indexLine} style={{ paddingLeft: '6px' }}>
+                                                                                • {linea.trim()}
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
                                                                 )}
-                                                            </li>
+                                                            </div>
                                                         ))}
-                                                    </ul>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))
