@@ -1794,11 +1794,6 @@
     max-width: 100%;
   }
 
-  .promoGraphicOverlay,
-  .promoAbsoluteImage {
-    display: none;
-  }
-
   .cartItemCard {
     display: grid;
     grid-template-columns: 60px 1fr auto;
