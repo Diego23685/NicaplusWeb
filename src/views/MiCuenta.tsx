@@ -252,33 +252,102 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
                                 <div>
                                     <h2 className={styles.subtitulo}>Suscripciones y Licencias Digitales</h2>
                                     
-                                    <h3 style={{ fontSize: '1rem', color: '#38bdf8', marginTop: '10px' }}>Activas / Vigentes</h3>
+                                    <h3 style={{ fontSize: '1rem', color: '#38bdf8', marginTop: '10px', marginBottom: '12px' }}>
+                                        Activas / Vigentes
+                                    </h3>
+                                    
                                     {suscripcionesVigentes.length === 0 ? (
                                         <div className={styles.noDatos}>No posees suscripciones activas actualmente.</div>
                                     ) : (
-                                        suscripcionesVigentes.map((sub: any) => (
-                                            <div key={sub.id} style={{ border: '1px solid #0284c7', padding: '12px', borderRadius: '8px', marginBottom: '10px', background: '#0369a110' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <strong>{sub.nombreServicio} ({sub.tipoSuscripcion || 'Digital'})</strong>
-                                                    <span style={{ color: '#4ade80', fontWeight: 'bold' }}>
-                                                        Vence: {new Date(sub.fechaVencimiento).toLocaleDateString('es-NI')}
-                                                    </span>
-                                                </div>
-                                                <div style={{ marginTop: '8px', background: '#0f172a', padding: '8px', borderRadius: '4px', borderLeft: '3px solid #38bdf8', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                                                    🔓 {sub.detallesCredenciales || 'Credenciales asignadas en caja.'}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {suscripcionesVigentes.map((sub: any) => (
+                                                <div 
+                                                    key={sub.id} 
+                                                    style={{ 
+                                                        border: '1px solid rgba(2, 132, 199, 0.3)', 
+                                                        padding: '14px', 
+                                                        borderRadius: '10px', 
+                                                        background: 'rgba(3, 105, 161, 0.08)',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: '8px'
+                                                    }}
+                                                >
+                                                    {/* Fila 1: Nombre del servicio y Estado/Vencimiento */}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                                        <strong style={{ fontSize: '0.95rem', color: '#ffffff' }}>
+                                                            {sub.nombreServicio} <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'normal' }}>({sub.tipoSuscripcion || 'Digital'})</span>
+                                                        </strong>
+                                                        <span style={{ color: '#4ade80', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                                            Vence: {new Date(sub.fechaVencimiento).toLocaleDateString('es-NI')}
+                                                        </span>
+                                                    </div>
 
-                                    {suscripcionesExpiradas.length > 0 && (
-                                        <>
-                                            <h3 style={{ fontSize: '1rem', color: '#f87171', marginTop: '20px' }}>Expiradas / Histórico</h3>
-                                            {suscripcionesExpiradas.map((sub: any) => (
-                                                <div key={sub.id} style={{ border: '1px solid #334155', padding: '10px', borderRadius: '8px', marginBottom: '8px', opacity: 0.7 }}>
-                                                    <span>{sub.nombreServicio} - Venció el {new Date(sub.fechaVencimiento).toLocaleDateString('es-NI')}</span>
+                                                    {/* Fila 2: Credencial desglosada verticalmente */}
+                                                    {sub.detallesCredenciales ? (
+                                                        <div 
+                                                            style={{ 
+                                                                background: '#0f172a', 
+                                                                padding: '10px 12px', 
+                                                                borderRadius: '6px', 
+                                                                borderLeft: '3px solid #38bdf8', 
+                                                                fontFamily: 'monospace', 
+                                                                fontSize: '0.8rem',
+                                                                color: '#e0f2fe',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: '4px'
+                                                            }}
+                                                        >
+                                                            <span style={{ fontWeight: 'bold', color: '#38bdf8', marginBottom: '2px' }}>
+                                                                🔓 Datos de Acceso:
+                                                            </span>
+                                                            
+                                                            {/* Si viene en una sola cadena dividida por |, se desglosa en filas */}
+                                                            {sub.detallesCredenciales.split('|').map((linea: string, indexLine: number) => (
+                                                                <div key={indexLine} style={{ paddingLeft: '6px' }}>
+                                                                    • {linea.trim()}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                                            Credenciales asignadas en caja o sin detalles adicionales.
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {/* Sección de Expiradas */}
+                                    {suscripcionesExpiradas.length > 0 && (
+                                        <>
+                                            <h3 style={{ fontSize: '1rem', color: '#f87171', marginTop: '24px', marginBottom: '12px' }}>
+                                                Expiradas / Histórico
+                                            </h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {suscripcionesExpiradas.map((sub: any) => (
+                                                    <div 
+                                                        key={sub.id} 
+                                                        style={{ 
+                                                            border: '1px solid rgba(255, 255, 255, 0.05)', 
+                                                            padding: '10px 14px', 
+                                                            borderRadius: '8px', 
+                                                            background: 'rgba(255, 255, 255, 0.02)',
+                                                            opacity: 0.7,
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            fontSize: '0.85rem'
+                                                        }}
+                                                    >
+                                                        <span>{sub.nombreServicio} ({sub.tipoSuscripcion || 'Digital'})</span>
+                                                        <span style={{ color: '#f87171' }}>
+                                                            Venció: {new Date(sub.fechaVencimiento).toLocaleDateString('es-NI')}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </>
                                     )}
                                 </div>
