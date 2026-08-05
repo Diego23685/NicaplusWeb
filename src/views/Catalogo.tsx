@@ -502,8 +502,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
                         {cliente ? (
                             <div className={styles.userAuthContainer}>
-                                <button onClick={alIrAMiCuenta} className={styles.btnPerfilCliente}>
-                                    👤 {cliente.nombre || cliente.Nombre || 'Mi Cuenta'}
+                                <button 
+                                    onClick={alIrAMiCuenta} 
+                                    className={styles.btnPerfilCliente}
+                                    title={cliente.nombre || cliente.Nombre}
+                                >
+                                    👤 {(cliente.nombre || cliente.Nombre || 'Mi Cuenta').split(' ')[0]}
                                 </button>
                                 <button onClick={alCerrarSesion} className={styles.btnSalir}>Salir</button>
                             </div>

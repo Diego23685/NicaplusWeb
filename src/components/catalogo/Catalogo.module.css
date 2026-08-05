@@ -51,7 +51,7 @@
 }
 
 /* ==========================================================================
-   2. NAVBAR ESTILO RETAIL
+   2. NAVBAR ESTILO RETAIL (CORREGIDA SIN DESBORDES)
    ========================================================================== */
 .navbar {
   position: sticky;
@@ -61,17 +61,21 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 2px solid #b002c2;
-  padding: 0 2rem;
+  padding: 0 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .navContainer {
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .brandBlock {
@@ -92,17 +96,19 @@
 
 .brandText {
   font-weight: 900;
-  font-size: 1.4rem;
-  letter-spacing: 0.08em;
+  font-size: 1.3rem;
+  letter-spacing: 0.05em;
   color: #ffffff;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .navigation {
   display: flex;
-  gap: 1.5rem;
+  gap: 0.8rem;
   flex-grow: 1;
   justify-content: center;
+  min-width: 0;
 }
 
 .navTab {
@@ -111,13 +117,13 @@
   color: #94a3b8;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: color 0.2s;
-  padding: 0.5rem 0;
+  padding: 0.4rem 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   white-space: nowrap;
 }
 
@@ -126,11 +132,10 @@
   text-shadow: 0 0 8px rgba(176, 2, 194, 0.6);
 }
 
-/* COMPONENTES DE BÚSQUEDA Y AUTH */
 .searchAndCartBlock {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0.5rem;
   flex-shrink: 0;
 }
 
@@ -138,25 +143,29 @@
   position: relative;
   display: flex;
   align-items: center;
-  width: 240px; 
-  min-width: 180px; 
+  width: 160px;
+  transition: width 0.3s ease;
+}
+
+.searchWrapper:focus-within {
+  width: 200px;
 }
 
 .searchIcon {
   position: absolute;
-  left: 0.8rem;
+  left: 0.7rem;
   color: #047688;
   pointer-events: none;
 }
 
 .searchInput {
   width: 100%;
-  padding: 0.5rem 1rem 0.5rem 2.2rem; 
+  padding: 0.45rem 0.8rem 0.45rem 2rem; 
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   background-color: rgba(255, 255, 255, 0.05);
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   outline: none;
   transition: all 0.3s ease;
 }
@@ -170,6 +179,7 @@
 .userAuthContainer {
   display: flex;
   align-items: center;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
@@ -177,11 +187,11 @@
   background: #047688;
   color: #ffffff;
   border: none;
-  padding: 0.5rem 1.2rem;
+  padding: 0.45rem 0.9rem;
   border-radius: 2rem;
   font-weight: 700;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   transition: background 0.2s;
   white-space: nowrap;
 }
@@ -194,10 +204,10 @@
   background: transparent;
   color: #ef4444;
   border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 0.4rem 0.8rem;
+  padding: 0.4rem 0.7rem;
   border-radius: 2rem;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
