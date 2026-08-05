@@ -211,6 +211,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             api.get('/juegos')
         ])
         .then(([p, c, j]) => {
+            console.log("PRODUCTOS DESDE API:", p.data); // Inspect aquí los campos exacta de CategoriaId/categoriaId
             setProductos(p.data || []);
             setCategorias(c.data || []);
             setJuegos(j.data || []);
@@ -337,13 +338,35 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
     const productosFiltrados = useMemo(() => {
         if (!Array.isArray(productos)) return [];
-        return productos.filter(p => {
-            const cumpleBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
-            const cumpleCategoria = idCatSeleccionada ? p.categoriaId === idCatSeleccionada : true;
-            const cumpleJuego = idJuegoSeleccionado ? p.juegoId === idJuegoSeleccionado : true;
+
+        // Buscamos el nombre de la categoría seleccionada a partir del ID
+        const catSeleccionada = categorias.find(c => c.id === idCatSeleccionada);
+        const nombreCatFiltro = catSeleccionada ? catSeleccionada.nombre.toLowerCase().trim() : null;
+
+        // Buscamos el nombre del juego seleccionado a partir del ID
+        const juegoSeleccionado = juegos.find(j => j.id === idJuegoSeleccionado);
+        const nombreJuegoFiltro = juegoSeleccionado ? juegoSeleccionado.nombre.toLowerCase().trim() : null;
+
+        return productos.filter((p: any) => {
+            // 1. Coincidencia por búsqueda
+            const nombreProd = (p.nombre || '').toLowerCase();
+            const cumpleBusqueda = busqueda.trim() === '' || nombreProd.includes(busqueda.toLowerCase().trim());
+
+            // 2. Coincidencia por Categoría (Comprara cadenas en minúsculas)
+            const catProducto = (p.categoriaNombre || '').toLowerCase().trim();
+            const cumpleCategoria = idCatSeleccionada === null || idCatSeleccionada === undefined
+                ? true
+                : (catProducto !== '' && catProducto === nombreCatFiltro);
+
+            // 3. Coincidencia por Juego
+            const juegoProducto = (p.juegoNombre || '').toLowerCase().trim();
+            const cumpleJuego = idJuegoSeleccionado === null || idJuegoSeleccionado === undefined
+                ? true
+                : (juegoProducto !== '' && juegoProducto === nombreJuegoFiltro);
+
             return cumpleBusqueda && cumpleCategoria && cumpleJuego;
         });
-    }, [productos, busqueda, idCatSeleccionada, idJuegoSeleccionado]);
+    }, [productos, busqueda, idCatSeleccionada, idJuegoSeleccionado, categorias, juegos]);
 
     const totalCarritoItems = useMemo(() => carrito.reduce((sum, i) => sum + i.cantidad, 0), [carrito]);
     const totalPagar = useMemo(() => carrito.reduce((sum, item) => sum + (item.cantidad * item.producto.precioVenta), 0), [carrito]);
@@ -624,7 +647,11 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     <div 
                                                         key={cat.id}
                                                         className={`${styles.categoryBubble} ${idCatSeleccionada === cat.id ? styles.categoryBubbleActive : ''}`}
-                                                        onClick={() => setIdCatSeleccionada(cat.id)}
+                                                        onClick={() => {
+                                                            // Al elegir una categoría, desactivar filtro por juego
+                                                            setIdCatSeleccionada(cat.id);
+                                                            setIdJuegoSeleccionado(null);
+                                                        }}
                                                     >
                                                         <div className={styles.bubbleIcon}>
                                                             {cat.imagenUrl ? <img src={cat.imagenUrl} alt={cat.nombre} /> : obtenerIconoCategoria(cat.nombre)}
@@ -661,7 +688,11 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                         <div 
                                                             key={juego.id}
                                                             className={`${styles.gameBubble} ${idJuegoSeleccionado === juego.id ? styles.gameBubbleActive : ''}`}
-                                                            onClick={() => setIdJuegoSeleccionado(juego.id)}
+                                                            onClick={() => {
+                                                                // Al elegir un juego, desactivar filtro por categoría
+                                                                setIdJuegoSeleccionado(juego.id);
+                                                                setIdCatSeleccionada(null);
+                                                            }}
                                                         >
                                                             <div className={styles.bubbleIcon}>
                                                                 {juego.imagenUrl ? <img src={juego.imagenUrl} alt={juego.nombre} /> : <FaGamepad />}

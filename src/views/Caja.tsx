@@ -502,11 +502,27 @@ export const Caja: React.FC = () => {
         });
 
         const payload = {
-            idCliente: idClienteSeleccionado === 0 ? null : idClienteSeleccionado, 
+            idCliente: idClienteSeleccionado && idClienteSeleccionado > 0 ? idClienteSeleccionado : null,
             metodoPago: metodoPago,
-            fechaVenta: new Date(fechaVenta + "T00:00:00"),
-            detalles: detallesMapeados,
-            fechaVencimientoCreditoManual: metodoPago === "Crédito" ? new Date(fechaVencimientoCredito + "T00:00:00") : null
+            // Se envía en ISO utilizando la fecha seleccionada en el input de fechaVenta
+            fechaVenta: fechaVenta ? new Date(fechaVenta + "T00:00:00").toISOString() : null, 
+            fechaVencimientoCreditoManual: metodoPago === "Crédito" 
+                ? new Date(fechaVencimientoCredito + "T12:00:00").toISOString() 
+                : null,
+            detalles: carrito.map(item => {
+                const p = productos.find(prod => prod.id === item.idProducto);
+                const metaFinal = p?.esSuscripcion 
+                    ? `DIAS:${item.diasSuscripcion}|${item.metadataDigital}` 
+                    : item.metadataDigital;
+
+                return {
+                    idProducto: item.idProducto,
+                    cantidad: item.cantidad,
+                    precioUnitario: item.precioUnitario,
+                    descuento: item.descuento || 0,
+                    metadataDigital: metaFinal || ''
+                };
+            })
         };
 
         try {
