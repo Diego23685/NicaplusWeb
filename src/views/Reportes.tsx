@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch } from 'react-icons/fa';
-import '../assets/styles/Reportes.css'; // Importación directa del archivo css limpio
+import '../assets/styles/Reportes.css';
 
 export const Reportes: React.FC = () => {
     // Estados del Generador de Reportes Original
@@ -187,11 +187,9 @@ export const Reportes: React.FC = () => {
             return;
         }
 
-        // --- PROCESAMIENTO Y LIMPIEZA DE DATOS ---
         const rangoPeriodo = datosReporte?.rango || 'Periodo no especificado';
         const transacciones = datosReporte?.transacciones || [];
         
-        // Función todoterreno para extraer y formatear la fecha
         const formatearFechaSegura = (t: any) => {
             const fechaRaw = t?.fechaVenta || t?.fecha || t?.Fecha || t?.fecha_venta || t?.createdAt || t?.created_at;
             if (!fechaRaw) return 'N/A';
@@ -199,21 +197,20 @@ export const Reportes: React.FC = () => {
             return isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleDateString();
         };
 
-        // CRUCE DINÁMICO CON ESTADOS DE REACT (ventasHistorial y clientes)
         const obtenerClienteCruzado = (transaccionReporte: any) => {
             if (!transaccionReporte) return 'Mostrador General';
 
-            // 1. Buscamos la venta coincidente en el historial completo del frontend
-            const ventaCompleta = ventasHistorial.find(v => v.id === transaccionReporte.id);
+            if (transaccionReporte.cliente || transaccionReporte.Cliente) {
+                return transaccionReporte.cliente || transaccionReporte.Cliente;
+            }
 
+            const ventaCompleta = ventasHistorial.find(v => v.id === transaccionReporte.id);
             if (ventaCompleta) {
-                // Si la venta del historial ya trae el objeto cliente poblado
                 if (ventaCompleta.cliente) {
                     const nombreObj = ventaCompleta.cliente.nombre || ventaCompleta.cliente.Nombre;
                     if (nombreObj) return nombreObj;
                 }
 
-                // Si la venta solo tiene el ID del cliente, lo cruzamos con el estado local de clientes
                 const idCli = ventaCompleta.idCliente || ventaCompleta.IdCliente;
                 if (idCli) {
                     const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idCli);
@@ -223,8 +220,6 @@ export const Reportes: React.FC = () => {
                 }
             }
 
-            // 2. Si no se halló en el historial de ventas, intentamos buscar directamente en la lista de clientes
-            // por si la transacción del reporte de casualidad expone algún idCliente o IdCliente
             const idClienteDirecto = transaccionReporte.idCliente || transaccionReporte.IdCliente;
             if (idClienteDirecto) {
                 const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idClienteDirecto);
@@ -233,16 +228,13 @@ export const Reportes: React.FC = () => {
                 }
             }
 
-            // 3. Fallback de seguridad
             return 'Mostrador General';
         };
 
-        // Cálculos de métricas operativas
         const totalTransacciones = transacciones.length;
         const totalNeto = transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0);
         const ticketPromedio = totalTransacciones > 0 ? (totalNeto / totalTransacciones) : 0;
 
-        // Desglose por método de pago
         const efectivo = transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
         const transferencia = transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
         const tarjeta = datosReporte?.finanzas?.tarjeta ?? transacciones.filter((t: any) => t.metodoPago === 'Tarjeta').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
@@ -250,7 +242,6 @@ export const Reportes: React.FC = () => {
 
         const listaProductos = datosReporte?.topProductos || [];
 
-        // --- PLANTILLA HTML + CSS PROFESIONAL ---
         const htmlDocumento = `
             <!DOCTYPE html>
             <html lang="es">
@@ -267,7 +258,6 @@ export const Reportes: React.FC = () => {
                     }
                     .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
                     
-                    /* Contenedor del Logo */
                     .logo-container {
                         display: flex;
                         align-items: center;
@@ -293,7 +283,6 @@ export const Reportes: React.FC = () => {
                     
                     .titulo-reporte { text-align: right; font-size: 12px; color: #64748b; line-height: 1.6; }
                     
-                    /* Grid de KPIs */
                     .grid-cards { 
                         display: grid; 
                         grid-template-columns: repeat(4, 1fr); 
@@ -311,7 +300,6 @@ export const Reportes: React.FC = () => {
                     .card-total { border: 1px solid #10b981; background: #f0fdf4; }
                     .card-total h3 { color: #16a34a; }
 
-                    /* Tablas */
                     table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 25px; }
                     table.data-table th { background: #0f172a; color: white; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; }
                     table.data-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
@@ -328,7 +316,6 @@ export const Reportes: React.FC = () => {
                         letter-spacing: 0.03em;
                     }
 
-                    /* Firmas de Cierre */
                     .firmas-container {
                         margin-top: 60px;
                         display: flex;
@@ -353,7 +340,6 @@ export const Reportes: React.FC = () => {
                 </style>
             </head>
             <body>
-                <!-- Encabezado Corporativo -->
                 <table class="header-table">
                     <tr>
                         <td>
@@ -373,7 +359,6 @@ export const Reportes: React.FC = () => {
                     </tr>
                 </table>
 
-                <!-- Resumen Financiero -->
                 <div class="seccion-titulo">I. Resumen de Cierre de Caja</div>
                 <br />
                 <div class="grid-cards">
@@ -385,14 +370,12 @@ export const Reportes: React.FC = () => {
                     </div>
                 </div>
 
-                <!-- Métricas Operativas Extra -->
                 <div class="grid-cards" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="card"><small>Transacciones Totales</small><h3>${totalTransacciones} Ventas</h3></div>
                     <div class="card"><small>Ticket Promedio</small><h3>C$ ${Number(ticketPromedio.toFixed(2)).toLocaleString()}</h3></div>
                     <div class="card"><small>Estado de Arqueo</small><h3 style="color: #10b981;">Cuadrado ✔</h3></div>
                 </div>
 
-                <!-- Top Productos -->
                 <div class="seccion-titulo">II. Rendimiento de Productos / Servicios (Top)</div>
                 <table class="data-table">
                     <thead>
@@ -416,7 +399,6 @@ export const Reportes: React.FC = () => {
                     </tbody>
                 </table>
 
-                <!-- Libro Diario de Transacciones -->
                 <div class="seccion-titulo">III. Libro Diario / Registro Detallado de Ventas</div>
                 <table class="data-table">
                     <thead>
@@ -433,7 +415,6 @@ export const Reportes: React.FC = () => {
                         ${transacciones.length === 0 
                             ? `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No hay transacciones registradas.</td></tr>`
                             : transacciones.map((t: any) => {
-                                // Buscamos la venta completa para obtener los detalles
                                 const ventaCompleta = ventasHistorial.find(v => v.id === t.id);
                                 const detalles = ventaCompleta?.detalles || [];
                                 
@@ -445,7 +426,6 @@ export const Reportes: React.FC = () => {
                                         <td>
                                             <div style="font-size: 9px; color: #475569;">
                                                 ${detalles.map((d: any) => {
-                                                    // BUSCAMOS EL NOMBRE REAL EN TU ESTADO 'productos'
                                                     const productoEncontrado = productos.find(p => (p.id ?? p.Id) === d.idProducto);
                                                     const nombreProducto = productoEncontrado 
                                                         ? (productoEncontrado.nombre ?? productoEncontrado.Nombre) 
@@ -464,7 +444,6 @@ export const Reportes: React.FC = () => {
                     </tbody>
                 </table>
 
-                <!-- Firmas de Responsabilidad -->
                 <div class="firmas-container">
                     <div class="firma-box">
                         <br><br><br>
@@ -602,7 +581,19 @@ export const Reportes: React.FC = () => {
                                                 <td style={{ whiteSpace: 'nowrap' }}>
                                                     {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
                                                 </td>
-                                                <td>{v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General'}</td>
+                                                <td>
+                                                    {(() => {
+                                                        if (v.cliente?.nombre || v.cliente?.Nombre) {
+                                                            return v.cliente.nombre || v.cliente.Nombre;
+                                                        }
+                                                        const idCli = v.idCliente || v.IdCliente;
+                                                        if (idCli) {
+                                                            const cli = clientes.find(c => (c.id ?? c.Id) === idCli);
+                                                            if (cli) return cli.nombre || cli.Nombre;
+                                                        }
+                                                        return 'Mostrador General';
+                                                    })()}
+                                                </td>
                                                 <td>
                                                     <span className="badgeMetodo">{v.metodoPago}</span>
                                                 </td>
