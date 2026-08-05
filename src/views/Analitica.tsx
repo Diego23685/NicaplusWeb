@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
     FaDollarSign, FaTrophy, FaShieldAlt, FaArrowDown, 
     FaCalendarTimes, FaChartLine, FaWallet, FaUserClock, 
-    FaSync, FaExclamationTriangle, FaFilter 
+    FaSync, FaExclamationTriangle, FaFilter, FaPrint
 } from 'react-icons/fa';
 
 interface Gasto {
@@ -76,8 +76,8 @@ const formatearFechaLocal = (fechaStr: string) => {
 export const Analitica: React.FC = () => {
     const fechaActual = new Date();
     
-    // Estados para controlar el tipo de filtro
-    const [tipoFiltro, setTipoFiltro] = useState<'mes' | 'anio' | 'rango'>('mes');
+    // Estados principales
+    const [tipoFiltro, setTipoFiltro] = useState<'hoy' | 'semana' | 'mes' | 'anio' | 'rango'>('mes');
     const [mes, setMes] = useState<number>(fechaActual.getMonth() + 1);
     const [anio, setAnio] = useState<number>(fechaActual.getFullYear());
     const [fechaInicio, setFechaInicio] = useState<string>('');
@@ -91,7 +91,6 @@ export const Analitica: React.FC = () => {
         setCargando(true);
         setError(null);
         try {
-            // Se construyen los parámetros dinámicamente según la modalidad activa
             const params: Record<string, any> = { tipoFiltro, anio };
 
             if (tipoFiltro === 'mes') {
@@ -116,8 +115,66 @@ export const Analitica: React.FC = () => {
         cargarAnalitica();
     }, [cargarAnalitica, tipoFiltro]);
 
+    const imprimirReporteAnalitico = () => {
+        if (!data) return;
+
+        const ventanaPrint = window.open('', '_blank');
+        if (!ventanaPrint) return alert("Por favor permita las ventanas emergentes.");
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Informe_Analitica_Ejecutiva</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 30px; color: #0f172a; }
+                    h2 { border-bottom: 2px solid #38bdf8; padding-bottom: 6px; color: #0f172a; }
+                    .card-container { display: flex; gap: 15px; margin-bottom: 20px; }
+                    .card { border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; flex: 1; background: #f8fafc; }
+                    .card small { font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase; }
+                    .card h3 { margin: 5px 0 0 0; font-size: 16px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                    th { background: #0f172a; color: white; padding: 8px; font-size: 11px; text-align: left; }
+                    td { border-bottom: 1px solid #e2e8f0; padding: 8px; font-size: 11px; }
+                </style>
+            </head>
+            <body>
+                <h2>Informe de Analítica de Negocio y Rentabilidad</h2>
+                <div class="card-container">
+                    <div class="card"><small>Utilidad Bruta</small><h3>C$ ${(data.resumenFinanciero?.utilidadBruta || 0).toLocaleString()}</h3></div>
+                    <div class="card"><small>Gastos Operativos</small><h3>C$ ${(data.resumenFinanciero?.gastosTotales || 0).toLocaleString()}</h3></div>
+                    <div class="card" style="border-color: #10b981; background: #f0fdf4;">
+                        <small style="color: #166534;">Utilidad Neta</small>
+                        <h3 style="color: #15803d;">C$ ${(data.resumenFinanciero?.utilidadNeta || 0).toLocaleString()}</h3>
+                    </div>
+                </div>
+
+                <h3>Top Servicios Rentables</h3>
+                <table>
+                    <thead><tr><th>#</th><th>Servicio / Producto</th><th>Utilidad Total</th></tr></thead>
+                    <tbody>
+                        ${(data.rankingServicios || []).map((s, i) => `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${s.servicio}</td>
+                                <td>C$ ${(s.utilidadTotal || 0).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <script>
+                    window.onload = function() { window.print(); }
+                </script>
+            </body>
+            </html>
+        `;
+
+        ventanaPrint.document.write(htmlContent);
+        ventanaPrint.document.close();
+    };
+
     const dineroPerdidoGarantias = data?.historialGarantias?.reduce((acc, curr) => acc + (curr.costoReposicion || 0), 0) ?? 0;
-    
     const utilidadBruta = data?.resumenFinanciero?.utilidadBruta ?? 0;
     const gastosTotales = data?.resumenFinanciero?.gastosTotales ?? 0;
     const utilidadNeta = data?.resumenFinanciero?.utilidadNeta ?? (utilidadBruta - gastosTotales);
@@ -172,9 +229,11 @@ export const Analitica: React.FC = () => {
                         {/* Selector de tipo de consulta */}
                         <select 
                             value={tipoFiltro} 
-                            onChange={(e) => setTipoFiltro(e.target.value as 'mes' | 'anio' | 'rango')}
+                            onChange={(e) => setTipoFiltro(e.target.value as 'hoy' | 'semana' | 'mes' | 'anio' | 'rango')}
                             style={{ background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}
                         >
+                            <option value="hoy" style={{ background: '#1e293b' }}>Hoy</option>
+                            <option value="semana" style={{ background: '#1e293b' }}>Esta Semana</option>
                             <option value="mes" style={{ background: '#1e293b' }}>Por Mes</option>
                             <option value="anio" style={{ background: '#1e293b' }}>Todo el Año</option>
                             <option value="rango" style={{ background: '#1e293b' }}>Rango Personalizado</option>
@@ -203,7 +262,7 @@ export const Analitica: React.FC = () => {
                         )}
 
                         {/* Selección de Año */}
-                        {tipoFiltro !== 'rango' && (
+                        {(tipoFiltro === 'mes' || tipoFiltro === 'anio') && (
                             <select 
                                 value={anio} 
                                 onChange={(e) => setAnio(Number(e.target.value))}
@@ -233,6 +292,13 @@ export const Analitica: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    <button 
+                        onClick={imprimirReporteAnalitico}
+                        style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                        <FaPrint /> Exportar PDF
+                    </button>
 
                     <button 
                         onClick={cargarAnalitica} 
@@ -269,7 +335,7 @@ export const Analitica: React.FC = () => {
                 <>
                     <div className="grid-kpis">
                         <Card 
-                            title={tipoFiltro === 'anio' ? "Utilidad Neta Año" : tipoFiltro === 'rango' ? "Utilidad Neta Rango" : "Utilidad Neta Mes"} 
+                            title={tipoFiltro === 'hoy' ? "Utilidad Neta Hoy" : tipoFiltro === 'semana' ? "Utilidad Neta Semana" : tipoFiltro === 'anio' ? "Utilidad Neta Año" : tipoFiltro === 'rango' ? "Utilidad Neta Rango" : "Utilidad Neta Mes"} 
                             value={`C$ ${utilidadNeta.toLocaleString()}`} 
                             subtitle={`Bruto: C$ ${utilidadBruta.toLocaleString()}`}
                             icon={<FaDollarSign />} 

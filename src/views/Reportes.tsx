@@ -223,6 +223,11 @@ export const Reportes: React.FC = () => {
 
         const rangoPeriodo = datosReporte?.rango || 'Periodo no especificado';
         const transacciones = datosReporte?.transacciones || [];
+
+        const utilidadBruta = datosReporte?.finanzas?.utilidadBruta ?? 0;
+        const utilidadNeta = datosReporte?.finanzas?.utilidadNeta ?? 0;
+        const costoMercancia = datosReporte?.finanzas?.costoMercancia ?? 0;
+        const gastosOperativos = datosReporte?.finanzas?.gastosOperativos ?? 0;
         
         const formatearFechaSegura = (t: any) => {
             const fechaRaw = t?.fechaVenta || t?.fecha || t?.Fecha || t?.fecha_venta || t?.createdAt || t?.created_at;
@@ -393,7 +398,7 @@ export const Reportes: React.FC = () => {
                     </tr>
                 </table>
 
-                <div class="seccion-titulo">I. Resumen de Cierre de Caja</div>
+                <div class="seccion-titulo">I. Resumen de Cierre de Caja y Rentabilidad</div>
                 <br />
                 <div class="grid-cards">
                     <div class="card"><small>Efectivo</small><h3>C$ ${Number(efectivo).toLocaleString()}</h3></div>
@@ -401,6 +406,16 @@ export const Reportes: React.FC = () => {
                     <div class="card"><small>Tarjeta / Créditos</small><h3>C$ ${Number(tarjeta + credito).toLocaleString()}</h3></div>
                     <div class="card card-total">
                         <small>Total Neto Recaudado</small><h3>C$ ${Number(totalNeto).toLocaleString()}</h3>
+                    </div>
+                </div>
+
+                <div class="grid-cards" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="card"><small>Costo Mercancía (CMV)</small><h3>C$ ${Number(costoMercancia).toLocaleString()}</h3></div>
+                    <div class="card"><small>Utilidad Bruta</small><h3>C$ ${Number(utilidadBruta).toLocaleString()}</h3></div>
+                    <div class="card"><small>Gastos Operativos</small><h3>C$ ${Number(gastosOperativos).toLocaleString()}</h3></div>
+                    <div class="card card-total" style="border-color: #3b82f6; background: #eff6ff;">
+                        <small style="color: #1d4ed8;">Utilidad Neta Real</small>
+                        <h3 style="color: #1e40af;">C$ ${Number(utilidadNeta).toLocaleString()}</h3>
                     </div>
                 </div>
 
@@ -536,40 +551,46 @@ export const Reportes: React.FC = () => {
             </div>
 
             {datosReporte && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div className="visualizacionHeader">
-                        <h4 className="txtPeriodo">Visualización del período: <strong>{datosReporte.rango}</strong></h4>
-                        <button onClick={exportarAPDF} className="btnExportar">
-                            <FaFilePdf /> Imprimir / Guardar PDF
-                        </button>
-                    </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className="visualizacionHeader">
+                    <h4 className="txtPeriodo">Visualización del período: <strong>{datosReporte.rango}</strong></h4>
+                    <button onClick={exportarAPDF} className="btnExportar">
+                        <FaFilePdf /> Imprimir / Guardar PDF
+                    </button>
+                </div>
 
-                    <div className="kpiGrid">
-                        <div className="kpiCard cajaReal">
-                            <small className="kpiLabel">BALANCE NETO (CAJA REAL)</small>
-                            <h3 className="kpiValue cajaReal">
-                                C$ {datosReporte.transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
-                            </h3>
-                        </div>
-                        <div className="kpiCard efectivo">
-                            <small className="kpiLabel">EFECTIVO</small>
-                            <h3 className="kpiValue">
-                                C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
-                            </h3>
-                        </div>
-                        <div className="kpiCard transferencia">
-                            <small className="kpiLabel">TRANSFERENCIA</small>
-                            <h3 className="kpiValue">
-                                C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
-                            </h3>
-                        </div>
-                        <div className="kpiCard tarjeta">
-                            <small className="kpiLabel">TARJETA</small>
-                            <h3 className="kpiValue">C$ {(datosReporte?.finanzas?.tarjeta ?? 0).toLocaleString()}</h3>
-                        </div>
+                <div className="kpiGrid">
+                    <div className="kpiCard cajaReal">
+                        <small className="kpiLabel">BALANCE NETO (CAJA REAL)</small>
+                        <h3 className="kpiValue cajaReal">
+                            C$ {datosReporte.transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
+                        </h3>
+                    </div>
+                    <div className="kpiCard efectivo">
+                        <small className="kpiLabel">EFECTIVO</small>
+                        <h3 className="kpiValue">
+                            C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
+                        </h3>
+                    </div>
+                    <div className="kpiCard transferencia">
+                        <small className="kpiLabel">TRANSFERENCIA</small>
+                        <h3 className="kpiValue">
+                            C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
+                        </h3>
+                    </div>
+                    <div className="kpiCard tarjeta">
+                        <small className="kpiLabel">UTILIDAD NETA ESTIMADA</small>
+                        <h3 className="kpiValue" style={{ color: '#10b981' }}>
+                            C$ {(datosReporte?.finanzas?.utilidadNeta ?? 0).toLocaleString()}
+                        </h3>
+                    </div>
+                    <div className="kpiCard tarjeta">
+                        <small className="kpiLabel">TARJETA</small>
+                        <h3 className="kpiValue">C$ {(datosReporte?.finanzas?.tarjeta ?? 0).toLocaleString()}</h3>
                     </div>
                 </div>
-            )}
+            </div>
+        )}
 
             <div style={{ marginTop: '10px' }}>
                 <div className="subPanelHeader">
