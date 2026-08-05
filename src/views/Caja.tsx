@@ -18,6 +18,8 @@ interface Producto {
     requiereServicio: boolean;
     esSuscripcion: boolean;
     categoriaId: number | null;
+    metadataDigital?: string;
+    primerPerfilId?: number;
 }
 
 interface Categoria {
@@ -34,8 +36,8 @@ interface ItemCarrito {
     subTotal: number;
     metadataDigital: string;
     diasSuscripcion: number;
-    descuento: number; 
-    idCombo?: number; 
+    descuento: number;
+    idsPerfiles?: number[]; // 👈 Almacena los IDs de cada credencial asignada
 }
 
 const escapeHtml = (unsafe: string) => {
@@ -53,6 +55,151 @@ const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => 
     const opciones = { timeZone: 'America/Managua', year: 'numeric' as const, month: '2-digit' as const, day: '2-digit' as const };
     const formateador = new Intl.DateTimeFormat('fr-CA', opciones);
     return formateador.format(d);
+};
+
+export const enviarWhatsAppVenta = (datosVenta: any) => {
+    if (!datosVenta || !datosVenta.detalles) {
+        alert("No hay datos de venta válidos para enviar.");
+        return;
+    }
+
+    const clienteObj = datosVenta.cliente;
+    if (!clienteObj || (!clienteObj.telefono && !clienteObj.Telefono)) {
+        alert("Venta genérica de mostrador: No hay un cliente con número de WhatsApp vinculado.");
+        return;
+    }
+
+    const telefonoRaw = clienteObj.telefono || clienteObj.Telefono || "";
+    const telefonoLimpio = telefonoRaw.replace(/[^0-9]/g, '');
+    const metodoUsado = datosVenta.metodoPagoCongelado || datosVenta.metodoPago || "Efectivo";
+    const totalReal = datosVenta.totalCongelado ?? datosVenta.total ?? datosVenta.detalles.reduce((sum: number, i: any) => sum + (i.subTotal || 0), 0);
+    const esVentaCredito = metodoUsado === "Crédito";
+    
+    const separador = "--------------------------------------------------------------------";
+
+    const lineas: string[] = [
+        "🎮 *NICAPLUS GAMING & TECH*",
+        "",
+        `¡Hola, ${clienteObj.nombre || clienteObj.Nombre}! Gracias por tu compra.`,
+        "",
+        separador,
+        "",
+        "📝 *COMPROBANTE DIGITAL DE COMPRA*",
+        `Factura: #000${datosVenta.ventaId || datosVenta.id}`,
+        `Fecha de compra: ${datosVenta.fechaVenta ? new Date(datosVenta.fechaVenta).toLocaleDateString('es-NI') : new Date().toLocaleDateString('es-NI')}`,
+        `Condición: ${metodoUsado.toUpperCase()}`,
+        "",
+        separador,
+        "",
+        "🔒 *CREDENCIALES DE ACCESO*",
+        ""
+    ];
+
+    let descuentoTotalAcumulado = 0;
+
+    // Helper robusto para formatear cualquier tipo de credencial
+    const procesarBloqueCredencial = (metaStr: string, indiceCredencial?: number) => {
+        if (!metaStr) return;
+        let accesosReales = metaStr.trim();
+        
+        // Limpiar prefijo DIAS:XX| si existe
+        if (accesosReales.startsWith("DIAS:")) {
+            const partes = accesosReales.split('|');
+            accesosReales = partes.slice(1).join('|').trim();
+        }
+
+        if (indiceCredencial !== undefined) {
+            lineas.push(`📌 *Perfil / Acceso #${indiceCredencial + 1}:*`);
+        }
+
+        // Si contiene delimitadores '|' (formato estructurado)
+        if (accesosReales.includes('|')) {
+            const fragmentos = accesosReales.split('|').map((f: string) => f.trim());
+            
+            fragmentos.forEach(frag => {
+                if (/^perfil:/i.test(frag)) {
+                    lineas.push(`   👤 *Perfil:* ${frag.replace(/^perfil:\s*/i, '')}`);
+                } else if (/^pin:/i.test(frag)) {
+                    lineas.push(`   🔒 *PIN:* ${frag.replace(/^pin:\s*/i, '')}`);
+                } else if (/^acceso:/i.test(frag)) {
+                    const accesoLimpio = frag.replace(/^acceso:\s*/i, '');
+                    const subPartes = accesoLimpio.split('/');
+                    if (subPartes[0]) lineas.push(`   📧 *Correo:* ${subPartes[0].trim()}`);
+                    if (subPartes[1]) lineas.push(`   🔑 *Contraseña:* ${subPartes[1].trim()}`);
+                } else if (frag.length > 0) {
+                    lineas.push(`   🔹 ${frag}`);
+                }
+            });
+        } 
+        // Si no usa '|', intentar detectar si es "correo / contraseña"
+        else if (accesosReales.includes('/')) {
+            const subPartes = accesosReales.split('/');
+            if (subPartes[0]) lineas.push(`   📧 *Correo:* ${subPartes[0].trim()}`);
+            if (subPartes[1]) lineas.push(`   🔑 *Contraseña:* ${subPartes[1].trim()}`);
+        } 
+        // Texto libre / ID de jugador
+        else if (accesosReales) {
+            lineas.push(`   🔑 *Datos / Acceso:* ${accesosReales}`);
+        }
+    };
+
+    datosVenta.detalles.forEach((item: any, idx: number) => {
+        lineas.push(`*Servicio ${idx + 1}:* ${item.nombre || 'Servicio/Producto'}`);
+        lineas.push(`🔹 *Cantidad:* ${item.cantidad}`);
+        
+        if (item.descuento && item.descuento > 0) {
+            const descPorItem = item.descuento * item.cantidad;
+            descuentoTotalAcumulado += descPorItem;
+            lineas.push(`🎁 *Descuento aplicado:* -C$ ${descPorItem}`);
+        }
+
+        // Verificar metadata
+        const meta = item.metadataDigital || item.metadata || '';
+        if (meta) {
+            const cuentasMultiples = meta.split(/\r?\n|;/).filter((c: string) => c.trim().length > 0);
+
+            if (cuentasMultiples.length > 1) {
+                cuentasMultiples.forEach((bloqueMeta: string, subIdx: number) => {
+                    procesarBloqueCredencial(bloqueMeta, subIdx);
+                });
+            } else {
+                procesarBloqueCredencial(meta);
+            }
+        } else {
+            lineas.push(`   ⚠️ _Sin credenciales asignadas_`);
+        }
+        lineas.push("");
+    });
+
+    lineas.push(separador);
+    lineas.push("");
+    lineas.push("💰 *INFORMACIÓN FINANCIERA*");
+    lineas.push("");
+    
+    if (descuentoTotalAcumulado > 0) {
+        lineas.push(`Subtotal: C$ ${totalReal + descuentoTotalAcumulado}`);
+        lineas.push(`Descuento Total: -C$ ${descuentoTotalAcumulado}`);
+    }
+    lineas.push(`*Total a Pagar: C$ ${totalReal}*`);
+    
+    if (esVentaCredito) {
+        lineas.push(`Estado: ⏳ Cuenta por cobrar`);
+    } else {
+        lineas.push(`Estado: ✅ Factura Cancelada / Pagada`);
+    }
+
+    lineas.push("");
+    lineas.push(separador);
+    lineas.push("");
+    lineas.push("📌 *INFORMACIÓN OPERATIVA*:");
+    lineas.push("- Las caídas de perfiles o contraseñas deben reportarse inmediatamente.");
+    lineas.push("");
+    lineas.push("¡Muchas gracias por su preferencia! 🤝");
+
+    const mensajeFinal = lineas.join("\n");
+    const urlWhatsApp = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeFinal)}`;
+    
+    window.open(urlWhatsApp, '_blank');
 };
 
 export const imprimirTicketTermico = (datosVenta: any) => {
@@ -246,7 +393,7 @@ export const Caja: React.FC = () => {
     const totalCostoVenta = useMemo(() => carrito.reduce((sum, item) => sum + (item.precioCostoUnitario * item.cantidad), 0), [carrito]);
     const margenGananciaTotal = useMemo(() => totalVenta - totalCostoVenta, [totalVenta, totalCostoVenta]);
 
-    const agregarAlCarrito = (producto: Producto) => {
+    const agregarAlCarrito = async (producto: Producto) => {
         const existe = carrito.find(item => item.idProducto === producto.id);
 
         if (existe) {
@@ -254,32 +401,74 @@ export const Caja: React.FC = () => {
                 mostrarError(`No hay suficiente stock en inventario de "${producto.nombre}". Máximo disponible: ${producto.stockActual}.`);
                 return;
             }
+
+            let credencialesActualizadas = existe.metadataDigital;
+            let listaIdsPerfiles = existe.idsPerfiles || [];
+
+            if (producto.esDigital) {
+                try {
+                    // Pasa los IDs numéricos exactos de las credenciales que ya están en el carrito
+                    const paramsIgnorados = listaIdsPerfiles.join(',');
+
+                    const res = await api.get(`/products/${producto.id}/siguiente-credencial`, {
+                        params: { ignorados: paramsIgnorados }
+                    });
+
+                    if (res.data && res.data.disponible && res.data.metadataDigital) {
+                        const nuevaCredencial = res.data.metadataDigital.trim();
+                        credencialesActualizadas = credencialesActualizadas 
+                            ? `${credencialesActualizadas}\n${nuevaCredencial}`
+                            : nuevaCredencial;
+
+                        if (res.data.idPerfil) {
+                            listaIdsPerfiles = [...listaIdsPerfiles, res.data.idPerfil];
+                        }
+                    } else {
+                        mostrarError(`No hay más credenciales o perfiles disponibles para "${producto.nombre}".`);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error al solicitar credencial:', error);
+                    mostrarError('Ocurrió un problema al consultar el inventario de cuentas.');
+                    return;
+                }
+            }
+
             setCarrito(carrito.map(item => {
                 if (item.idProducto === producto.id) {
                     const nuevaCant = item.cantidad + 1;
                     return { 
                         ...item, 
                         cantidad: nuevaCant, 
-                        subTotal: (item.precioUnitario - item.descuento) * nuevaCant 
+                        subTotal: (item.precioUnitario - item.descuento) * nuevaCant,
+                        metadataDigital: credencialesActualizadas,
+                        idsPerfiles: listaIdsPerfiles
                     };
                 }
                 return item;
             }));
+
         } else {
             if (!producto.esDigital && !producto.requiereServicio && producto.stockActual < 1) {
                 mostrarError(`El producto "${producto.nombre}" no cuenta con existencias disponibles.`);
                 return;
             }
-            setCarrito([...carrito, {
+
+            const metadataDigital = producto.esDigital ? (producto.metadataDigital || '') : '';
+            // 👈 Guardar el ID inicial si el producto trae uno cargado
+            const idsIniciales = (producto.esDigital && producto.primerPerfilId) ? [producto.primerPerfilId] : [];
+
+            setCarrito(prevCarrito => [...prevCarrito, {
                 idProducto: producto.id,
                 nombre: producto.nombre,
                 cantidad: 1,
                 precioUnitario: producto.precioVenta,
                 precioCostoUnitario: producto.precioCosto,
                 subTotal: producto.precioVenta,
-                metadataDigital: '',
+                metadataDigital: metadataDigital,
                 diasSuscripcion: (producto as any).diasDuracion || 30,
                 descuento: 0,
+                idsPerfiles: idsIniciales // 👈 Ahora el primer ID queda registrado desde la unidad 1
             }]);
         }
     };
@@ -467,13 +656,16 @@ export const Caja: React.FC = () => {
     const finalizarVenta = async () => {
         if (carrito.length === 0) return;
 
+        // DENTRO DE finalizarVenta() EN Caja.tsx
+
         const faltaMetadata = carrito.some(item => {
             const p = productos.find(prod => prod.id === item.idProducto);
-            return p?.esDigital && !p?.esSuscripcion && !item.metadataDigital.trim();
+            // Exigir credenciales tanto para productos digitales como para suscripciones
+            return (p?.esDigital || p?.esSuscripcion) && !item.metadataDigital.trim();
         });
 
         if (faltaMetadata) {
-            mostrarError("Debe ingresar el ID del jugador o la referencia requerida para todos los productos digitales.");
+            mostrarError("Debe ingresar las credenciales de acceso o referencia para los productos seleccionados.");
             return;
         }
 
@@ -525,22 +717,30 @@ export const Caja: React.FC = () => {
             })
         };
 
+        // DENTRO DE finalizarVenta() EN Caja.tsx
+
         try {
             const res = await api.post('/ventas', payload);
+
+            // Mapear asegurando que 'metadataDigital' y el 'id/ventaId' no vengan como undefined
             const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
                 const prodOriginal = productos.find(p => p.id === item.idProducto);
                 const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto);
+                
                 return {
                     ...item,
                     nombre: prodOriginal ? prodOriginal.nombre : "Producto General",
-                    diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30
+                    diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30,
+                    // ⚠️ FIX: Preservar la metadataDigital ingresada localmente si el backend no la retorna
+                    metadataDigital: item.metadataDigital || itemCarritoOriginal?.metadataDigital || ''
                 };
             });
 
             const clienteFacturado = listaClientes.find(c => c.id === idClienteSeleccionado);
             
             setDatosUltimaVenta({
-                ventaId: res.data.id || res.data.ventaId,
+                // ⚠️ FIX: Soportar id, ventaId o idVenta devuelto por la API
+                ventaId: res.data.id || res.data.ventaId || res.data.idVenta || "0",
                 detalles: detallesParaTicket,
                 cliente: clienteFacturado || null,
                 totalCongelado: totalVenta, 
@@ -797,14 +997,21 @@ export const Caja: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {pBase?.esDigital && !pBase?.esSuscripcion && (
-                                            <input 
-                                                type="text" 
-                                                placeholder="ID del Jugador / Referencia (Obligatorio)" 
-                                                value={item.metadataDigital} 
-                                                onChange={(e) => actualizarMetadata(item.idProducto, e.target.value)} 
-                                                className={styles.metaInput} 
-                                            />
+                                        {/* RENDERIZADO EN EL CARRITO (Caja.tsx) */}
+                                        {pBase?.esDigital && (
+                                            <div style={{ marginTop: '6px' }}>
+                                                <small style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                    🔒 Credenciales Asignadas (Auto):
+                                                </small>
+                                                <textarea 
+                                                    rows={2}
+                                                    placeholder="No hay credenciales registradas en el inventario..."
+                                                    value={item.metadataDigital} 
+                                                    onChange={(e) => actualizarMetadata(item.idProducto, e.target.value)} 
+                                                    className={styles.metaInput} 
+                                                    style={{ width: '100%', marginTop: '2px', fontSize: '0.8rem', resize: 'vertical' }}
+                                                />
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -947,6 +1154,7 @@ export const Caja: React.FC = () => {
             )}
 
             {/* MODAL INTERACTIVO FLOTANTE: DESPACHO EXITOSO */}
+            {/* DENTRO DEL MODAL INTERACTIVO FLOTANTE: DESPACHO EXITOSO EN CAJA.TSX */}
             {mostrarModalDespacho && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>
@@ -957,7 +1165,7 @@ export const Caja: React.FC = () => {
                         <div className={styles.modalActions}>
                             {datosUltimaVenta && datosUltimaVenta.cliente && datosUltimaVenta.cliente.id !== 0 ? (
                                 <button 
-                                    onClick={enviarCredencialesWhatsApp} 
+                                    onClick={() => enviarWhatsAppVenta(datosUltimaVenta)} 
                                     className={`${styles.modalBtn} ${styles.btnWhatsapp}`}
                                 >
                                     <FaWhatsapp size={18} /> Enviar Comprobante y Accesos (WhatsApp)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch } from 'react-icons/fa';
+import { FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch, FaPrint, FaWhatsapp } from 'react-icons/fa';
+import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja'; // Importar si están en el mismo directorio
 import '../assets/styles/Reportes.css';
 
 export const Reportes: React.FC = () => {
@@ -173,6 +174,39 @@ export const Reportes: React.FC = () => {
         } catch (err: any) {
             alert(err.response?.data || "Error al procesar la auditoría.");
         }
+    };
+
+    const obtenerEstructuraVentaNormalizada = (venta: any) => {
+        const idCli = venta.idCliente || venta.IdCliente;
+        const clienteAsociado = venta.cliente || clientes.find(c => (c.id ?? c.Id) === idCli) || null;
+
+        const detallesMapeados = (venta.detalles || []).map((d: any) => {
+            const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+            return {
+                ...d,
+                nombre: prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`),
+                subTotal: d.subTotal ?? (d.cantidad * d.precioUnitario - (d.descuento || 0))
+            };
+        });
+
+        return {
+            ventaId: venta.id,
+            detalles: detallesMapeados,
+            cliente: clienteAsociado,
+            totalCongelado: venta.total ?? detallesMapeados.reduce((acc: number, item: any) => acc + item.subTotal, 0),
+            metodoPagoCongelado: venta.metodoPago,
+            fechaVenta: venta.fechaVenta || venta.fecha
+        };
+    };
+
+    const reimprimirTicket = (venta: any) => {
+        const datosVenta = obtenerEstructuraVentaNormalizada(venta);
+        imprimirTicketTermico(datosVenta);
+    };
+
+    const reordenarEnviarWhatsApp = (venta: any) => {
+        const datosVenta = obtenerEstructuraVentaNormalizada(venta);
+        enviarWhatsAppVenta(datosVenta);
     };
 
     const exportarAPDF = () => {
@@ -566,7 +600,7 @@ export const Reportes: React.FC = () => {
                                         <th>Método</th>
                                         <th>Desglose Items</th>
                                         <th style={{ textAlign: 'right' }}>Monto</th>
-                                        <th style={{ textAlign: 'center' }}>Acción</th>
+                                        <th style={{ textAlign: 'center' }}>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -611,9 +645,17 @@ export const Reportes: React.FC = () => {
                                                     C$ {(v.total ?? 0).toLocaleString()}
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <button onClick={() => abrirEditorVenta(v)} className="btnCorregir">
-                                                        <FaEdit /> Corregir
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                        <button onClick={() => abrirEditorVenta(v)} className="btnCorregir" title="Editar Venta">
+                                                            <FaEdit />
+                                                        </button>
+                                                        <button onClick={() => reimprimirTicket(v)} className="btnCorregir" style={{ background: '#3b82f6' }} title="Reimprimir Ticket">
+                                                            <FaPrint />
+                                                        </button>
+                                                        <button onClick={() => reordenarEnviarWhatsApp(v)} className="btnCorregir" style={{ background: '#22c55e' }} title="Reenviar por WhatsApp">
+                                                            <FaWhatsapp />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
