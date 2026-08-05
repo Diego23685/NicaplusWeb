@@ -63,7 +63,6 @@ const Card: React.FC<CardProps> = ({ title, value, icon, color, subtitle }) => (
     </div>
 );
 
-// Formateador seguro de fechas sin desfase de Zona Horaria (UTC vs Local)
 const formatearFechaLocal = (fechaStr: string) => {
     if (!fechaStr) return 'N/A';
     const partes = fechaStr.split('T')[0].split('-');
@@ -76,8 +75,13 @@ const formatearFechaLocal = (fechaStr: string) => {
 
 export const Analitica: React.FC = () => {
     const fechaActual = new Date();
+    
+    // Estados para controlar el tipo de filtro
+    const [tipoFiltro, setTipoFiltro] = useState<'mes' | 'anio' | 'rango'>('mes');
     const [mes, setMes] = useState<number>(fechaActual.getMonth() + 1);
     const [anio, setAnio] = useState<number>(fechaActual.getFullYear());
+    const [fechaInicio, setFechaInicio] = useState<string>('');
+    const [fechaFin, setFechaFin] = useState<string>('');
 
     const [data, setData] = useState<AnaliticaData | null>(null);
     const [cargando, setCargando] = useState<boolean>(true);
@@ -87,9 +91,17 @@ export const Analitica: React.FC = () => {
         setCargando(true);
         setError(null);
         try {
-            const res = await api.get<AnaliticaData>('/reportes/analitica-ejecutiva', {
-                params: { mes, anio }
-            });
+            // Se construyen los parámetros dinámicamente según la modalidad activa
+            const params: Record<string, any> = { tipoFiltro, anio };
+
+            if (tipoFiltro === 'mes') {
+                params.mes = mes;
+            } else if (tipoFiltro === 'rango') {
+                params.fechaInicio = fechaInicio;
+                params.fechaFin = fechaFin;
+            }
+
+            const res = await api.get<AnaliticaData>('/reportes/analitica-ejecutiva', { params });
             setData(res.data);
         } catch (err: any) {
             console.error("Error al cargar analítica ejecutiva:", err);
@@ -97,15 +109,15 @@ export const Analitica: React.FC = () => {
         } finally {
             setCargando(false);
         }
-    }, [mes, anio]);
+    }, [tipoFiltro, mes, anio, fechaInicio, fechaFin]);
 
     useEffect(() => {
+        if (tipoFiltro === 'rango' && (!fechaInicio || !fechaFin)) return;
         cargarAnalitica();
-    }, [cargarAnalitica]);
+    }, [cargarAnalitica, tipoFiltro]);
 
     const dineroPerdidoGarantias = data?.historialGarantias?.reduce((acc, curr) => acc + (curr.costoReposicion || 0), 0) ?? 0;
     
-    // Utilidad real calculada
     const utilidadBruta = data?.resumenFinanciero?.utilidadBruta ?? 0;
     const gastosTotales = data?.resumenFinanciero?.gastosTotales ?? 0;
     const utilidadNeta = data?.resumenFinanciero?.utilidadNeta ?? (utilidadBruta - gastosTotales);
@@ -147,41 +159,79 @@ export const Analitica: React.FC = () => {
                 }
             `}</style>
 
-            {/* ENCABEZADO Y FILTROS DE PERIODO */}
+            {/* ENCABEZADO Y CONTROLES DINÁMICOS */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', background: '#1e293b', padding: '16px 20px', borderRadius: '12px', border: '1px solid #334155' }}>
                 <h3 style={{ color: '#38bdf8', margin: 0, fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600 }}>
                     <FaChartLine /> Panel de Inteligencia de Negocio
                 </h3>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0f172a', padding: '6px 12px', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0f172a', padding: '6px 12px', borderRadius: '8px', border: '1px solid #334155' }}>
                         <FaFilter style={{ color: '#38bdf8', fontSize: '0.85rem' }} />
+                        
+                        {/* Selector de tipo de consulta */}
                         <select 
-                            value={mes} 
-                            onChange={(e) => setMes(Number(e.target.value))}
-                            style={{ background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+                            value={tipoFiltro} 
+                            onChange={(e) => setTipoFiltro(e.target.value as 'mes' | 'anio' | 'rango')}
+                            style={{ background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}
                         >
-                            <option value={1} style={{ background: '#1e293b' }}>Enero</option>
-                            <option value={2} style={{ background: '#1e293b' }}>Febrero</option>
-                            <option value={3} style={{ background: '#1e293b' }}>Marzo</option>
-                            <option value={4} style={{ background: '#1e293b' }}>Abril</option>
-                            <option value={5} style={{ background: '#1e293b' }}>Mayo</option>
-                            <option value={6} style={{ background: '#1e293b' }}>Junio</option>
-                            <option value={7} style={{ background: '#1e293b' }}>Julio</option>
-                            <option value={8} style={{ background: '#1e293b' }}>Agosto</option>
-                            <option value={9} style={{ background: '#1e293b' }}>Septiembre</option>
-                            <option value={10} style={{ background: '#1e293b' }}>Octubre</option>
-                            <option value={11} style={{ background: '#1e293b' }}>Noviembre</option>
-                            <option value={12} style={{ background: '#1e293b' }}>Diciembre</option>
+                            <option value="mes" style={{ background: '#1e293b' }}>Por Mes</option>
+                            <option value="anio" style={{ background: '#1e293b' }}>Todo el Año</option>
+                            <option value="rango" style={{ background: '#1e293b' }}>Rango Personalizado</option>
                         </select>
-                        <select 
-                            value={anio} 
-                            onChange={(e) => setAnio(Number(e.target.value))}
-                            style={{ background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
-                        >
-                            <option value={2025} style={{ background: '#1e293b' }}>2025</option>
-                            <option value={2026} style={{ background: '#1e293b' }}>2026</option>
-                        </select>
+
+                        {/* Opciones por Mes */}
+                        {tipoFiltro === 'mes' && (
+                            <select 
+                                value={mes} 
+                                onChange={(e) => setMes(Number(e.target.value))}
+                                style={{ background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+                            >
+                                <option value={1} style={{ background: '#1e293b' }}>Enero</option>
+                                <option value={2} style={{ background: '#1e293b' }}>Febrero</option>
+                                <option value={3} style={{ background: '#1e293b' }}>Marzo</option>
+                                <option value={4} style={{ background: '#1e293b' }}>Abril</option>
+                                <option value={5} style={{ background: '#1e293b' }}>Mayo</option>
+                                <option value={6} style={{ background: '#1e293b' }}>Junio</option>
+                                <option value={7} style={{ background: '#1e293b' }}>Julio</option>
+                                <option value={8} style={{ background: '#1e293b' }}>Agosto</option>
+                                <option value={9} style={{ background: '#1e293b' }}>Septiembre</option>
+                                <option value={10} style={{ background: '#1e293b' }}>Octubre</option>
+                                <option value={11} style={{ background: '#1e293b' }}>Noviembre</option>
+                                <option value={12} style={{ background: '#1e293b' }}>Diciembre</option>
+                            </select>
+                        )}
+
+                        {/* Selección de Año */}
+                        {tipoFiltro !== 'rango' && (
+                            <select 
+                                value={anio} 
+                                onChange={(e) => setAnio(Number(e.target.value))}
+                                style={{ background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+                            >
+                                <option value={2025} style={{ background: '#1e293b' }}>2025</option>
+                                <option value={2026} style={{ background: '#1e293b' }}>2026</option>
+                            </select>
+                        )}
+
+                        {/* Rango de fechas dinámico */}
+                        {tipoFiltro === 'rango' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <input 
+                                    type="date" 
+                                    value={fechaInicio} 
+                                    onChange={(e) => setFechaInicio(e.target.value)}
+                                    style={{ background: '#1e293b', color: '#fff', border: '1px solid #334155', borderRadius: '4px', padding: '2px 6px', fontSize: '0.8rem' }}
+                                />
+                                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>a</span>
+                                <input 
+                                    type="date" 
+                                    value={fechaFin} 
+                                    onChange={(e) => setFechaFin(e.target.value)}
+                                    style={{ background: '#1e293b', color: '#fff', border: '1px solid #334155', borderRadius: '4px', padding: '2px 6px', fontSize: '0.8rem' }}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <button 
@@ -194,7 +244,7 @@ export const Analitica: React.FC = () => {
                 </div>
             </div>
 
-            {/* MANEJO DE ESTADOS DE CARGA Y ERROR */}
+            {/* ESTADOS DE CARGA Y ERROR */}
             {cargando && !data && (
                 <div style={{ color: '#38bdf8', padding: '40px', textAlign: 'center', background: '#1e293b', borderRadius: '12px', border: '1px solid #334155' }}>
                     <FaSync className="spin" style={{ fontSize: '1.5rem', marginBottom: '10px' }} />
@@ -214,13 +264,12 @@ export const Analitica: React.FC = () => {
                 </div>
             )}
 
-            {/* CONTENIDO PRINCIPAL */}
+            {/* CONTENIDO Y REPORTES */}
             {data && (
                 <>
-                    {/* KPI CARDS */}
                     <div className="grid-kpis">
                         <Card 
-                            title="Utilidad Neta Mes" 
+                            title={tipoFiltro === 'anio' ? "Utilidad Neta Año" : tipoFiltro === 'rango' ? "Utilidad Neta Rango" : "Utilidad Neta Mes"} 
                             value={`C$ ${utilidadNeta.toLocaleString()}`} 
                             subtitle={`Bruto: C$ ${utilidadBruta.toLocaleString()}`}
                             icon={<FaDollarSign />} 
@@ -246,10 +295,7 @@ export const Analitica: React.FC = () => {
                         />
                     </div>
 
-                    {/* SECCIÓN DETALLADA */}
                     <div className="grid-detalles">
-                        
-                        {/* Top Servicios Rentables */}
                         <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column' }}>
                             <h4 style={{ color: '#38bdf8', marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600 }}>
                                 <FaTrophy /> Top Servicios Rentables
@@ -257,7 +303,7 @@ export const Analitica: React.FC = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
                                 {(!data.rankingServicios || data.rankingServicios.length === 0) ? (
                                     <div style={{ color: '#64748b', fontSize: '0.85rem', padding: '20px 0', textAlign: 'center' }}>
-                                        No hay datos de servicios prestados este mes.
+                                        No hay datos de servicios prestados en este período.
                                     </div>
                                 ) : (
                                     data.rankingServicios.map((s, i) => (
@@ -270,7 +316,6 @@ export const Analitica: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Gastos Desglosados */}
                         <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column' }}>
                             <h4 style={{ color: '#fb923c', marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600 }}>
                                 <FaWallet /> Gastos Operativos (C$ {gastosTotales.toLocaleString()})
@@ -291,7 +336,6 @@ export const Analitica: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Renovaciones Perdidas */}
                         <div style={{ background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column' }}>
                             <h4 style={{ color: '#f43f5e', marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600 }}>
                                 <FaUserClock /> Renovaciones Vencidas
