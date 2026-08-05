@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
   FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
-  FaTags, FaThList, FaExclamationTriangle 
+  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup 
 } from 'react-icons/fa';
 import styles from '../assets/styles/Caja.module.css';
 
@@ -37,7 +37,7 @@ interface ItemCarrito {
     metadataDigital: string;
     diasSuscripcion: number;
     descuento: number;
-    idsPerfiles?: number[]; // 👈 Almacena los IDs de cada credencial asignada
+    idsPerfiles?: number[];
 }
 
 const escapeHtml = (unsafe: string) => {
@@ -97,12 +97,10 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
 
     let descuentoTotalAcumulado = 0;
 
-    // Helper robusto para formatear cualquier tipo de credencial
     const procesarBloqueCredencial = (metaStr: string, indiceCredencial?: number) => {
         if (!metaStr) return;
         let accesosReales = metaStr.trim();
         
-        // Limpiar prefijo DIAS:XX| si existe
         if (accesosReales.startsWith("DIAS:")) {
             const partes = accesosReales.split('|');
             accesosReales = partes.slice(1).join('|').trim();
@@ -112,7 +110,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
             lineas.push(`📌 *Perfil / Acceso #${indiceCredencial + 1}:*`);
         }
 
-        // Si contiene delimitadores '|' (formato estructurado)
         if (accesosReales.includes('|')) {
             const fragmentos = accesosReales.split('|').map((f: string) => f.trim());
             
@@ -131,13 +128,11 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
                 }
             });
         } 
-        // Si no usa '|', intentar detectar si es "correo / contraseña"
         else if (accesosReales.includes('/')) {
             const subPartes = accesosReales.split('/');
             if (subPartes[0]) lineas.push(`   📧 *Correo:* ${subPartes[0].trim()}`);
             if (subPartes[1]) lineas.push(`   🔑 *Contraseña:* ${subPartes[1].trim()}`);
         } 
-        // Texto libre / ID de jugador
         else if (accesosReales) {
             lineas.push(`   🔑 *Datos / Acceso:* ${accesosReales}`);
         }
@@ -153,7 +148,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
             lineas.push(`🎁 *Descuento aplicado:* -C$ ${descPorItem}`);
         }
 
-        // Verificar metadata
         const meta = item.metadataDigital || item.metadata || '';
         if (meta) {
             const cuentasMultiples = meta.split(/\r?\n|;/).filter((c: string) => c.trim().length > 0);
@@ -345,6 +339,9 @@ export const Caja: React.FC = () => {
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [busquedaCliente, setBusquedaCliente] = useState('');
     const [categoriaFiltroActiva, setCategoriaFiltroActiva] = useState<number | null>(null);
+    
+    // FILTRO DE RUBRO SUPERIOR (Físico, Digital, Streaming)
+    const [filtroRubroCaja, setFiltroRubroCaja] = useState<'todos' | 'fisico' | 'digital' | 'streaming'>('todos');
 
     const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
     const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
@@ -376,10 +373,16 @@ export const Caja: React.FC = () => {
             .filter(p => {
                 const coincideTexto = p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase());
                 const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
-                return coincideTexto && coincideCategoria;
+                
+                let coincideRubro = true;
+                if (filtroRubroCaja === 'fisico') coincideRubro = !p.esDigital;
+                if (filtroRubroCaja === 'digital') coincideRubro = p.esDigital && !p.esSuscripcion;
+                if (filtroRubroCaja === 'streaming') coincideRubro = p.esDigital && p.esSuscripcion;
+
+                return coincideTexto && coincideCategoria && coincideRubro;
             })
             .sort((a, b) => a.nombre.localeCompare(b.nombre));
-    }, [productos, busquedaProducto, categoriaFiltroActiva]);
+    }, [productos, busquedaProducto, categoriaFiltroActiva, filtroRubroCaja]);
 
     const clientesFiltrados = useMemo(() => {
         if (!busquedaCliente.trim()) return listaClientes.slice(0, 30);
@@ -407,7 +410,6 @@ export const Caja: React.FC = () => {
 
             if (producto.esDigital) {
                 try {
-                    // Pasa los IDs numéricos exactos de las credenciales que ya están en el carrito
                     const paramsIgnorados = listaIdsPerfiles.join(',');
 
                     const res = await api.get(`/products/${producto.id}/siguiente-credencial`, {
@@ -455,7 +457,6 @@ export const Caja: React.FC = () => {
             }
 
             const metadataDigital = producto.esDigital ? (producto.metadataDigital || '') : '';
-            // 👈 Guardar el ID inicial si el producto trae uno cargado
             const idsIniciales = (producto.esDigital && producto.primerPerfilId) ? [producto.primerPerfilId] : [];
 
             setCarrito(prevCarrito => [...prevCarrito, {
@@ -468,7 +469,7 @@ export const Caja: React.FC = () => {
                 metadataDigital: metadataDigital,
                 diasSuscripcion: (producto as any).diasDuracion || 30,
                 descuento: 0,
-                idsPerfiles: idsIniciales // 👈 Ahora el primer ID queda registrado desde la unidad 1
+                idsPerfiles: idsIniciales
             }]);
         }
     };
@@ -524,16 +525,11 @@ export const Caja: React.FC = () => {
 
     const limpiarCarrito = useCallback(() => setCarrito([]), []);
 
-    
-
     const finalizarVenta = async () => {
         if (carrito.length === 0) return;
 
-        // DENTRO DE finalizarVenta() EN Caja.tsx
-
         const faltaMetadata = carrito.some(item => {
             const p = productos.find(prod => prod.id === item.idProducto);
-            // Exigir credenciales tanto para productos digitales como para suscripciones
             return (p?.esDigital || p?.esSuscripcion) && !item.metadataDigital.trim();
         });
 
@@ -569,7 +565,6 @@ export const Caja: React.FC = () => {
         const payload = {
             idCliente: idClienteSeleccionado && idClienteSeleccionado > 0 ? idClienteSeleccionado : null,
             metodoPago: metodoPago,
-            // Se envía en ISO utilizando la fecha seleccionada en el input de fechaVenta
             fechaVenta: fechaVenta ? new Date(fechaVenta + "T00:00:00").toISOString() : null, 
             fechaVencimientoCreditoManual: metodoPago === "Crédito" 
                 ? new Date(fechaVencimientoCredito + "T12:00:00").toISOString() 
@@ -590,12 +585,9 @@ export const Caja: React.FC = () => {
             })
         };
 
-        // DENTRO DE finalizarVenta() EN Caja.tsx
-
         try {
             const res = await api.post('/ventas', payload);
 
-            // Mapear asegurando que 'metadataDigital' y el 'id/ventaId' no vengan como undefined
             const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
                 const prodOriginal = productos.find(p => p.id === item.idProducto);
                 const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto);
@@ -604,7 +596,6 @@ export const Caja: React.FC = () => {
                     ...item,
                     nombre: prodOriginal ? prodOriginal.nombre : "Producto General",
                     diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30,
-                    // ⚠️ FIX: Preservar la metadataDigital ingresada localmente si el backend no la retorna
                     metadataDigital: item.metadataDigital || itemCarritoOriginal?.metadataDigital || ''
                 };
             });
@@ -612,7 +603,6 @@ export const Caja: React.FC = () => {
             const clienteFacturado = listaClientes.find(c => c.id === idClienteSeleccionado);
             
             setDatosUltimaVenta({
-                // ⚠️ FIX: Soportar id, ventaId o idVenta devuelto por la API
                 ventaId: res.data.id || res.data.ventaId || res.data.idVenta || "0",
                 detalles: detallesParaTicket,
                 cliente: clienteFacturado || null,
@@ -693,12 +683,44 @@ export const Caja: React.FC = () => {
                         />
                     </div>
 
+                    {/* FILTROS DE RUBRO PRINCIPAL */}
+                    <div className={styles.categoriasScroll} style={{ marginBottom: '6px' }}>
+                        <button 
+                            onClick={() => setFiltroRubroCaja('todos')} 
+                            className={`${styles.catBtn} ${filtroRubroCaja === 'todos' ? styles.catBtnActive : ''}`}
+                        >
+                            <FaLayerGroup size={11} /> Todos los Rubros
+                        </button>
+                        <button 
+                            onClick={() => setFiltroRubroCaja('fisico')} 
+                            className={`${styles.catBtn} ${filtroRubroCaja === 'fisico' ? styles.catBtnActive : ''}`}
+                            style={{ borderColor: '#047688' }}
+                        >
+                            <FaBoxes size={11} /> Físicos
+                        </button>
+                        <button 
+                            onClick={() => setFiltroRubroCaja('digital')} 
+                            className={`${styles.catBtn} ${filtroRubroCaja === 'digital' ? styles.catBtnActive : ''}`}
+                            style={{ borderColor: '#38bdf8' }}
+                        >
+                            <FaGamepad size={11} /> Digitales
+                        </button>
+                        <button 
+                            onClick={() => setFiltroRubroCaja('streaming')} 
+                            className={`${styles.catBtn} ${filtroRubroCaja === 'streaming' ? styles.catBtnActive : ''}`}
+                            style={{ borderColor: '#f43f5e' }}
+                        >
+                            <FaTv size={11} /> Streaming
+                        </button>
+                    </div>
+
+                    {/* FILTROS POR CATEGORÍA SECUNDARIA */}
                     <div className={styles.categoriasScroll}>
                         <button 
                             onClick={() => setCategoriaFiltroActiva(null)} 
                             className={`${styles.catBtn} ${categoriaFiltroActiva === null ? styles.catBtnActive : ''}`}
                         >
-                            <FaThList size={11} /> Todas
+                            <FaThList size={11} /> Todas las Categorías
                         </button>
                         {categorias.map(c => (
                             <button 
@@ -741,14 +763,9 @@ export const Caja: React.FC = () => {
                                         </div>
 
                                         <div className={styles.productBadges}>
-                                            <span className={`${styles.badge} ${p.esDigital ? styles.badgeDigital : p.requiereServicio ? styles.badgeServicio : styles.badgeFisico}`}>
-                                                {p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
+                                            <span className={`${styles.badge} ${p.esDigital ? (p.esSuscripcion ? styles.badgeRecurrente : styles.badgeDigital) : p.requiereServicio ? styles.badgeServicio : styles.badgeFisico}`}>
+                                                {p.esSuscripcion ? "Streaming" : p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
                                             </span>
-                                            {p.esSuscripcion && (
-                                                <span className={`${styles.badge} ${styles.badgeRecurrente}`}>
-                                                    🔄 Recurrente
-                                                </span>
-                                            )}
                                             {!p.esDigital && !p.requiereServicio && (
                                                 <small className={`${styles.stockText} ${p.stockActual <= 3 ? styles.stockCritical : ''}`}>
                                                     Cant: {p.stockActual}
@@ -779,8 +796,7 @@ export const Caja: React.FC = () => {
                                                     {p.nombre}
                                                 </strong>
                                                 <small className={styles.productRowSub}>
-                                                    {p.esDigital ? "Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
-                                                    {p.esSuscripcion && " | 🔄 Requiere Renovación"}
+                                                    {p.esSuscripcion ? "📺 Streaming" : p.esDigital ? "🎮 Recarga Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
                                                 </small>
                                             </div>
                                         </div>
@@ -823,7 +839,7 @@ export const Caja: React.FC = () => {
                                                     <FaTimes size={14} />
                                                 </button>
                                                 <span className={styles.cartItemName}>
-                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(🔄)</span>}
+                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(📺)</span>}
                                                 </span>
                                             </div>
                                             <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap' }}>C$ {item.subTotal}</strong>
@@ -870,7 +886,6 @@ export const Caja: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {/* RENDERIZADO EN EL CARRITO (Caja.tsx) */}
                                         {pBase?.esDigital && (
                                             <div style={{ marginTop: '6px' }}>
                                                 <small style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 'bold' }}>
@@ -1027,7 +1042,6 @@ export const Caja: React.FC = () => {
             )}
 
             {/* MODAL INTERACTIVO FLOTANTE: DESPACHO EXITOSO */}
-            {/* DENTRO DEL MODAL INTERACTIVO FLOTANTE: DESPACHO EXITOSO EN CAJA.TSX */}
             {mostrarModalDespacho && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>

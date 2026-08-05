@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, 
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -102,10 +102,11 @@ export const CatalogosAdmin: React.FC = () => {
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [categoriaImagen, setCategoriaImagen] = useState('');
     
-    // FILTROS
+    // FILTROS Y RUBROS
     const [filtroProd, setFiltroProd] = useState('');
     const [juegoFiltroActivo, setJuegoFiltroActivo] = useState<number | null>(null);
     const [categoriaFiltroActiva, setCategoriaFiltroActiva] = useState<number | null>(null);
+    const [rubroAdmin, setRubroAdmin] = useState<'todos' | 'fisicos' | 'digitales' | 'streaming'>('todos');
 
     // MODAL CONTROLADO DE EXCEPCIONES Y ADVERTENCIAS
     const [errorModal, setErrorModal] = useState({
@@ -138,15 +139,21 @@ export const CatalogosAdmin: React.FC = () => {
 
     useEffect(() => { cargarSincronizacionMaster(); }, [cargarSincronizacionMaster]);
 
-    // FILTRADO DE PRODUCTOS MEMOIZADO
+    // FILTRADO DE PRODUCTOS MEMOIZADO POR RUBROS, CATEGORÍAS Y JUEGOS
     const prodsFiltrados = useMemo(() => {
         return productos.filter(p => {
             const coincideTexto = p.nombre.toLowerCase().includes(filtroProd.toLowerCase());
             const coincideJuego = juegoFiltroActivo ? p.juegoId === juegoFiltroActivo : true;
             const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
-            return coincideTexto && coincideJuego && coincideCategoria;
+            
+            let coincideRubro = true;
+            if (rubroAdmin === 'fisicos') coincideRubro = !p.esDigital;
+            if (rubroAdmin === 'digitales') coincideRubro = p.esDigital && !p.esSuscripcion;
+            if (rubroAdmin === 'streaming') coincideRubro = p.esDigital && p.esSuscripcion;
+
+            return coincideTexto && coincideJuego && coincideCategoria && coincideRubro;
         });
-    }, [productos, filtroProd, juegoFiltroActivo, categoriaFiltroActiva]);
+    }, [productos, filtroProd, juegoFiltroActivo, categoriaFiltroActiva, rubroAdmin]);
 
     // FILTRADO Y ORDENAMIENTO DE PERFILES MEMOIZADO
     const perfilesFiltradosYOrdenados = useMemo(() => {
@@ -613,7 +620,7 @@ export const CatalogosAdmin: React.FC = () => {
                                 {formProducto.esDigital && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
                                         <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
-                                            <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 ¿Es Suscripción Recurrente?
+                                            <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 ¿Es Suscripción Recurrente (Streaming)?
                                         </label>
                                         {formProducto.esSuscripcion && (
                                             <div style={{ paddingLeft: '20px' }}>
@@ -668,10 +675,44 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             )}
 
-            {/* SELECTORES DE FILTROS PRODUCTOS */}
-            <div className={styles.filterCard}>
+            {/* SELECCIÓN DE RUBRO PRINCIPAL Y FILTROS SECUNDARIOS */}
+            <div className={styles.filterCard} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* PESTAÑAS DE RUBROS SUPERIORES */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
+                    <button 
+                        onClick={() => setRubroAdmin('todos')} 
+                        className={styles.btn} 
+                        style={{ background: rubroAdmin === 'todos' ? '#3b82f6' : '#1e293b', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                        <FaLayerGroup /> Todos los Rubros
+                    </button>
+                    <button 
+                        onClick={() => setRubroAdmin('fisicos')} 
+                        className={styles.btn} 
+                        style={{ background: rubroAdmin === 'fisicos' ? '#047688' : '#1e293b', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                        <FaBoxes /> 📦 Productos Físicos
+                    </button>
+                    <button 
+                        onClick={() => setRubroAdmin('digitales')} 
+                        className={styles.btn} 
+                        style={{ background: rubroAdmin === 'digitales' ? '#38bdf8' : '#1e293b', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                        <FaGamepad /> 🎮 Digitales / Recargas
+                    </button>
+                    <button 
+                        onClick={() => setRubroAdmin('streaming')} 
+                        className={styles.btn} 
+                        style={{ background: rubroAdmin === 'streaming' ? '#f43f5e' : '#1e293b', color: '#fff', fontSize: '0.85rem' }}
+                    >
+                        <FaTv /> 📺 Streaming (Suscripciones)
+                    </button>
+                </div>
+
+                {/* FILTROS SECUNDARIOS POR CATEGORÍA Y JUEGO */}
                 <div className={styles.scrollRow}>
-                    <div onClick={() => setCategoriaFiltroActiva(null)} className={`${styles.pill} ${categoriaFiltroActiva === null ? styles.pillActivePurple : ''}`}><FaThList /> Todas</div>
+                    <div onClick={() => setCategoriaFiltroActiva(null)} className={`${styles.pill} ${categoriaFiltroActiva === null ? styles.pillActivePurple : ''}`}><FaThList /> Todas las Categorías</div>
                     {categorias.map(c => <div key={c.id} onClick={() => setCategoriaFiltroActiva(c.id)} className={`${styles.pill} ${categoriaFiltroActiva === c.id ? styles.pillActivePurple : ''}`}>{c.nombre}</div>)}
                 </div>
                 <div className={styles.scrollRow}>
@@ -680,7 +721,7 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             </div>
 
-            {/* TABLA PRINCIPAL */}
+            {/* TABLA PRINCIPAL DE PRODUCTOS */}
             <div className={styles.tableWrapper}>
                 <input type="text" placeholder="🔍 Filtrar por coincidencia..." value={filtroProd} onChange={e => setFiltroProd(e.target.value)} className={styles.input} style={{ marginBottom: '12px' }} />
                 <table className={styles.table}>
@@ -699,254 +740,258 @@ export const CatalogosAdmin: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {prodsFiltrados.map((p) => (
-                            <React.Fragment key={p.id}>
-                                <tr style={{ borderBottom: productoIdPerfilAbierto === p.id ? 'none' : '' }}>
-                                    <td>{p.imagenUrl ? <img src={p.imagenUrl} alt="P" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px' }} /> : <FaImage style={{ color: '#475569', fontSize: '1.2rem' }} />}</td>
-                                    <td>
-                                        <strong>{p.nombre}</strong><br/>
-                                        <small style={{ color: '#94a3b8' }}>
-                                            {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
-                                            <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
-                                            {p.esSuscripcion && <span style={{ color: '#f43f5e', marginLeft: '6px', fontWeight: 'bold' }}>[🔄 Recurrente]</span>}
-                                            <span style={{ color: p.controlaStock ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
-                                                {p.controlaStock ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
-                                            </span>
-                                        </small>
-                                    </td>
-                                    <td style={{ color: '#94a3b8' }}>C$ {p.precioCosto}</td>
-                                    <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {p.precioVenta}</td>
-                                    <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
-                                    <td style={{ color: '#fb923c' }}>{p.garantiaDias} días</td>
-                                    <td style={{ color: '#cbd5e1' }}>{p.proveedor || 'N/A'}</td>
-                                    <td>
-                                        <span className={styles.badge} style={{
-                                            background: p.estado === 'Pausado' ? 'rgba(245, 158, 11, 0.15)' : p.estado === 'Agotado' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(74, 222, 128, 0.15)',
-                                            color: p.estado === 'Pausado' ? '#f59e0b' : p.estado === 'Agotado' ? '#ef4444' : '#4ade80'
-                                        }}>{p.estado || 'Activo'}</span>
-                                    </td>
-                                    <td style={{ color: !p.controlaStock ? '#a855f7' : p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>
-                                        {p.controlaStock ? `${p.stockActual} u.` : 'N/A'}
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                            {p.esSuscripcion && (
-                                                <button onClick={() => abrirGestionPerfiles(p)} className={styles.btn} style={{ background: productoIdPerfilAbierto === p.id ? '#475569' : '#047688', color: '#fff', padding: '6px 10px', borderRadius: '4px' }}>
-                                                    <FaTv /> Perfiles
-                                                </button>
-                                            )}
-                                            <button onClick={() => editarProducto(p)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '6px 10px', borderRadius: '4px' }}>Editar</button>
-                                            <button onClick={() => eliminarProducto(p.id)} className={`${styles.btn} ${styles.btnDanger}`} style={{ padding: '6px 10px', borderRadius: '4px' }}>Eliminar</button>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                {productoIdPerfilAbierto === p.id && (
-                                    <tr style={{ background: '#0f172a' }}>
-                                        <td colSpan={10} style={{ padding: '16px' }}>
-                                            <div style={{ borderLeft: '4px solid #047688', paddingLeft: '14px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                                    <h5 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', fontWeight: 'bold' }}>Administración de Pantallas Libres / Ocupadas: {p.nombre}</h5>
-                                                    <button onClick={() => setProductoIdPerfilAbierto(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}><FaTimes /> Cerrar Panel</button>
-                                                </div>
-
-                                                <div className={styles.panel} style={{ background: '#1e293b', border: '1px solid #233249', marginBottom: '14px', padding: '14px' }}>
-                                                    <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
-                                                        <button type="button" onClick={() => setModoIngreso('individual')} className={styles.btn} style={{ background: modoIngreso === 'individual' ? '#047688' : '#334155', color: '#fff', padding: '6px 12px', fontSize: '0.8rem' }}>👤 Perfil Individual</button>
-                                                        <button type="button" onClick={() => setModoIngreso('completa')} className={styles.btn} style={{ background: modoIngreso === 'completa' ? '#047688' : '#334155', color: '#fff', padding: '6px 12px', fontSize: '0.8rem' }}>📺 Cuenta Completa</button>
-                                                    </div>
-
-                                                    {modoIngreso === 'individual' ? (
-                                                        <form onSubmit={agregarPerfilManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                                                            <input type="text" value={perfNombre} onChange={e => setPerfNombre(e.target.value)} className={styles.input} placeholder="Nombre Perfil" required />
-                                                            <input type="text" value={perfPin} onChange={e => setPerfPin(e.target.value)} className={styles.input} placeholder="PIN" maxLength={6} />
-                                                            <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} className={styles.input} placeholder="Correo Cuenta" required />
-                                                            <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} className={styles.input} placeholder="Password" required />
-                                                            <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} style={{ justifyContent: 'center' }}><FaPlus /> Cargar</button>
-                                                        </form>
-                                                    ) : (
-                                                        <form onSubmit={agregarCuentaCompletaManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-                                                            <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} className={styles.input} placeholder="Correo Electrónico" required />
-                                                            <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} className={styles.input} placeholder="Clave Global" required />
-                                                            <input type="number" value={cantidadPerfiles} onChange={e => setCantidadPerfiles(Number(e.target.value))} className={styles.input} min={1} max={10} />
-                                                            <button type="submit" className={styles.btn} style={{ background: '#6366f1', color: '#fff', justifyContent: 'center' }}><FaTv /> Auto-generar</button>
-                                                        </form>
-                                                    )}
-                                                </div>
-
-                                                {/* BARRA DE BÚSQUEDA Y ORDENAMIENTO DE PERFILES */}
-                                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '14px', background: '#1e293b', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155' }}>
-                                                    <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <FaSearch style={{ color: '#38bdf8' }} />
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="🔍 Buscar perfil por nombre, correo, PIN o cliente..." 
-                                                            value={busquedaPerfil} 
-                                                            onChange={e => setBusquedaPerfil(e.target.value)} 
-                                                            className={styles.input} 
-                                                            style={{ margin: 0, padding: '6px 10px', fontSize: '0.85rem' }}
-                                                        />
-                                                    </div>
-                                                    
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <FaFilter style={{ color: '#f59e0b' }} />
-                                                        <select 
-                                                            value={ordenPerfil} 
-                                                            onChange={e => setOrdenPerfil(e.target.value)} 
-                                                            className={styles.select}
-                                                            style={{ margin: 0, padding: '6px 10px', fontSize: '0.85rem', width: 'auto' }}
-                                                        >
-                                                            <option value="a-z">Ordenar: Nombre (A - Z)</option>
-                                                            <option value="z-a">Ordenar: Nombre (Z - A)</option>
-                                                            <option value="correo">Ordenar: Correo Electrónico</option>
-                                                            <option value="disponibles">Primero Disponibles (Libres)</option>
-                                                            <option value="ocupados">Primero Ocupados (Asignados)</option>
-                                                        </select>
-                                                    </div>
-
-                                                    {busquedaPerfil && (
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => setBusquedaPerfil('')} 
-                                                            className={styles.btn} 
-                                                            style={{ background: '#475569', color: '#fff', padding: '4px 8px', fontSize: '0.75rem' }}
-                                                        >
-                                                            Limpiar Búsqueda
-                                                        </button>
-                                                    )}
-
-                                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: 'auto' }}>
-                                                        Mostrando: <strong style={{ color: '#38bdf8' }}>{perfilesFiltradosYOrdenados.length}</strong> de {perfilesActuales.length} perfiles
-                                                    </span>
-                                                </div>
-
-                                                {/* GRID DE PERFILES FILTRADOS Y ORDENADOS */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-                                                    {perfilesFiltradosYOrdenados.length === 0 ? (
-                                                        <div style={{ gridColumn: '1 / -1', padding: '20px', textAlign: 'center', color: '#94a3b8', background: '#1e293b', borderRadius: '8px' }}>
-                                                            No se encontraron perfiles que coincidan con el filtro.
-                                                        </div>
-                                                    ) : (
-                                                        perfilesFiltradosYOrdenados.map((perfil) => {
-                                                            const esEditando = perfilEditandoId === perfil.id;
-                                                            return (
-                                                                <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: '1px solid', borderColor: perfil.ocupado ? '#ef4444' : '#10b981', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                    
-                                                                    {/* 1. Cabecera con Nombre y Llave de Lote */}
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                                                        {esEditando ? (
-                                                                            <input 
-                                                                                type="text" 
-                                                                                value={perfilEditandoDatos.ExtNombrePerfil} 
-                                                                                onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} 
-                                                                                className={styles.input} 
-                                                                                style={{ padding: '2px 6px', fontSize: '0.8rem', width: '110px' }} 
-                                                                            />
-                                                                        ) : (
-                                                                            <strong style={{ fontSize: '0.85rem' }}>{perfil.nombrePerfil}</strong>
-                                                                        )}
-                                                                        
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                            {/* Si pertenece a un lote/grupo */}
-                                                                            {perfil.accountGroupKey && (
-                                                                                <div style={{ display: 'flex', alignItems: 'center', background: '#475569', borderRadius: '4px', overflow: 'hidden' }}>
-                                                                                    <span style={{ fontSize: '0.7rem', padding: '2px 6px', color: '#cbd5e1' }} title={perfil.accountGroupKey}>
-                                                                                        🔑 {perfil.accountGroupKey.substring(0, 8)}
-                                                                                    </span>
-                                                                                    {!perfil.ocupado && !esEditando && (
-                                                                                        <>
-                                                                                            <button 
-                                                                                                type="button"
-                                                                                                onClick={() => removerPerfilManual(perfil.id)} 
-                                                                                                style={{ background: '#f59e0b', border: 'none', color: '#000', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRight: '1px solid #334155' }}
-                                                                                                title="Eliminar solo este perfil"
-                                                                                            >
-                                                                                                <FaTrash size={10} />
-                                                                                            </button>
-                                                                                            <button 
-                                                                                                type="button"
-                                                                                                onClick={() => removerCuentaCompletaManual(perfil.accountGroupKey!)} 
-                                                                                                style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                                                                title="Eliminar Cuenta Completa (Lote)"
-                                                                                            >
-                                                                                                <FaBoxes size={10} />
-                                                                                            </button>
-                                                                                        </>
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
-                                                                            
-                                                                            {/* Si es un perfil suelto sin grupo */}
-                                                                            {!perfil.accountGroupKey && !perfil.ocupado && !esEditando && (
-                                                                                <button type="button" onClick={() => removerPerfilManual(perfil.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><FaTrash size={12} /></button>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* 2. Cuerpo de la Tarjeta */}
-                                                                    <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
-                                                                        {esEditando ? (
-                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
-                                                                                <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>✉️ Correo:</label>
-                                                                                <input 
-                                                                                    type="email" 
-                                                                                    value={perfilEditandoDatos.correoCuenta} 
-                                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, correoCuenta: e.target.value})} 
-                                                                                    className={styles.input} 
-                                                                                    style={{ padding: '2px 6px', fontSize: '0.8rem' }} 
-                                                                                />
-                                                                                <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>🔒 Clave:</label>
-                                                                                <input 
-                                                                                    type="text" 
-                                                                                    value={perfilEditandoDatos.passwordCuenta} 
-                                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, passwordCuenta: e.target.value})} 
-                                                                                    className={styles.input} 
-                                                                                    style={{ padding: '2px 6px', fontSize: '0.8rem' }} 
-                                                                                />
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {perfil.correoCuenta}</div>
-                                                                        )}
-                                                                        
-                                                                        <div style={{ marginTop: '4px' }}>
-                                                                            🔑 PIN: {esEditando ? (
-                                                                                <input type="text" value={perfilEditandoDatos.pin} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} className={styles.input} style={{ padding: '2px 6px', fontSize: '0.8rem', width: '60px' }} maxLength={6} />
-                                                                            ) : (
-                                                                                <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{perfil.pin || 'Sin PIN'}</span>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {perfil.ocupado && (
-                                                                            <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '6px', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                                <span>👤 {perfil.nombreCliente || `ID: ${perfil.idClienteAsignado}`}</span>
-                                                                                <button type="button" onClick={() => liberarPerfilCliente(perfil.id)} className={styles.btn} style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', fontSize: '0.75rem' }}>Liberar</button>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    {/* 3. Acciones Inferiores */}
-                                                                    <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                                                                        {esEditando ? (
-                                                                            <>
-                                                                                <button type="button" onClick={guardarCambiosPerfil} className={`${styles.btn} ${styles.btnPrimary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Guardar</button>
-                                                                                <button type="button" onClick={() => setPerfilEditandoId(null)} className={`${styles.btn} ${styles.btnSecondary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Cerrar</button>
-                                                                            </>
-                                                                        ) : (
-                                                                            <button type="button" onClick={() => comenzarEdicionPerfil(perfil)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Editar Info</button>
-                                                                        )}
-                                                                    </div>
-
-                                                                </div>
-                                                            );
-                                                        })
-                                                    )}
-                                                </div>
+                        {prodsFiltrados.length === 0 ? (
+                            <tr>
+                                <td colSpan={10} style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>
+                                    No hay productos coincidentes dentro del rubro seleccionado.
+                                </td>
+                            </tr>
+                        ) : (
+                            prodsFiltrados.map((p) => (
+                                <React.Fragment key={p.id}>
+                                    <tr style={{ borderBottom: productoIdPerfilAbierto === p.id ? 'none' : '' }}>
+                                        <td>{p.imagenUrl ? <img src={p.imagenUrl} alt="P" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px' }} /> : <FaImage style={{ color: '#475569', fontSize: '1.2rem' }} />}</td>
+                                        <td>
+                                            <strong>{p.nombre}</strong><br/>
+                                            <small style={{ color: '#94a3b8' }}>
+                                                {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
+                                                <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
+                                                {p.esSuscripcion && <span style={{ color: '#f43f5e', marginLeft: '6px', fontWeight: 'bold' }}>[📺 Streaming / Recurrente]</span>}
+                                                <span style={{ color: p.controlaStock ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
+                                                    {p.controlaStock ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
+                                                </span>
+                                            </small>
+                                        </td>
+                                        <td style={{ color: '#94a3b8' }}>C$ {p.precioCosto}</td>
+                                        <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {p.precioVenta}</td>
+                                        <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
+                                        <td style={{ color: '#fb923c' }}>{p.garantiaDias} días</td>
+                                        <td style={{ color: '#cbd5e1' }}>{p.proveedor || 'N/A'}</td>
+                                        <td>
+                                            <span className={styles.badge} style={{
+                                                background: p.estado === 'Pausado' ? 'rgba(245, 158, 11, 0.15)' : p.estado === 'Agotado' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(74, 222, 128, 0.15)',
+                                                color: p.estado === 'Pausado' ? '#f59e0b' : p.estado === 'Agotado' ? '#ef4444' : '#4ade80'
+                                            }}>{p.estado || 'Activo'}</span>
+                                        </td>
+                                        <td style={{ color: !p.controlaStock ? '#a855f7' : p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>
+                                            {p.controlaStock ? `${p.stockActual} u.` : 'N/A'}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                {p.esSuscripcion && (
+                                                    <button onClick={() => abrirGestionPerfiles(p)} className={styles.btn} style={{ background: productoIdPerfilAbierto === p.id ? '#475569' : '#047688', color: '#fff', padding: '6px 10px', borderRadius: '4px' }}>
+                                                        <FaTv /> Perfiles
+                                                    </button>
+                                                )}
+                                                <button onClick={() => editarProducto(p)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '6px 10px', borderRadius: '4px' }}>Editar</button>
+                                                <button onClick={() => eliminarProducto(p.id)} className={`${styles.btn} ${styles.btnDanger}`} style={{ padding: '6px 10px', borderRadius: '4px' }}>Eliminar</button>
                                             </div>
                                         </td>
                                     </tr>
-                                )}
-                            </React.Fragment>
-                        ))}
+
+                                    {/* PANEL DE PERFILES DE STREAMING */}
+                                    {productoIdPerfilAbierto === p.id && (
+                                        <tr style={{ background: '#0f172a' }}>
+                                            <td colSpan={10} style={{ padding: '16px' }}>
+                                                <div style={{ borderLeft: '4px solid #047688', paddingLeft: '14px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                        <h5 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', fontWeight: 'bold' }}>Administración de Pantallas Libres / Ocupadas: {p.nombre}</h5>
+                                                        <button onClick={() => setProductoIdPerfilAbierto(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}><FaTimes /> Cerrar Panel</button>
+                                                    </div>
+
+                                                    <div className={styles.panel} style={{ background: '#1e293b', border: '1px solid #233249', marginBottom: '14px', padding: '14px' }}>
+                                                        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                                                            <button type="button" onClick={() => setModoIngreso('individual')} className={styles.btn} style={{ background: modoIngreso === 'individual' ? '#047688' : '#334155', color: '#fff', padding: '6px 12px', fontSize: '0.8rem' }}>👤 Perfil Individual</button>
+                                                            <button type="button" onClick={() => setModoIngreso('completa')} className={styles.btn} style={{ background: modoIngreso === 'completa' ? '#047688' : '#334155', color: '#fff', padding: '6px 12px', fontSize: '0.8rem' }}>📺 Cuenta Completa</button>
+                                                        </div>
+
+                                                        {modoIngreso === 'individual' ? (
+                                                            <form onSubmit={agregarPerfilManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                                                <input type="text" value={perfNombre} onChange={e => setPerfNombre(e.target.value)} className={styles.input} placeholder="Nombre Perfil" required />
+                                                                <input type="text" value={perfPin} onChange={e => setPerfPin(e.target.value)} className={styles.input} placeholder="PIN" maxLength={6} />
+                                                                <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} className={styles.input} placeholder="Correo Cuenta" required />
+                                                                <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} className={styles.input} placeholder="Password" required />
+                                                                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} style={{ justifyContent: 'center' }}><FaPlus /> Cargar</button>
+                                                            </form>
+                                                        ) : (
+                                                            <form onSubmit={agregarCuentaCompletaManual} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                                                                <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} className={styles.input} placeholder="Correo Electrónico" required />
+                                                                <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} className={styles.input} placeholder="Clave Global" required />
+                                                                <input type="number" value={cantidadPerfiles} onChange={e => setCantidadPerfiles(Number(e.target.value))} className={styles.input} min={1} max={10} />
+                                                                <button type="submit" className={styles.btn} style={{ background: '#6366f1', color: '#fff', justifyContent: 'center' }}><FaTv /> Auto-generar</button>
+                                                            </form>
+                                                        )}
+                                                    </div>
+
+                                                    {/* BARRA DE BÚSQUEDA Y ORDENAMIENTO DE PERFILES */}
+                                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '14px', background: '#1e293b', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                                        <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <FaSearch style={{ color: '#38bdf8' }} />
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="🔍 Buscar perfil por nombre, correo, PIN o cliente..." 
+                                                                value={busquedaPerfil} 
+                                                                onChange={e => setBusquedaPerfil(e.target.value)} 
+                                                                className={styles.input} 
+                                                                style={{ margin: 0, padding: '6px 10px', fontSize: '0.85rem' }}
+                                                            />
+                                                        </div>
+                                                        
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <FaFilter style={{ color: '#f59e0b' }} />
+                                                            <select 
+                                                                value={ordenPerfil} 
+                                                                onChange={e => setOrdenPerfil(e.target.value)} 
+                                                                className={styles.select}
+                                                                style={{ margin: 0, padding: '6px 10px', fontSize: '0.85rem', width: 'auto' }}
+                                                            >
+                                                                <option value="a-z">Ordenar: Nombre (A - Z)</option>
+                                                                <option value="z-a">Ordenar: Nombre (Z - A)</option>
+                                                                <option value="correo">Ordenar: Correo Electrónico</option>
+                                                                <option value="disponibles">Primero Disponibles (Libres)</option>
+                                                                <option value="ocupados">Primero Ocupados (Asignados)</option>
+                                                            </select>
+                                                        </div>
+
+                                                        {busquedaPerfil && (
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => setBusquedaPerfil('')} 
+                                                                className={styles.btn} 
+                                                                style={{ background: '#475569', color: '#fff', padding: '4px 8px', fontSize: '0.75rem' }}
+                                                            >
+                                                                Limpiar Búsqueda
+                                                            </button>
+                                                        )}
+
+                                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: 'auto' }}>
+                                                            Mostrando: <strong style={{ color: '#38bdf8' }}>{perfilesFiltradosYOrdenados.length}</strong> de {perfilesActuales.length} perfiles
+                                                        </span>
+                                                    </div>
+
+                                                    {/* GRID DE PERFILES FILTRADOS */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                                                        {perfilesFiltradosYOrdenados.length === 0 ? (
+                                                            <div style={{ gridColumn: '1 / -1', padding: '20px', textAlign: 'center', color: '#94a3b8', background: '#1e293b', borderRadius: '8px' }}>
+                                                                No se encontraron perfiles que coincidan con el filtro.
+                                                            </div>
+                                                        ) : (
+                                                            perfilesFiltradosYOrdenados.map((perfil) => {
+                                                                const esEditando = perfilEditandoId === perfil.id;
+                                                                return (
+                                                                    <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: '1px solid', borderColor: perfil.ocupado ? '#ef4444' : '#10b981', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                        
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                                            {esEditando ? (
+                                                                                <input 
+                                                                                    type="text" 
+                                                                                    value={perfilEditandoDatos.ExtNombrePerfil} 
+                                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} 
+                                                                                    className={styles.input} 
+                                                                                    style={{ padding: '2px 6px', fontSize: '0.8rem', width: '110px' }} 
+                                                                                />
+                                                                            ) : (
+                                                                                <strong style={{ fontSize: '0.85rem' }}>{perfil.nombrePerfil}</strong>
+                                                                            )}
+                                                                            
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                {perfil.accountGroupKey && (
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', background: '#475569', borderRadius: '4px', overflow: 'hidden' }}>
+                                                                                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', color: '#cbd5e1' }} title={perfil.accountGroupKey}>
+                                                                                            🔑 {perfil.accountGroupKey.substring(0, 8)}
+                                                                                        </span>
+                                                                                        {!perfil.ocupado && !esEditando && (
+                                                                                            <>
+                                                                                                <button 
+                                                                                                    type="button"
+                                                                                                    onClick={() => removerPerfilManual(perfil.id)} 
+                                                                                                    style={{ background: '#f59e0b', border: 'none', color: '#000', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRight: '1px solid #334155' }}
+                                                                                                    title="Eliminar solo este perfil"
+                                                                                                >
+                                                                                                    <FaTrash size={10} />
+                                                                                                </button>
+                                                                                                <button 
+                                                                                                    type="button"
+                                                                                                    onClick={() => removerCuentaCompletaManual(perfil.accountGroupKey!)} 
+                                                                                                    style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                                                    title="Eliminar Cuenta Completa (Lote)"
+                                                                                                >
+                                                                                                    <FaBoxes size={10} />
+                                                                                                </button>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                                
+                                                                                {!perfil.accountGroupKey && !perfil.ocupado && !esEditando && (
+                                                                                    <button type="button" onClick={() => removerPerfilManual(perfil.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><FaTrash size={12} /></button>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                                                                            {esEditando ? (
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
+                                                                                    <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>✉️ Correo:</label>
+                                                                                    <input 
+                                                                                        type="email" 
+                                                                                        value={perfilEditandoDatos.correoCuenta} 
+                                                                                        onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, correoCuenta: e.target.value})} 
+                                                                                        className={styles.input} 
+                                                                                        style={{ padding: '2px 6px', fontSize: '0.8rem' }} 
+                                                                                    />
+                                                                                    <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>🔒 Clave:</label>
+                                                                                    <input 
+                                                                                        type="text" 
+                                                                                        value={perfilEditandoDatos.passwordCuenta} 
+                                                                                        onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, passwordCuenta: e.target.value})} 
+                                                                                        className={styles.input} 
+                                                                                        style={{ padding: '2px 6px', fontSize: '0.8rem' }} 
+                                                                                    />
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉️ {perfil.correoCuenta}</div>
+                                                                            )}
+                                                                            
+                                                                            <div style={{ marginTop: '4px' }}>
+                                                                                🔑 PIN: {esEditando ? (
+                                                                                    <input type="text" value={perfilEditandoDatos.pin} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} className={styles.input} style={{ padding: '2px 6px', fontSize: '0.8rem', width: '60px' }} maxLength={6} />
+                                                                                ) : (
+                                                                                    <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{perfil.pin || 'Sin PIN'}</span>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {perfil.ocupado && (
+                                                                                <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '6px', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                                    <span>👤 {perfil.nombreCliente || `ID: ${perfil.idClienteAsignado}`}</span>
+                                                                                    <button type="button" onClick={() => liberarPerfilCliente(perfil.id)} className={styles.btn} style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', fontSize: '0.75rem' }}>Liberar</button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                                                            {esEditando ? (
+                                                                                <>
+                                                                                    <button type="button" onClick={guardarCambiosPerfil} className={`${styles.btn} ${styles.btnPrimary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Guardar</button>
+                                                                                    <button type="button" onClick={() => setPerfilEditandoId(null)} className={`${styles.btn} ${styles.btnSecondary}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Cerrar</button>
+                                                                                </>
+                                                                            ) : (
+                                                                                <button type="button" onClick={() => comenzarEdicionPerfil(perfil)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '3px 8px', fontSize: '0.75rem' }}>Editar Info</button>
+                                                                            )}
+                                                                        </div>
+
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>
