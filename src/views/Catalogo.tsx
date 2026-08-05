@@ -555,74 +555,76 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                 {/* COLUMNA DERECHA: BANNER PROMO + BURBUJAS DE FILTRO + CUADRÍCULA */}
                                 <div className={styles.catalogoMainContent}>
                                     
-                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS */}
-                                    <section className={styles.heroPromoSection}>
-                                        {productoPrincipal ? (
-                                            <div className={styles.mainPromoBanner}>
-                                                <div className={styles.promoBadge}>
-                                                    {productoPrincipal.esDigital ? "DESTACADO DIGITAL" : "LO MÁS BUSCADO"}
-                                                </div>
-                                                <h2 className={styles.promoTitle} onClick={() => manejarVerDetalle(productoPrincipal)} style={{cursor: 'pointer'}}>
-                                                    {productoPrincipal.nombre}
-                                                </h2>
-                                                <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
-                                                <button 
-                                                    className={styles.promoBtn} 
-                                                    onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
-                                                >
-                                                    COMPRAR POR C$ {productoPrincipal.precioVenta.toLocaleString('es-NI')}
-                                                </button>
-                                                <div className={styles.promoGraphicOverlay} />
-                                                {productoPrincipal.imagenUrl && (
-                                                    <img 
-                                                        src={productoPrincipal.imagenUrl} 
-                                                        alt={productoPrincipal.nombre} 
-                                                        className={styles.promoAbsoluteImage}
-                                                        onClick={() => manejarVerDetalle(productoPrincipal)}
-                                                        style={{cursor: 'pointer'}}
-                                                    />
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className={styles.mainPromoBanner}>
-                                                <h2 className={styles.promoTitle}>Cargando Novedades...</h2>
-                                            </div>
-                                        )}
-
-                                        <div className={styles.sidePromoContainer}>
-                                            {productosSecundarios.map((prod: Producto, index: number) => (
-                                                <div 
-                                                    key={prod.id} 
-                                                    className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
-                                                >
-                                                    <div className={styles.sideBannerContent}>
-                                                        <span className={styles.sideTag}>
-                                                            {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
-                                                        </span>
-                                                        <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
-                                                            {prod.nombre}
-                                                        </h3>
-                                                        <p>¡Por solo C$ {prod.precioVenta.toLocaleString('es-NI')}!</p>
-                                                        <button 
-                                                            className={styles.sideLink} 
-                                                            onClick={(e) => agregarAlCarrito(prod, e)}
-                                                        >
-                                                            Añadir al carrito
-                                                        </button>
+                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS: SE OCULTA SI HAY UNA BÚSQUEDA ACTIVA */}
+                                    {busqueda.trim() === '' && (
+                                        <section className={styles.heroPromoSection}>
+                                            {productoPrincipal ? (
+                                                <div className={styles.mainPromoBanner}>
+                                                    <div className={styles.promoBadge}>
+                                                        {productoPrincipal.esDigital ? "DESTACADO DIGITAL" : "LO MÁS BUSCADO"}
                                                     </div>
-                                                    {prod.imagenUrl && (
+                                                    <h2 className={styles.promoTitle} onClick={() => manejarVerDetalle(productoPrincipal)} style={{cursor: 'pointer'}}>
+                                                        {productoPrincipal.nombre}
+                                                    </h2>
+                                                    <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
+                                                    <button 
+                                                        className={styles.promoBtn} 
+                                                        onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
+                                                    >
+                                                        COMPRAR POR C$ {productoPrincipal.precioVenta.toLocaleString('es-NI')}
+                                                    </button>
+                                                    <div className={styles.promoGraphicOverlay} />
+                                                    {productoPrincipal.imagenUrl && (
                                                         <img 
-                                                            src={prod.imagenUrl} 
-                                                            alt={prod.nombre} 
-                                                            className={styles.sideBannerImage} 
-                                                            onClick={() => manejarVerDetalle(prod)}
+                                                            src={productoPrincipal.imagenUrl} 
+                                                            alt={productoPrincipal.nombre} 
+                                                            className={styles.promoAbsoluteImage}
+                                                            onClick={() => manejarVerDetalle(productoPrincipal)}
                                                             style={{cursor: 'pointer'}}
                                                         />
                                                     )}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </section>
+                                            ) : (
+                                                <div className={styles.mainPromoBanner}>
+                                                    <h2 className={styles.promoTitle}>Cargando Novedades...</h2>
+                                                </div>
+                                            )}
+
+                                            <div className={styles.sidePromoContainer}>
+                                                {productosSecundarios.map((prod: Producto, index: number) => (
+                                                    <div 
+                                                        key={prod.id} 
+                                                        className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
+                                                    >
+                                                        <div className={styles.sideBannerContent}>
+                                                            <span className={styles.sideTag}>
+                                                                {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
+                                                            </span>
+                                                            <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                                {prod.nombre}
+                                                            </h3>
+                                                            <p>¡Por solo C$ {prod.precioVenta.toLocaleString('es-NI')}!</p>
+                                                            <button 
+                                                                className={styles.sideLink} 
+                                                                onClick={(e) => agregarAlCarrito(prod, e)}
+                                                            >
+                                                                Añadir al carrito
+                                                            </button>
+                                                        </div>
+                                                        {prod.imagenUrl && (
+                                                            <img 
+                                                                src={prod.imagenUrl} 
+                                                                alt={prod.nombre} 
+                                                                className={styles.sideBannerImage} 
+                                                                onClick={() => manejarVerDetalle(prod)}
+                                                                style={{cursor: 'pointer'}}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
 
                                     {/* BURBUJAS (FILTROS RÁPIDOS DE CATEGORÍAS Y JUEGOS) */}
                                     <div className={styles.filterSectionContainer}>
@@ -711,43 +713,52 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     
                                     {/* ENCABEZADO DE PRODUCTOS */}
                                     <div className={styles.productsHeader}>
-                                        <h2 className={styles.productsHeaderTitle}>Productos Destacados</h2>
+                                        <h2 className={styles.productsHeaderTitle}>
+                                            {busqueda.trim() !== '' ? `Resultados para "${busqueda}"` : 'Productos Destacados'}
+                                        </h2>
                                     </div>
                                     
                                     {/* CUADRÍCULA DE PRODUCTOS FILTRADOS */}
-                                    <div className={styles.productsGrid}>
-                                        {productosFiltrados.map((prod: Producto) => (
-                                            <div key={prod.id} className={styles.productCard}>
-                                                <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
-                                                    <span className={styles.productBadge} style={{ background: prod.esDigital ? '#581c7e' : '#047688' }}>
-                                                        {prod.esDigital ? "Digital" : "Físico"}
-                                                    </span>
-                                                    {prod.imagenUrl ? (
-                                                        <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} />
-                                                    ) : (
-                                                        <div className={styles.noImagePlaceholder}>Nicaplus Tech</div>
-                                                    )}
-                                                </div>
-                                                <div className={styles.productInfo}>
-                                                    <h3 className={styles.productName} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
-                                                        {prod.nombre}
-                                                    </h3>
-                                                    <p className={styles.productDescription}>{prod.descripcion}</p>
-                                                    <div className={styles.priceActionRow}>
-                                                        <span className={styles.productPrice}>C$ {prod.precioVenta.toLocaleString('es-NI')}</span>
-                                                        <button 
-                                                            className={styles.addCartBtn}
-                                                            disabled={!prod.esDigital && prod.stockActual <= 0}
-                                                            onClick={(e) => agregarAlCarrito(prod, e)}
-                                                            aria-label={`Añadir ${prod.nombre} al carrito`}
-                                                        >
-                                                            <FaShoppingCart />
-                                                        </button>
+                                    {productosFiltrados.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
+                                            <FaSearch size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                            <p>No se encontraron productos coincidentes.</p>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.productsGrid}>
+                                            {productosFiltrados.map((prod: Producto) => (
+                                                <div key={prod.id} className={styles.productCard}>
+                                                    <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                        <span className={styles.productBadge} style={{ background: prod.esDigital ? '#581c7e' : '#047688' }}>
+                                                            {prod.esDigital ? "Digital" : "Físico"}
+                                                        </span>
+                                                        {prod.imagenUrl ? (
+                                                            <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} />
+                                                        ) : (
+                                                            <div className={styles.noImagePlaceholder}>Nicaplus Tech</div>
+                                                        )}
+                                                    </div>
+                                                    <div className={styles.productInfo}>
+                                                        <h3 className={styles.productName} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                            {prod.nombre}
+                                                        </h3>
+                                                        <p className={styles.productDescription}>{prod.descripcion}</p>
+                                                        <div className={styles.priceActionRow}>
+                                                            <span className={styles.productPrice}>C$ {prod.precioVenta.toLocaleString('es-NI')}</span>
+                                                            <button 
+                                                                className={styles.addCartBtn}
+                                                                disabled={!prod.esDigital && prod.stockActual <= 0}
+                                                                onClick={(e) => agregarAlCarrito(prod, e)}
+                                                                aria-label={`Añadir ${prod.nombre} al carrito`}
+                                                            >
+                                                                <FaShoppingCart />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                 </div>
                             </div>
