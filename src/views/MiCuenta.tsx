@@ -311,7 +311,7 @@ export const MiCuenta: React.FC<MiCuentaProps> = ({ alVolver, alCerrarSesion }) 
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italiccd    ' }}>
                                                             Credenciales asignadas en caja o sin detalles adicionales.
                                                         </div>
                                                     )}

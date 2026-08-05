@@ -20,6 +20,7 @@ interface Producto {
     categoriaId: number | null;
     metadataDigital?: string;
     primerPerfilId?: number;
+    diasDuracion?: number;
 }
 
 interface Categoria {
@@ -55,6 +56,32 @@ const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => 
     const opciones = { timeZone: 'America/Managua', year: 'numeric' as const, month: '2-digit' as const, day: '2-digit' as const };
     const formateador = new Intl.DateTimeFormat('fr-CA', opciones);
     return formateador.format(d);
+};
+
+// Utilidad para calcular meses exactos considerando 28, 29, 30 o 31 días según el calendario real
+const sumarMesesExactos = (fechaBaseISO: string, meses: number): string => {
+    const [year, month, day] = fechaBaseISO.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day);
+    
+    fecha.setMonth(fecha.getMonth() + meses);
+    
+    if (fecha.getDate() !== day) {
+        fecha.setDate(0);
+    }
+
+    const yyyy = fecha.getFullYear();
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    
+    return `${yyyy}-${mm}-${dd}`;
+};
+
+// Utilidad para calcular días reales transcurridos entre dos fechas
+const calcularDiasRealesEntreFechas = (fechaInicioStr: string, fechaFinStr: string): number => {
+    const inicio = new Date(fechaInicioStr + "T00:00:00");
+    const fin = new Date(fechaFinStr + "T00:00:00");
+    const diferenciaMs = fin.getTime() - inicio.getTime();
+    return Math.max(1, Math.round(diferenciaMs / (1000 * 60 * 60 * 24)));
 };
 
 export const enviarWhatsAppVenta = (datosVenta: any) => {
@@ -340,7 +367,6 @@ export const Caja: React.FC = () => {
     const [busquedaCliente, setBusquedaCliente] = useState('');
     const [categoriaFiltroActiva, setCategoriaFiltroActiva] = useState<number | null>(null);
     
-    // FILTRO DE RUBRO SUPERIOR (Físico, Digital, Streaming)
     const [filtroRubroCaja, setFiltroRubroCaja] = useState<'todos' | 'fisico' | 'digital' | 'streaming'>('todos');
 
     const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
@@ -442,7 +468,7 @@ export const Caja: React.FC = () => {
                     return { 
                         ...item, 
                         cantidad: nuevaCant, 
-                        subTotal: (item.precioUnitario - item.descuento) * nuevaCant,
+                        subTotal: Math.round((item.precioUnitario - item.descuento) * nuevaCant),
                         metadataDigital: credencialesActualizadas,
                         idsPerfiles: listaIdsPerfiles
                     };
@@ -467,11 +493,25 @@ export const Caja: React.FC = () => {
                 precioCostoUnitario: producto.precioCosto,
                 subTotal: producto.precioVenta,
                 metadataDigital: metadataDigital,
-                diasSuscripcion: (producto as any).diasDuracion || 30,
+                diasSuscripcion: producto.diasDuracion || 30,
                 descuento: 0,
                 idsPerfiles: idsIniciales
             }]);
         }
+    };
+
+    const cambiarPrecioUnitarioManual = (idProducto: number, nuevoPrecio: number) => {
+        const precioValidado = Math.max(0, nuevoPrecio);
+        setCarrito(prev => prev.map(item => {
+            if (item.idProducto === idProducto) {
+                return { 
+                    ...item, 
+                    precioUnitario: precioValidado, 
+                    subTotal: Math.round((precioValidado - item.descuento) * item.cantidad)
+                };
+            }
+            return item;
+        }));
     };
 
     const cambiarDescuentoManual = (idProducto: number, descuento: number) => {
@@ -482,7 +522,7 @@ export const Caja: React.FC = () => {
                 return { 
                     ...item, 
                     descuento: descFinal, 
-                    subTotal: (item.precioUnitario - descFinal) * item.cantidad 
+                    subTotal: Math.round((item.precioUnitario - descFinal) * item.cantidad)
                 };
             }
             return item;
@@ -503,7 +543,7 @@ export const Caja: React.FC = () => {
                 return { 
                     ...item, 
                     cantidad: cantValida, 
-                    subTotal: (item.precioUnitario - item.descuento) * cantValida 
+                    subTotal: Math.round((item.precioUnitario - item.descuento) * cantValida)
                 };
             }
             return item;
@@ -512,7 +552,31 @@ export const Caja: React.FC = () => {
 
     const actualizarDiasItemCarrito = (idProducto: number, dias: number) => {
         if (dias < 1) return;
-        setCarrito(carrito.map(item => item.idProducto === idProducto ? { ...item, diasSuscripcion: dias } : item));
+        setCarrito(prev => prev.map(item => {
+            if (item.idProducto === idProducto) {
+                const pBase = productos.find(p => p.id === idProducto);
+                const diasBase = pBase?.diasDuracion || 30;
+                
+                // Prorrateo automático de tarifa basado en días contratados
+                const tarifaDiaria = pBase ? (pBase.precioVenta / diasBase) : (item.precioUnitario / 30);
+                const nuevoPrecioProporcional = Math.round(tarifaDiaria * dias);
+
+                return { 
+                    ...item, 
+                    diasSuscripcion: dias,
+                    precioUnitario: nuevoPrecioProporcional,
+                    subTotal: Math.round((nuevoPrecioProporcional - item.descuento) * item.cantidad)
+                };
+            }
+            return item;
+        }));
+    };
+
+    const aplicarMesesExactosCarrito = (idProducto: number, meses: number) => {
+        if (meses < 1) return;
+        const fechaFinCalculada = sumarMesesExactos(fechaVenta, meses);
+        const diasReales = calcularDiasRealesEntreFechas(fechaVenta, fechaFinCalculada);
+        actualizarDiasItemCarrito(idProducto, diasReales);
     };
 
     const eliminarDelCarrito = (idProducto: number) => {
@@ -556,7 +620,7 @@ export const Caja: React.FC = () => {
                 idProducto: item.idProducto,
                 cantidad: item.cantidad,
                 precioUnitario: item.precioUnitario,
-                subTotal: (item.precioUnitario - (item.descuento || 0)) * item.cantidad,
+                subTotal: Math.round((item.precioUnitario - (item.descuento || 0)) * item.cantidad),
                 descuento: item.descuento || 0,
                 metadataDigital: metaFinal || ''
             };
@@ -858,6 +922,17 @@ export const Caja: React.FC = () => {
                                             </div>
 
                                             <div className={styles.controlGroup}>
+                                                <span className={styles.cartLabel}>P.Unit (C$):</span>
+                                                <input 
+                                                    type="number" 
+                                                    min={0} 
+                                                    value={item.precioUnitario} 
+                                                    onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, Number(e.target.value))} 
+                                                    className={styles.smallInput} 
+                                                />
+                                            </div>
+
+                                            <div className={styles.controlGroup}>
                                                 <span className={`${styles.cartLabel} ${styles.labelDescuento}`}>Desc (C$):</span>
                                                 <input 
                                                     type="number" 
@@ -871,7 +946,7 @@ export const Caja: React.FC = () => {
                                         </div>
 
                                         {pBase?.esSuscripcion && (
-                                            <div className={styles.cartItemSubRow}>
+                                            <div className={styles.cartItemSubRow} style={{ marginTop: '4px', gap: '8px' }}>
                                                 <div className={styles.controlGroup}>
                                                     <span className={`${styles.cartLabel} ${styles.labelSuscripcion}`}>Días:</span>
                                                     <input 
@@ -882,7 +957,26 @@ export const Caja: React.FC = () => {
                                                         className={styles.smallInput} 
                                                     />
                                                 </div>
-                                                <span style={{ fontSize: '0.7rem', color: '#64748b', alignSelf: 'center' }}>Base: C$ {item.precioUnitario}</span>
+
+                                                <div className={styles.controlGroup}>
+                                                    <span className={styles.cartLabel}>Meses Exactos:</span>
+                                                    <select 
+                                                        onChange={(e) => {
+                                                            const m = Number(e.target.value);
+                                                            if (m > 0) aplicarMesesExactosCarrito(item.idProducto, m);
+                                                        }}
+                                                        className={styles.selectControl}
+                                                        style={{ padding: '2px 4px', fontSize: '0.75rem' }}
+                                                        defaultValue=""
+                                                    >
+                                                        <option value="" disabled>Seleccionar...</option>
+                                                        <option value="1">1 mes</option>
+                                                        <option value="2">2 meses</option>
+                                                        <option value="3">3 meses</option>
+                                                        <option value="6">6 meses</option>
+                                                        <option value="12">12 meses</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                         )}
 
