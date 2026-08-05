@@ -132,18 +132,22 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                 Password: regPassword
             };
 
-            await api.post('/Auth/registro-cliente', datosRegistro);
+            const res = await api.post('/Auth/registro-cliente', datosRegistro);
+            if (res.data?.mensaje) {
+                console.log(res.data.mensaje); 
+            }
+            
             setIsRegisterSuccess(true);
             
             setTimeout(() => {
                 setIsRegisterSuccess(false);
-                setEsRegistro(false); 
+                setEsRegistro(false); // Redirigir a la pantalla de Login
                 setRegNombre('');
                 setRegCorreo('');
                 setRegUsuario('');
                 setRegTelefono('');
                 setRegPassword('');
-            }, 2000);
+            }, 2500);
 
         } catch (error: any) {
             console.error('Error en el registro:', error);
@@ -151,7 +155,9 @@ export const ClientesLoginRegister: React.FC<ClientesLoginRegisterProps> = ({ al
                 const listaErrores = Object.values(error.response.data.errors).flat().join(' | ');
                 setErrorSubmit(`Validación fallida: ${listaErrores}`);
             } else {
-                const msg = typeof error.response?.data === 'string' ? error.response.data : 'Hubo un problema al crear tu usuario.';
+                const msg = typeof error.response?.data === 'string' 
+                    ? error.response.data 
+                    : error.response?.data?.mensaje || 'Hubo un problema al procesar tu solicitud.';
                 setErrorSubmit(msg);
             }
         } finally {
