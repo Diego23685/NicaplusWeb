@@ -23,6 +23,12 @@
   padding-left: 8px;
 }
 
+.brandLogoImg {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
 .brandLogoContainer {
   display: flex;
   align-items: center;

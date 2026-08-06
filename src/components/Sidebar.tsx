@@ -54,7 +54,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                 {/* LOGO / BRANDING */}
                 <div className={styles.branding}>
                     <div className={styles.brandLogoContainer}>
-                        <div className={styles.brandLogo}>N+</div>
+                        <img 
+                            src="../../public/logo.png" 
+                            alt="Nicaplus Gaming" 
+                            className={styles.brandLogoImg} 
+                        />
                         <div>
                             <h2 className={styles.brandTitle}>
                                 NICA<span className={styles.brandTeal}>PLUS</span>
