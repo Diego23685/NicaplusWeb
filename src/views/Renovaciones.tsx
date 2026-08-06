@@ -112,7 +112,7 @@ export const Renovaciones: React.FC = () => {
                 `Te recordamos que tu suscripción de *${plataformaPlan}*\n\n` +
                 `(${credenciales})\n\n` + 
                 `- *vence el día de hoy* (${fechaVencimiento}).\n\n` +
-                `💳 Costo de renovación: C$ ${monto}\n\n` +
+                `- 💳 *Costo de renovación:* C$ ${monto}\n\n` +
                 `Para evitar la suspensión de tu servicio, realiza tu pago y envíanos el comprobante por este mismo chat.\n\n` +
                 `¡Gracias por elegir NICAPLUS STREAM! 💙`;
 
@@ -123,10 +123,10 @@ export const Renovaciones: React.FC = () => {
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
                 `Te notificamos que tu suscripción de *${plataformaPlan}* \n\n` +
                 `(${credenciales})\n\n` + 
-                `se encuentra vencida desde el ${fechaVencimiento}.\n\n` +
-                `💳 Costo de renovación: C$ ${monto}\n\n` +
+                `- *se encuentra vencida desde el* ${fechaVencimiento}.\n\n` +
+                `- 💳 *Costo de renovación:* C$ ${monto}\n\n` +
                 `Para renovar tu servicio, realiza tu depósito o transferencia y envíanos el comprobante por este mismo chat.\n\n` +
-                `Importante: Si la renovación no se realiza a tiempo, el perfil podrá ser suspendido o reasignado de acuerdo con la disponibilidad del servicio.\n\n` +
+                `- ⚠️ *Importante:* Si la renovación no se realiza a tiempo, el perfil podrá ser suspendido o reasignado de acuerdo con la disponibilidad del servicio.\n\n` +
                 `¡Gracias por elegir NICAPLUS STREAM! 💙`;
 
         } else {
@@ -136,9 +136,9 @@ export const Renovaciones: React.FC = () => {
                 `Hola, *${clienteNombre}*. 👋\n\n` +
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
                 `Te informamos que tu suscripción de *${plataformaPlan}* (${credenciales}) vence en ${diasTexto}, el ${fechaVencimiento}.\n\n` +
-                `💳 Costo de renovación: C$ ${monto}\n\n` +
+                `- 💳 *Costo de renovación:* C$ ${monto}\n\n` +
                 `Te recomendamos estar atento a la fecha de vencimiento para evitar interrupciones en tu servicio.\n\n` +
-                `Una vez realizado el pago, envíanos tu comprobante por este mismo chat para procesar tu renovación.\n\n` +
+                `- 📎 *Comprobante:* Una vez realizado el pago, envíanos tu comprobante por este mismo chat para procesar tu renovación.\n\n` +
                 `¡Gracias por elegir NICAPLUS STREAM! 💙`;
         }
 
