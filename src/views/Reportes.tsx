@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch, FaPrint, FaWhatsapp } from 'react-icons/fa';
+import { 
+    FaEdit, 
+    FaTimes, 
+    FaCalendarAlt, 
+    FaFilePdf, 
+    FaSearch, 
+    FaPrint, 
+    FaWhatsapp, 
+    FaChevronLeft, 
+    FaChevronRight 
+} from 'react-icons/fa';
 import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
 import '../assets/styles/Reportes.css';
 
@@ -10,6 +20,9 @@ export const Reportes: React.FC = () => {
     const [hasta, setHasta] = useState('');
     const [datosReporte, setDatosReporte] = useState<any>(null);
     const [cargandoReporte, setCargandoReporte] = useState(false);
+
+    // Estado para la navegación dinámica entre meses con flechas
+    const [fechaReferenciaMes, setFechaReferenciaMes] = useState<Date>(new Date());
 
     const [clientes, setClientes] = useState<any[]>([]);
     const [productos, setProductos] = useState<any[]>([]);
@@ -36,7 +49,14 @@ export const Reportes: React.FC = () => {
         }
     };
 
-    const aplicarRangoRapido = (tipo: 'hoy' | 'semana' | 'mes' | 'ano') => {
+    const formatearLocal = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dia}`;
+    };
+
+    const aplicarRangoRapido = (tipo: 'hoy' | 'semana' | 'mes' | 'mesPasado' | 'ano') => {
         const hoy = new Date();
         const opciones = { timeZone: 'America/Managua', year: 'numeric' as const, month: '2-digit' as const, day: '2-digit' as const };
         const [year, month, day] = new Intl.DateTimeFormat('fr-CA', opciones).format(hoy).split('-');
@@ -49,19 +69,30 @@ export const Reportes: React.FC = () => {
             fInicio.setDate(fInicio.getDate() - (diaSemana - 1));
         } else if (tipo === 'mes') {
             fInicio = new Date(Number(year), Number(month) - 1, 1);
+            fFin = new Date(Number(year), Number(month), 0); // Último día del mes actual
+            setFechaReferenciaMes(new Date(Number(year), Number(month) - 1, 1));
+        } else if (tipo === 'mesPasado') {
+            fInicio = new Date(Number(year), Number(month) - 2, 1);
+            fFin = new Date(Number(year), Number(month) - 1, 0); // Último día del mes anterior
+            setFechaReferenciaMes(new Date(Number(year), Number(month) - 2, 1));
         } else if (tipo === 'ano') {
             fInicio = new Date(Number(year), 0, 1);
         }
 
-        const formatearLocal = (d: Date) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const dia = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${dia}`;
-        };
-
         setDesde(formatearLocal(fInicio));
         setHasta(formatearLocal(fFin));
+    };
+
+    const cambiarMesRelativo = (deltaMeses: number) => {
+        const nuevaFecha = new Date(fechaReferenciaMes);
+        nuevaFecha.setMonth(nuevaFecha.getMonth() + deltaMeses);
+        setFechaReferenciaMes(nuevaFecha);
+
+        const primerDia = new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth(), 1);
+        const ultimoDia = new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth() + 1, 0);
+
+        setDesde(formatearLocal(primerDia));
+        setHasta(formatearLocal(ultimoDia));
     };
 
     const ConsultarReporte = async () => {
@@ -554,11 +585,37 @@ export const Reportes: React.FC = () => {
             </div>
             
             <div className="filtrosContainer">
-                <div className="rangoBotones">
+                <div className="rangoBotones" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button onClick={() => aplicarRangoRapido('hoy')} className="btnRango">Hoy</button>
                     <button onClick={() => aplicarRangoRapido('semana')} className="btnRango">Esta Semana</button>
                     <button onClick={() => aplicarRangoRapido('mes')} className="btnRango">Este Mes</button>
+                    <button onClick={() => aplicarRangoRapido('mesPasado')} className="btnRango">Mes Pasado</button>
                     <button onClick={() => aplicarRangoRapido('ano')} className="btnRango">Año</button>
+
+                    {/* Controles de Navegación por Meses con Flechas */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px', background: 'rgba(255, 255, 255, 0.05)', padding: '2px 8px', borderRadius: '6px' }}>
+                        <button 
+                            onClick={() => cambiarMesRelativo(-1)} 
+                            className="btnRango" 
+                            title="Mes Anterior"
+                            style={{ padding: '6px 10px', display: 'flex', alignItems: 'center' }}
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#e2e8f0', minWidth: '110px', textAlign: 'center' }}>
+                            {fechaReferenciaMes.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase()}
+                        </span>
+
+                        <button 
+                            onClick={() => cambiarMesRelativo(1)} 
+                            className="btnRango" 
+                            title="Mes Siguiente"
+                            style={{ padding: '6px 10px', display: 'flex', alignItems: 'center' }}
+                        >
+                            <FaChevronRight />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="fechasInputs">
