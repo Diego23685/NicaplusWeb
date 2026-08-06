@@ -87,20 +87,60 @@ export const Renovaciones: React.FC = () => {
             alert("Este cliente no cuenta con un teléfono registrado.");
             return;
         }
+
         const telefonoLimpio = item.cliente.telefono.replace(/[^0-9]/g, '');
-        const fechaFormateada = new Date(item.fechaVencimiento).toLocaleDateString();
+        const clienteNombre = item.cliente.nombre || 'Cliente';
+        const plataformaPlan = item.nombreServicio;
+        const credenciales = item.detallesCredenciales || 'No especificada';
+        const monto = item.costoRenovacion ?? 0;
 
-        let saludoUrgencia = `vence el ${fechaFormateada}`;
-        if (item.diasRestantes === 0) saludoUrgencia = "*VENCE HOY MISMO*";
-        if (item.diasRestantes < 0) saludoUrgencia = "*SE ENCUENTRA VENCIDO*";
+        // Formatear la fecha a: "DD de [Mes en letras] del YYYY"
+        const fechaObj = new Date(item.fechaVencimiento);
+        const fechaVencimiento = new Intl.DateTimeFormat('es-ES', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }).format(fechaObj).replace(' de ', ' de ').replace(/ de (\d{4})$/, ' del $1');
 
-        const mensaje = `*NICAPLUS GAMING & TECH*\n` +
-            `Hola ${item.cliente.nombre}, te saludamos de NICAPLUS.\n` +
-            `Te notificamos que tu servicio de *${item.nombreServicio}* ${saludoUrgencia}.\n\n` +
-            `Puedes realizar tu depósito o transferencia para procesar tu renovación y evitar la caída o corte de tu perfil.\n\n` +
-            `¡Gracias por tu preferencia!`;
+        let mensaje = '';
 
-        window.open(`https://wa.me/505${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        if (item.diasRestantes === 0) {
+            // Plantilla: Vence hoy
+            mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
+                `Hola, *${clienteNombre}*. 👋\n\n` +
+                `Te saludamos de *NICAPLUS STREAM.*\n\n` +
+                `Te recordamos que tu suscripción de *${plataformaPlan}*\n\n` +
+                `(${credenciales})\n\n` + 
+                `vence el día de hoy (${fechaVencimiento}).\n\n` +
+                `💳 Costo de renovación: C$ ${monto}\n\n` +
+                `Para evitar la suspensión de tu servicio, realiza tu pago y envíanos el comprobante por este mismo chat.\n\n` +
+                `¡Gracias por elegir NICAPLUS STREAM! 💙`;
+
+        } else if (item.diasRestantes < 0) {
+            // Plantilla: Suscripción vencida
+            mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
+                `Hola, *${clienteNombre}*. 👋\n\n` +
+                `Te saludamos de *NICAPLUS STREAM.*\n\n` +
+                `Te notificamos que tu suscripción de *${plataformaPlan}* (${credenciales}) se encuentra vencida desde el ${fechaVencimiento}.\n\n` +
+                `💳 Costo de renovación: C$ ${monto}\n\n` +
+                `Para renovar tu servicio, realiza tu depósito o transferencia y envíanos el comprobante por este mismo chat.\n\n` +
+                `Importante: Si la renovación no se realiza a tiempo, el perfil podrá ser suspendido o reasignado de acuerdo con la disponibilidad del servicio.\n\n` +
+                `¡Gracias por elegir NICAPLUS STREAM! 💙`;
+
+        } else {
+            // Plantilla: Vence en N días
+            const diasTexto = item.diasRestantes === 1 ? '1 día' : `${item.diasRestantes} días`;
+            mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
+                `Hola, *${clienteNombre}*. 👋\n\n` +
+                `Te saludamos de *NICAPLUS STREAM.*\n\n` +
+                `Te informamos que tu suscripción de *${plataformaPlan}* (${credenciales}) vence en ${diasTexto}, el ${fechaVencimiento}.\n\n` +
+                `💳 Costo de renovación: C$ ${monto}\n\n` +
+                `Te recomendamos estar atento a la fecha de vencimiento para evitar interrupciones en tu servicio.\n\n` +
+                `Una vez realizado el pago, envíanos tu comprobante por este mismo chat para procesar tu renovación.\n\n` +
+                `¡Gracias por elegir NICAPLUS STREAM! 💙`;
+        }
+
+        window.open(`https://api.whatsapp.com/send/?phone=505${telefonoLimpio}&text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
     const abrirHistorial = async (suscripcion: Suscripcion) => {
@@ -351,6 +391,7 @@ export const Renovaciones: React.FC = () => {
                     )}
                 </div>
             )}
+            
 
             {/* MODAL PROCESAR PAGO */}
             {mostrarRenovar && suscripcionRenovar && (

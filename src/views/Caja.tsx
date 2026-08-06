@@ -167,7 +167,7 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
 
     datosVenta.detalles.forEach((item: any, idx: number) => {
         lineas.push(`*Servicio ${idx + 1}:* ${item.nombre || 'Servicio/Producto'}`);
-        lineas.push(`🔹 *Cantidad:* ${item.cantidad}`);
+        lineas.push(`   🔹 *Cantidad:* ${item.cantidad}`);
         
         if (item.descuento && item.descuento > 0) {
             const descPorItem = item.descuento * item.cantidad;
