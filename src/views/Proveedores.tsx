@@ -40,6 +40,7 @@ export const Proveedores: React.FC = () => {
   const [nuevoPrecioVenta, setNuevoPrecioVenta] = useState<number | ''>('');
   const [garantiaCompra, setGarantiaCompra] = useState(30);
   const [tiempoEntregaRealDias, setTiempoEntregaRealDias] = useState(1);
+  const [observacionesCompra, setObservacionesCompra] = useState('');
 
   // ESTADO PARA MODAL DE EDICIÓN DE COMPRA
   const [compraAEditar, setCompraAEditar] = useState<any | null>(null);
@@ -147,6 +148,7 @@ export const Proveedores: React.FC = () => {
     const payload = {
       idProveedor: Number(compraAEditar.idProveedor),
       totalCompra: totalCalculado,
+      observaciones: compraAEditar.observaciones || '',
       detalles: compraAEditar.detalles.map((d: any) => ({
         idProducto: Number(d.idProducto),
         cantidad: Number(d.cantidad),
@@ -206,6 +208,7 @@ export const Proveedores: React.FC = () => {
       idProveedor: Number(idProvSeleccionado),
       totalCompra: cantidadCompra * costoUnitarioCompra,
       tiempoEntregaRealDias: Number(tiempoEntregaRealDias),
+      observaciones: observacionesCompra,
       detalles: [
         {
           idProducto: Number(idProdSeleccionado),
@@ -224,6 +227,7 @@ export const Proveedores: React.FC = () => {
       setCantidadCompra(1);
       setCostoUnitarioCompra(0);
       setNuevoPrecioVenta('');
+      setObservacionesCompra('');
       await cargarDatos();
     } catch {
       alert("No fue posible registrar la compra.");
@@ -363,6 +367,17 @@ export const Proveedores: React.FC = () => {
                   <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} className={styles.input} />
                 </div>
 
+                <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
+                  <label>Notas / Cuenta o Correo Renovado</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Cuenta renovada gomez@gmail.com o Lote #412" 
+                    value={observacionesCompra} 
+                    onChange={e => setObservacionesCompra(e.target.value)} 
+                    className={styles.input} 
+                  />
+                </div>
+
                 <button type="submit" className={styles.btnRegistrarCompra} style={{ gridColumn: 'span 2' }}>
                   <FaPlus /> Registrar compra e ingresar stock
                 </button>
@@ -422,6 +437,7 @@ export const Proveedores: React.FC = () => {
                   <th>Fecha</th>
                   <th>Proveedor</th>
                   <th>Detalle Items</th>
+                  <th>Notas / Correos</th>
                   <th style={{ textAlign: "right" }}>Total</th>
                   <th style={{ textAlign: "center" }}>Acciones</th>
                 </tr>
@@ -438,6 +454,11 @@ export const Proveedores: React.FC = () => {
                           <div key={idx}>• {d.cantidad}x {d.productoNombre} (a C$ {d.costoUnitario})</div>
                         ))}
                       </div>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontStyle: c.observaciones ? 'normal' : 'italic' }}>
+                        {c.observaciones || 'Sin notas'}
+                      </span>
                     </td>
                     <td style={{ textAlign: "right", fontWeight: "bold", color: "#ef4444" }}>
                       C$ {c.totalCompra.toLocaleString()}
@@ -456,7 +477,7 @@ export const Proveedores: React.FC = () => {
                 ))}
                 {historialCompras.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
+                    <td colSpan={7} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
                       No hay compras registradas en el historial.
                     </td>
                   </tr>
@@ -546,6 +567,17 @@ export const Proveedores: React.FC = () => {
                 >
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
                 </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Notas / Cuenta o Correo Renovado</label>
+                <input 
+                  type="text" 
+                  value={compraAEditar.observaciones || ''} 
+                  onChange={e => setCompraAEditar({ ...compraAEditar, observaciones: e.target.value })}
+                  className={styles.input}
+                  placeholder="Ej: Cuenta renovada gomez@gmail.com"
+                />
               </div>
 
               <div>
