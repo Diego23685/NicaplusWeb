@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import { FaWhatsapp } from 'react-icons/fa';
-import styles from '../assets/styles/Renovaciones.module.css';
+import { FaWhatsapp, FaHistory, FaTimes, FaSearch, FaDollarSign, FaBan, FaCalendarAlt, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
 interface Cliente {
     nombre: string;
@@ -35,6 +34,9 @@ export const Renovaciones: React.FC = () => {
     const [busqueda, setBusqueda] = useState<string>('');
     const [cargando, setCargando] = useState<boolean>(true);
 
+    // ESTADO PARA EXPANDIR / COLAPSAR TARJETAS POR ID
+    const [tarjetaExpandidaId, setTarjetaExpandidaId] = useState<number | null>(null);
+
     const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(false);
     const [historialRenovaciones, setHistorialRenovaciones] = useState<HistorialRenovacion[]>([]);
     const [servicioSeleccionado, setServicioSeleccionado] = useState<Suscripcion | null>(null);
@@ -60,7 +62,7 @@ export const Renovaciones: React.FC = () => {
     const cargarSuscripciones = async () => {
         try {
             const res = await api.get<Suscripcion[]>('/suscripciones/alertas');
-            setSuscripciones(res.data);
+            setSuscripciones(res.data || []);
         } catch (err) {
             console.error("Error al traer alertas de renovación:", err);
         } finally {
@@ -81,6 +83,10 @@ export const Renovaciones: React.FC = () => {
             return coincideTexto && coincideAlerta;
         });
     }, [suscripciones, busqueda, filtroAlerta]);
+
+    const toggleExpandirTarjeta = (id: number) => {
+        setTarjetaExpandidaId(prevId => (prevId === id ? null : id));
+    };
 
     const dispararRecordatorioWhatsApp = (item: Suscripcion) => {
         if (!item.cliente || !item.cliente.telefono) {
@@ -108,7 +114,7 @@ export const Renovaciones: React.FC = () => {
             setCargandoHistorial(true);
             setServicioSeleccionado(suscripcion);
             const res = await api.get<HistorialRenovacion[]>(`/renovaciones/suscripcion/${suscripcion.id}`);
-            setHistorialRenovaciones(res.data);
+            setHistorialRenovaciones(res.data || []);
             setMostrarHistorial(true);
         } catch (error) {
             console.error("Error cargando historial:", error);
@@ -184,229 +190,300 @@ export const Renovaciones: React.FC = () => {
         return estilos[alerta] || estilos['Normal'];
     };
 
-    if (cargando) return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Auditando cronología de vencimientos...</div>;
+    if (cargando) return (
+        <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>
+            Auditando cronología de vencimientos...
+        </div>
+    );
 
     return (
-        <div className={styles.container}>
+        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
+            
             {/* ENCABEZADO */}
-            <div className={styles.header}>
-                <h3>Control de Renovaciones y Alertas</h3>
-                <p>Monitoreo preventivo de cuentas streaming y licencias activas.</p>
+            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div>
+                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Alertas de Renovación</h3>
+                    <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Monitoreo de cuentas streaming y licencias</small>
+                </div>
+
+                {/* Filtros horizontales por estatus de alerta */}
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                    {['Todos', 'Vencido', 'Hoy', '1 Dia', '3 Dias', '7 Dias'].map((tipo) => (
+                        <button 
+                            key={tipo}
+                            onClick={() => setFiltroAlerta(tipo)}
+                            style={{
+                                background: filtroAlerta === tipo ? '#38bdf8' : '#0f172a',
+                                color: filtroAlerta === tipo ? '#0f172a' : '#94a3b8',
+                                border: '1px solid #334155',
+                                padding: '6px 12px',
+                                borderRadius: '16px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {tipo === 'Todos' ? '👁️ Ver Todas' : tipo === 'Vencido' ? '🛑 Vencidas' : `⏰ ${tipo}`}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* FILTROS CRÍTICOS */}
-            <div className={styles.filterContainer}>
-                {['Todos', 'Vencido', 'Hoy', '1 Dia', '3 Dias', '7 Dias'].map((tipo) => (
-                    <button 
-                        key={tipo}
-                        onClick={() => setFiltroAlerta(tipo)}
-                        className={styles.filterBtn}
-                        style={{
-                            background: filtroAlerta === tipo ? '#581c7e' : '#1e293b'
-                        }}
-                    >
-                        {tipo === 'Todos' ? '👁️ Ver Todas' : tipo === 'Vencido' ? '🛑 Vencidas' : `⏰ ${tipo}`}
-                    </button>
-                ))}
-            </div>
-
-            {/* BUSCADOR */}
-            <div className={styles.searchContainer}>
+            {/* BÚSQUEDA INPUT */}
+            <div style={{ position: 'relative' }}>
+                <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
                 <input 
                     type="text" 
-                    placeholder="Filtrar por nombre de servicio o nombre de cliente..." 
+                    placeholder="Buscar cliente o servicio..." 
                     value={busqueda} 
                     onChange={e => setBusqueda(e.target.value)} 
-                    className={styles.input} 
+                    style={{
+                        width: '100%',
+                        padding: '10px 12px 10px 38px',
+                        background: '#1e293b',
+                        border: '1px solid #334155',
+                        borderRadius: '10px',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                    }}
                 />
             </div>
 
-            {/* TABLA DE CONTENIDO CON SCROLL INTELIGENTE */}
-            <div className={styles.tablePanel}>
-                <div className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Servicio</th>
-                                <th>Vencimiento</th>
-                                <th style={{ textAlign: 'center' }}>Estatus Alerta</th>
-                                <th style={{ textAlign: 'center' }}>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {suscripcionesFiltradas.map((s) => {
-                                const configBadge = badgeEstilo(s.alertaFiltro);
-                                return (
-                                    <tr key={s.id}>
-                                        <td>
-                                            <strong>{s.cliente?.nombre || 'Cliente Genérico'}</strong>
-                                            <small className={styles.subText}>📞 {s.cliente?.telefono || 'Sin número'}</small>
-                                        </td>
-                                        <td>
-                                            <strong>{s.nombreServicio}</strong>
-                                            <small className={styles.subTextCredenciales}>{s.detallesCredenciales}</small>
-                                        </td>
-                                        <td>
-                                            {new Date(s.fechaVencimiento).toLocaleDateString()}
-                                            <small style={{ display: 'block', color: s.diasRestantes < 0 ? '#ef4444' : '#4ade80', fontWeight: 'bold' }}>
-                                                {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
+            {/* FEED MÓVIL EN ACORDEÓN COMPACTO */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {suscripcionesFiltradas.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+                        No hay renovaciones que requieran atención con este criterio.
+                    </div>
+                ) : (
+                    suscripcionesFiltradas.map((s) => {
+                        const configBadge = badgeEstilo(s.alertaFiltro);
+                        const estaExpandido = tarjetaExpandidaId === s.id;
+
+                        return (
+                            <div 
+                                key={s.id} 
+                                style={{ 
+                                    background: '#1e293b', 
+                                    padding: '12px', 
+                                    borderRadius: '12px', 
+                                    border: '1px solid #334155', 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '8px' 
+                                }}
+                            >
+                                {/* FILA COMPACTA PRINCIPAL: CLIENTE + INDICADOR + BOTÓN DESPLEGABLE */}
+                                <div 
+                                    onClick={() => toggleExpandirTarjeta(s.id)}
+                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ color: '#38bdf8', fontSize: '0.8rem' }}>
+                                            {estaExpandido ? <FaChevronUp /> : <FaChevronDown />}
+                                        </span>
+                                        <div>
+                                            <strong style={{ color: '#fff', fontSize: '0.9rem', display: 'block' }}>
+                                                {s.cliente?.nombre || 'Cliente Genérico'}
+                                            </strong>
+                                            <small style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                                📞 {s.cliente?.telefono || 'Sin número'}
                                             </small>
-                                        </td>
-                                        
-                                        <td style={{ textAlign: 'center' }}>
-                                            <span className={styles.badgeAlert} style={{ background: configBadge.bg, color: configBadge.color }}>
-                                                {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
-                                            </span>
-                                            
-                                            {s.estado === 'NoRenovar' && (
-                                                <small style={{ display: 'block', color: '#f59e0b', marginTop: '4px', fontWeight: 'bold' }}>
-                                                    🚫 No renovará
-                                                </small>
-                                            )}
-                                        </td>
+                                        </div>
+                                    </div>
 
-                                        <td style={{ textAlign: 'center' }}>
-                                            <div className={styles.actionsCellWrapper}>
-                                                <button onClick={() => dispararRecordatorioWhatsApp(s)} className={styles.btnAvisar}>
-                                                    <FaWhatsapp /> Avisar
-                                                </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ background: configBadge.bg, color: configBadge.color, border: `1px solid ${configBadge.color}`, padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700 }}>
+                                            {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                                <button onClick={() => abrirHistorial(s)} className={styles.btnHistorialIcon}>
-                                                    📜
-                                                </button>
-
-                                                <button
-                                                    onClick={() => {
-                                                        setSuscripcionRenovar(s);
-                                                        setMonto(s.costoRenovacion);
-                                                        setFechaPago(obtenerFechaLocalHoy());
-                                                        setMostrarRenovar(true);
-                                                    }}
-                                                    className={styles.btnRenovar}
-                                                >
-                                                    💵 Renovar
-                                                </button>
-
-                                                <button
-                                                    disabled={s.estado === 'NoRenovar'}
-                                                    onClick={() => {
-                                                        setSuscripcionRenovar(s);
-                                                        setMotivoCancelacion("");
-                                                        setMostrarCancelar(true);
-                                                    }}
-                                                    className={styles.btnCancelarRow}
-                                                    style={{
-                                                        opacity: s.estado === 'NoRenovar' ? 0.5 : 1,
-                                                        cursor: s.estado === 'NoRenovar' ? 'not-allowed' : 'pointer'
-                                                    }}
-                                                >
-                                                    {s.estado === 'NoRenovar' ? '🚫 Cancelado' : '❌ Cancelar'}
-                                                </button>
+                                {/* CONTENIDO AMPLIADO / DESPLEGABLE (SOLO SE MUESTRA AL TOCAR LA TARJETA) */}
+                                {estaExpandido && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid #334155', paddingTop: '8px', marginTop: '2px' }}>
+                                        {/* Detalle del producto / servicio a renovar */}
+                                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #38bdf8', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <strong style={{ color: '#38bdf8', fontSize: '0.85rem' }}>📺 {s.nombreServicio}</strong>
+                                                <strong style={{ color: '#10b981', fontSize: '0.82rem' }}>C$ {s.costoRenovacion}</strong>
                                             </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {suscripcionesFiltradas.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} style={{ padding: '20px', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>
-                                        No se registran renovaciones que requieran atención bajo este criterio.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            <small style={{ color: '#cbd5e1', fontSize: '0.72rem', wordBreak: 'break-all' }}>
+                                                {s.detallesCredenciales}
+                                            </small>
+                                        </div>
+
+                                        {/* Fechas de vencimiento y estatus */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                                            <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaCalendarAlt size={10} /> Vence: {new Date(s.fechaVencimiento).toLocaleDateString()}
+                                            </span>
+                                            <strong style={{ color: s.diasRestantes < 0 ? '#ef4444' : '#10b981', fontSize: '0.75rem' }}>
+                                                {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* BARRA FIJA DE BOTONES DE ACCIÓN (SIEMPRE VISIBLES) */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px', borderTop: '1px solid #334155', paddingTop: '8px' }}>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); dispararRecordatorioWhatsApp(s); }}
+                                        style={{ background: '#25D366', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                        title="Enviar aviso por WhatsApp"
+                                    >
+                                        <FaWhatsapp /> Avisar
+                                    </button>
+
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); abrirHistorial(s); }}
+                                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                        title="Ver historial de pagos"
+                                    >
+                                        <FaHistory /> Hist.
+                                    </button>
+
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSuscripcionRenovar(s);
+                                            setMonto(s.costoRenovacion);
+                                            setFechaPago(obtenerFechaLocalHoy());
+                                            setMostrarRenovar(true);
+                                        }}
+                                        style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                    >
+                                        <FaDollarSign /> Renovar
+                                    </button>
+
+                                    <button 
+                                        disabled={s.estado === 'NoRenovar'}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSuscripcionRenovar(s);
+                                            setMotivoCancelacion("");
+                                            setMostrarCancelar(true);
+                                        }}
+                                        style={{ background: s.estado === 'NoRenovar' ? '#334155' : '#ef4444', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', cursor: s.estado === 'NoRenovar' ? 'not-allowed' : 'pointer', opacity: s.estado === 'NoRenovar' ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                    >
+                                        <FaBan /> Cancelar
+                                    </button>
+                                </div>
+
+                            </div>
+                        );
+                    })
+                )}
             </div>
 
             {/* MODAL HISTORIAL SIDEBAR */}
             {mostrarHistorial && (
-                <div className={styles.sidebarHistorial}>
-                    <div className={styles.sidebarHeader}>
-                        <h3>📜 Historial</h3>
-                        <button onClick={() => setMostrarHistorial(false)} className={styles.btnCloseSidebar}>X</button>
-                    </div>
-                    <hr style={{ borderColor: '#334155', margin: '15px 0' }}/>
-                    {servicioSeleccionado && (
-                        <div className={styles.infoCard}>
-                            <strong>{servicioSeleccionado.nombreServicio}</strong>
-                            <small>{servicioSeleccionado.cliente?.nombre}</small>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '80vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>📜 Historial de Pagos</h4>
+                            <button onClick={() => setMostrarHistorial(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
-                    )}
-                    {cargandoHistorial ? (
-                        <p>Cargando historial...</p>
-                    ) : historialRenovaciones.length === 0 ? (
-                        <p style={{ color: '#94a3b8' }}>Esta suscripción todavía no tiene renovaciones.</p>
-                    ) : (
-                        historialRenovaciones.map((r) => (
-                            <div key={r.id} className={styles.historialCard}>
-                                <strong>💰 ${r.monto}</strong>
-                                <small>Método: {r.metodoPago}</small>
-                                <small>Fecha pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
-                                <small className={styles.vencimientoFuturo}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
-                                <p>{r.observacion}</p>
+
+                        {servicioSeleccionado && (
+                            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.78rem' }}>
+                                <strong style={{ color: '#fff', display: 'block' }}>{servicioSeleccionado.nombreServicio}</strong>
+                                <small style={{ color: '#94a3b8' }}>Cliente: {servicioSeleccionado.cliente?.nombre}</small>
                             </div>
-                        ))
-                    )}
-                </div>
-            )}
+                        )}
 
-            {/* MODAL PROCESAR PAGO */}
-            {mostrarRenovar && suscripcionRenovar && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalBox}>
-                        <h3 style={{ color: '#38bdf8', marginTop: 0 }}>💵 Procesar Renovación</h3>
-                        <div className={styles.infoCard}>
-                            <strong>{suscripcionRenovar.nombreServicio}</strong>
-                            <small>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
-                            <small>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
-                        </div>
-
-                        <label className={styles.label}>Fecha de Pago</label>
-                        <input 
-                            type="date" 
-                            value={fechaPago} 
-                            onChange={e => setFechaPago(e.target.value)} 
-                            className={styles.input}
-                            style={{ marginBottom: '15px' }} 
-                        />
-
-                        <label className={styles.label}>Monto</label>
-                        <input type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} className={styles.input} style={{ marginBottom: '15px' }} />
-
-                        <label className={styles.label}>Método de pago</label>
-                        <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} className={styles.select} style={{ marginBottom: '20px' }}>
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Tarjeta">Tarjeta</option>
-                        </select>
-
-                        <div className={styles.modalActions}>
-                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} className={styles.btnModalClose}>Cancelar</button>
-                            <button onClick={procesarRenovacion} className={styles.btnModalConfirm}>Confirmar Pago</button>
-                        </div>
+                        {cargandoHistorial ? (
+                            <p style={{ color: '#38bdf8', fontSize: '0.8rem', textAlign: 'center' }}>Cargando historial...</p>
+                        ) : historialRenovaciones.length === 0 ? (
+                            <p style={{ color: '#64748b', fontSize: '0.8rem', textAlign: 'center', margin: '14px 0' }}>Esta suscripción todavía no tiene renovaciones.</p>
+                        ) : (
+                            historialRenovaciones.map((r) => (
+                                <div key={r.id} style={{ background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.75rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <strong style={{ color: '#10b981' }}>C$ {r.monto}</strong>
+                                        <span style={{ color: '#94a3b8' }}>{r.metodoPago}</span>
+                                    </div>
+                                    <small style={{ color: '#64748b' }}>Pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
+                                    <small style={{ color: '#38bdf8', fontWeight: 700 }}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
+                                    {r.observacion && <p style={{ margin: '2px 0 0 0', color: '#cbd5e1', fontSize: '0.7rem' }}>{r.observacion}</p>}
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* MODAL CANCELAR */}
+            {/* MODAL PROCESAR RENOVACIÓN PAGO */}
+            {mostrarRenovar && suscripcionRenovar && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>💵 Procesar Renovación</h4>
+                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+                        </div>
+
+                        <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.75rem' }}>
+                            <strong style={{ color: '#fff', display: 'block' }}>{suscripcionRenovar.nombreServicio}</strong>
+                            <small style={{ color: '#94a3b8', display: 'block' }}>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
+                            <small style={{ color: '#f59e0b', display: 'block' }}>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
+                        </div>
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Fecha de Pago</label>
+                            <input 
+                                type="date" 
+                                value={fechaPago} 
+                                onChange={e => setFechaPago(e.target.value)} 
+                                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} 
+                            />
+                        </div>
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Monto (C$)</label>
+                            <input type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+                        </div>
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Método de Pago</label>
+                            <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                            </select>
+                        </div>
+
+                        <button onClick={procesarRenovacion} style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                            Confirmar Pago
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL CANCELAR SERVICIO */}
             {mostrarCancelar && suscripcionRenovar && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalBox}>
-                        <h3 style={{ color: '#ef4444', marginTop: 0 }}>❌ Cancelar Servicio</h3>
-                        <div className={styles.infoCard}>
-                            <strong>{suscripcionRenovar.nombreServicio}</strong>
-                            <small>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#f87171', fontSize: '0.95rem' }}>❌ Cancelar Servicio</h4>
+                            <button onClick={() => setMostrarCancelar(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
 
-                        <label className={styles.label} style={{ marginTop: '15px' }}>Motivo</label>
-                        <textarea value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)} className={styles.textarea} />
-
-                        <div className={styles.modalActions}>
-                            <button onClick={() => setMostrarCancelar(false)} className={styles.btnModalClose}>Volver</button>
-                            <button onClick={procesarCancelacion} className={styles.btnModalCancelAction}>Confirmar Cancelación</button>
+                        <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.75rem' }}>
+                            <strong style={{ color: '#fff', display: 'block' }}>{suscripcionRenovar.nombreServicio}</strong>
+                            <small style={{ color: '#94a3b8' }}>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
                         </div>
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Motivo de Cancelación</label>
+                            <textarea value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)} rows={2} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} />
+                        </div>
+
+                        <button onClick={procesarCancelacion} style={{ width: '100%', padding: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                            Confirmar Cancelación
+                        </button>
                     </div>
                 </div>
             )}

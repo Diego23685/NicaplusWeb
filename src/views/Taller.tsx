@@ -1,11 +1,9 @@
-// Taller.tsx
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
-    FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
-    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle 
+    FaTools, FaChevronRight, FaTimes, 
+    FaWhatsapp, FaPrint, FaCheckCircle, FaFileContract, FaExclamationTriangle, FaPlus
 } from 'react-icons/fa';
-import styles from '../assets/styles/Taller.module.css'; // Importación de estilos modulares
 
 interface Orden {
     id: number;
@@ -27,11 +25,17 @@ interface Cliente {
 export const Taller: React.FC = () => {
     const [ordenes, setOrdenes] = useState<Orden[]>([]);
     const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [cargando, setCargando] = useState(true);
+
+    // CONTROL DE PESTAÑAS MÓVILES
+    const [tabActiva, setTabActiva] = useState<'kanban' | 'ingreso'>('kanban');
+    const [columnaFiltroKanban, setColumnaFiltroKanban] = useState<'Recibido' | 'En Revisión' | 'Listo'>('Recibido');
+
     const [dispositivo, setDispositivo] = useState('');
     const [diagnostico, setDiagnostico] = useState('');
     const [notasGarantia, setNotasGarantia] = useState('Garantía de 30 días sobre la reparación efectuada. No cubre sellos rotos o humedad.');
     
-    // Sistema de Notificaciones / Toast en lugar de Alerts
+    // Sistema de Notificaciones / Toast
     const [notificacion, setNotificacion] = useState<{ mostrar: boolean; mensaje: string; tipo: 'exito' | 'error' | 'warning' }>({
         mostrar: false,
         mensaje: '',
@@ -45,7 +49,7 @@ export const Taller: React.FC = () => {
         }, 4000);
     };
 
-    // Gestión de Cliente (Selección o Registro Nuevo)
+    // Gestión de Cliente
     const [modoNuevoCliente, setModoNuevoCliente] = useState(false);
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
     const [busquedaCliente, setBusquedaCliente] = useState('');
@@ -53,7 +57,7 @@ export const Taller: React.FC = () => {
     const [telefonoCliente, setTelefonoCliente] = useState('');
     const [emailCliente, setEmailCliente] = useState('');
 
-    // Estados para el Modal de Entrega Final
+    // Modal de Entrega Final
     const [mostrarModalEntrega, setMostrarModalEntrega] = useState(false);
     const [ordenAEntregar, setOrdenAEntregar] = useState<Orden | null>(null);
     const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
@@ -61,7 +65,7 @@ export const Taller: React.FC = () => {
     const [costoReparacion, setCostoReparacion] = useState<number>(0);
     const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo');
 
-    // Estados para el modal de selección de Avisar / Imprimir
+    // Modal de Acciones Comerciales
     const [mostrarModalAccion, setMostrarModalAccion] = useState(false);
     const [ordenParaAccion, setOrdenParaAccion] = useState<Orden | null>(null);
     const [tipoAccionContexto, setTipoAccionContexto] = useState<'AlListo' | 'AlEntregar'>('AlListo');
@@ -73,11 +77,13 @@ export const Taller: React.FC = () => {
                 api.get('/ordenesservicio'),
                 api.get('/clientes')
             ]);
-            setOrdenes(resOrdenes.data);
-            setClientes(resClientes.data);
+            setOrdenes(resOrdenes.data || []);
+            setClientes(resClientes.data || []);
         } catch (err) {
             console.error("Error al cargar datos del taller:", err);
             mostrarToast("No se pudieron cargar los datos del taller.", "error");
+        } finally {
+            setCargando(false);
         }
     };
 
@@ -98,51 +104,18 @@ export const Taller: React.FC = () => {
                 <title>Contrato_Garantia_ORD-${ordenId}</title>
                 <style>
                     @page { size: letter; margin: 15mm; }
-                    body { 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        color: #581c7e; 
-                        line-height: 1.5; 
-                        font-size: 13px;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
-                    .header-logo { font-size: 24px; font-weight: 800; color: #581c7e; letter-spacing: -0.5px; }
-                    .header-sub { font-size: 11px; color: #64748b; line-height: 1.3; }
-                    .doc-title { text-align: right; font-size: 16px; font-weight: bold; color: #0f172a; text-transform: uppercase; }
-                    .doc-number { text-align: right; font-size: 18px; font-weight: 800; color: #dc2626; margin-top: 5px; }
-                    
-                    .section-title { 
-                        font-size: 12px; 
-                        font-weight: bold; 
-                        text-transform: uppercase; 
-                        color: #581c7e; 
-                        border-bottom: 2px solid #e2e8f0; 
-                        padding-bottom: 5px; 
-                        margin: 20px 0 10px 0; 
-                    }
-                    
-                    .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                    .info-grid td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
-                    .info-label { font-weight: bold; color: #475569; width: 25%; background: #f8fafc; font-size: 11px; text-transform: uppercase; }
-                    .info-value { color: #0f172a; }
-
-                    .terms-box { 
-                        background: #f8fafc; 
-                        border: 1px solid #e2e8f0; 
-                        border-radius: 6px; 
-                        padding: 15px; 
-                        font-size: 11px; 
-                        color: #334155; 
-                        text-align: justify;
-                    }
-                    .terms-box ol { margin: 0; padding-left: 18px; }
-                    .terms-box li { margin-bottom: 8px; }
-                    
-                    .signatures-table { width: 100%; margin-top: 50px; border-collapse: collapse; }
-                    .signatures-table td { width: 50%; text-align: center; vertical-align: bottom; height: 80px; }
-                    .linea-firma { width: 200px; border-bottom: 1px solid #94a3b8; margin: 0 auto 5px auto; }
-                    .firma-label { font-size: 11px; color: #64748b; font-weight: bold; }
+                    body { font-family: 'Segoe UI', sans-serif; color: #1e293b; line-height: 1.5; font-size: 12px; margin: 0; padding: 0; }
+                    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    .header-logo { font-size: 22px; font-weight: 800; color: #581c7e; }
+                    .doc-title { text-align: right; font-size: 14px; font-weight: bold; color: #0f172a; text-transform: uppercase; }
+                    .doc-number { text-align: right; font-size: 16px; font-weight: 800; color: #dc2626; }
+                    .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #581c7e; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin: 15px 0 8px 0; }
+                    .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+                    .info-grid td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 11px; }
+                    .info-label { font-weight: bold; color: #475569; width: 25%; background: #f8fafc; }
+                    .terms-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; font-size: 10px; color: #334155; }
+                    .signatures-table { width: 100%; margin-top: 40px; border-collapse: collapse; text-align: center; }
+                    .linea-firma { width: 180px; border-bottom: 1px solid #94a3b8; margin: 0 auto 4px auto; }
                 </style>
             </head>
             <body>
@@ -150,92 +123,43 @@ export const Taller: React.FC = () => {
                     <tr>
                         <td>
                             <div class="header-logo">NICAPLUS GAMING</div>
-                            <div class="header-sub">
-                                Venta de celulares y accesorios<br>
-                                De la estatua de la madre 1c y media al norte, León, Nicaragua<br>
-                                Soporte: +505 8787-0821 | taller@nicaplus.com
-                            </div>
+                            <small>León, Nicaragua | Soporte: +505 8787-0821</small>
                         </td>
-                        <td style="text-align: right; vertical-align: top;">
+                        <td style="text-align: right;">
                             <div class="doc-title">Póliza de Garantía de Servicio</div>
                             <div class="doc-number">ORD-${ordenId}</div>
-                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
-                                Fecha de Emisión: ${new Date().toLocaleDateString('es-NI')}
-                            </div>
                         </td>
                     </tr>
                 </table>
 
-                <div class="section-title">Información del Beneficiario / Cliente</div>
+                <div class="section-title">Información del Cliente</div>
                 <table class="info-grid">
                     <tr>
-                        <td class="info-label">Nombre del Cliente</td>
-                        <td class="info-value"><strong>${datos.cliente.nombre}</strong></td>
-                        <td class="info-label">Teléfono de Contacto</td>
-                        <td class="info-value">${datos.cliente.telefono || 'N/D'}</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Correo Electrónico</td>
-                        <td class="info-value" colspan="3">${datos.cliente.email || 'taller@nicaplus.com'}</td>
+                        <td class="info-label">Cliente</td><td><strong>${datos.cliente.nombre}</strong></td>
+                        <td class="info-label">Teléfono</td><td>${datos.cliente.telefono || 'N/D'}</td>
                     </tr>
                 </table>
 
-                <div class="section-title">Especificaciones del Equipo y Trabajo Realizado</div>
+                <div class="section-title">Especificaciones del Equipo</div>
                 <table class="info-grid">
-                    <tr>
-                        <td class="info-label">Dispositivo / Consola</td>
-                        <td class="info-value" colspan="3"><strong>${datos.dispositivo}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Reporte Inicial (Falla)</td>
-                        <td class="info-value" colspan="3">${datos.diagnostico}</td>
-                    </tr>
-                    ${datos.diagnosticoFinal ? `
-                    <tr>
-                        <td class="info-label">Solución Aplicada</td>
-                        <td class="info-value" colspan="3">${datos.diagnosticoFinal}</td>
-                    </tr>
-                    ` : ''}
-                    ${datos.herramientasUsadas ? `
-                    <tr>
-                        <td class="info-label">Respuestos / Insumos</td>
-                        <td class="info-value" colspan="3">${datos.herramientasUsadas}</td>
-                    </tr>
-                    ` : ''}
+                    <tr><td class="info-label">Dispositivo</td><td colspan="3"><strong>${datos.dispositivo}</strong></td></tr>
+                    <tr><td class="info-label">Falla Reportada</td><td colspan="3">${datos.diagnostico}</td></tr>
+                    ${datos.diagnosticoFinal ? `<tr><td class="info-label">Solución</td><td colspan="3">${datos.diagnosticoFinal}</td></tr>` : ''}
                 </table>
 
-                <div class="section-title">Cláusulas y Condiciones de la Garantía Limitada</div>
+                <div class="section-title">Términos y Condiciones</div>
                 <div class="terms-box">
-                    <ol>
-                        <li><strong>Ámbito de Cobertura:</strong> La presente póliza cubre única y exclusivamente la mano de obra y los componentes sustituidos detallados en esta orden. No ampara fallas ajenas al sector intervenido originalmente.</li>
-                        <li><strong>Periodo de Validez:</strong> Las notas de tiempo establecidas para este servicio son: <strong>${datos.notasGarantia}</strong>.</li>
-                        <li><strong>Exclusiones de Cobertura:</strong> La garantía quedará automáticamente anulada bajo las siguientes circunstancias:
-                            <ul>
-                                <li>Rotura, manipulación, alteración o remoción de los sellos de garantía físicos de NICAPLUS GAMING colocados en el chasis del equipo.</li>
-                                <li>Evidencia de daños físicos posteriores a la entrega (golpes, fisuras, abolladuras, puertos forzados).</li>
-                                <li>Presencia de humedad, sulfatación, ingreso de líquidos, sobrecargas eléctricas o plagas de insectos en el interior de la placa de circuito.</li>
-                            </ul>
-                        </li>
-                        <li><strong>Condiciones para Reclamación:</strong> Para hacer efectivo el reclamo, es requisito indispensable presentar este contrato impreso o digital de forma legible. El equipo será sometido a un diagnóstico técnico inicial de evaluación.</li>
-                    </ol>
+                    <strong>Póliza de Servicio Técnico:</strong> ${datos.notasGarantia}. La garantía no cubre sellos de seguridad violados, humedad o golpes posteriores a la entrega.
                 </div>
 
                 <table class="signatures-table">
                     <tr>
-                        <td>
-                            <div class="linea-firma"></div>
-                            <div class="firma-label">NICAPLUS GAMING<br>Técnico Autorizado</div>
-                        </td>
-                        <td>
-                            <div class="linea-firma"></div>
-                            <div class="firma-label">Cliente Conforme<br>Firma o Cédula</div>
-                        </td>
+                        <td><div class="linea-firma"></div><small>NICAPLUS GAMING</small></td>
+                        <td><div class="linea-firma"></div><small>Cliente Conforme</small></td>
                     </tr>
                 </table>
 
-                <script>
-                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
-                </script>
+                <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
             </body>
             </html>
         `;
@@ -255,30 +179,23 @@ export const Taller: React.FC = () => {
                     body { font-family: 'Courier New', monospace; width: 200px; margin: 10px; font-size: 11px; color: #000; line-height: 1.2; }
                     .center { text-align: center; }
                     .linea { border-bottom: 1px dashed #000; margin: 8px 0; }
-                    .titulo { font-weight: bold; font-size: 13px; }
                 </style>
             </head>
             <body>
                 <div class="center">
-                    <span class="titulo">NICAPLUS GAMING</span><br>
+                    <strong>NICAPLUS GAMING</strong><br>
                     Taller de Soporte Técnico<br>
-                    León, Nicaragua<br>
                     <strong>INGRESO #ORD-${ordenId}</strong>
                 </div>
                 <div class="linea"></div>
                 <strong>CLIENTE:</strong> ${datos.cliente.nombre}<br>
                 <strong>TELÉFONO:</strong> ${datos.cliente.telefono}<br>
-                <strong>FECHA:</strong> ${new Date().toLocaleDateString()}<br>
                 <div class="linea"></div>
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
                 <strong>FALLA:</strong><br>${datos.diagnostico}<br>
                 <div class="linea"></div>
-                <div class="center" style="margin-bottom: 30px;">
-                    Conserve este voucher para retirar su equipo.<br>
-                </div>
-                <script>
-                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
-                </script>
+                <div class="center">Conserve este comprobante para retirar.</div>
+                <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
             </body>
             </html>
         `;
@@ -298,46 +215,22 @@ export const Taller: React.FC = () => {
                     body { font-family: 'Courier New', monospace; width: 200px; margin: 10px; font-size: 11px; color: #000; line-height: 1.2; }
                     .center { text-align: center; }
                     .linea { border-bottom: 1px dashed #000; margin: 8px 0; }
-                    .titulo { font-weight: bold; font-size: 13px; }
-                    .total-box { font-size: 12px; font-weight: bold; text-align: right; margin: 8px 0; }
                 </style>
             </head>
             <body>
                 <div class="center">
-                    <span class="titulo">NICAPLUS GAMING</span><br>
+                    <strong>NICAPLUS GAMING</strong><br>
                     Entrega Final de Taller<br>
-                    León, Nicaragua<br>
                     <strong>ORDEN: #ORD-${datosEntrega.ordenId}</strong>
                 </div>
                 <div class="linea"></div>
                 <strong>CLIENTE:</strong> ${datosEntrega.clienteNombre}<br>
-                <strong>TELÉFONO:</strong> ${datosEntrega.clienteTelefono}<br>
-                <strong>FECHA SALIDA:</strong> ${new Date().toLocaleDateString()}<br>
+                <strong>EQUIPO:</strong> ${datosEntrega.dispositivo}<br>
                 <div class="linea"></div>
-                <strong>EQUIPO RETIRADO:</strong><br>${datosEntrega.dispositivo}<br><br>
-                <strong>SOLUCIÓN TÉCNICA:</strong><br>${datosEntrega.diagnosticoFinal}<br><br>
-                <strong>REPUESTOS:</strong><br>${datosEntrega.herramientasUsadas}<br>
+                <strong>TOTAL PAGADO: C$ ${datosEntrega.costoReparacion.toLocaleString('es-NI')}</strong><br>
+                <strong>MÉTODO:</strong> ${datosEntrega.metodoPago.toUpperCase()}
                 <div class="linea"></div>
-                
-                <div class="total-box">
-                    TOTAL PAGADO: C$ ${datosEntrega.costoReparacion.toLocaleString('es-NI')}<br>
-                    MÉTODO: ${datosEntrega.metodoPago.toUpperCase()}
-                </div>
-                
-                <div class="linea"></div>
-                <center><strong>GARANTÍA EN TICKET</strong></center>
-                <p style="font-size: 9px; text-align: justify;">
-                    ${datosEntrega.notasGarantia}
-                </p>
-                <div class="linea"></div>
-                <br><br>
-                <div class="center">
-                    _______________________<br>
-                    Firma de Cliente Conforme
-                </div>
-                <script>
-                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
-                </script>
+                <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }</script>
             </body>
             </html>
         `;
@@ -357,7 +250,6 @@ export const Taller: React.FC = () => {
         }
 
         let textoMensaje = "";
-
         if (tipo === 'Listo') {
             textoMensaje = `¡Hola *${orden.cliente.nombre}*! 👋 Te saludamos de *NICAPLUS GAMING*. Te notificamos que tu equipo *${orden.dispositivo}* (Orden #${orden.id}) ya se encuentra reparado y listo para ser retirado en tienda. 🛠️✨`;
         } else {
@@ -382,7 +274,7 @@ export const Taller: React.FC = () => {
         try {
             if (modoNuevoCliente) {
                 if (!nombreCliente || !telefonoCliente) {
-                    mostrarToast("Complete los datos obligatorios del nuevo cliente.", "warning");
+                    mostrarToast("Complete los datos del nuevo cliente.", "warning");
                     return;
                 }
                 const resCliente = await api.post('/clientes', {
@@ -395,23 +287,22 @@ export const Taller: React.FC = () => {
             }
 
             if (!idClienteFinal || idClienteFinal === 0) {
-                mostrarToast("Debe seleccionar un cliente de la base de datos o registrar uno nuevo.", "warning");
+                mostrarToast("Debe seleccionar o registrar un cliente.", "warning");
                 return;
             }
 
             const clienteAsociado = clientes.find(c => c.id === idClienteFinal) || { nombre: nombreCliente, telefono: telefonoCliente, email: emailCliente };
-
             const usuarioLogueado = JSON.parse(localStorage.getItem('usuario') || '{}');
 
             const resOrden = await api.post('/ordenesservicio', {
                 idCliente: idClienteFinal,
-                idUsuario: usuarioLogueado.id, // <-- Enviar el ID aquí
+                idUsuario: usuarioLogueado.id,
                 dispositivo,
                 diagnostico,
                 notas: notasGarantia
             });
 
-            mostrarToast(`Equipo #${resOrden.data.id} ingresado correctamente.`, "exito");
+            mostrarToast(`Equipo #${resOrden.data.id} ingresado.`, "exito");
             
             imprimirDocumentosSoporte(resOrden.data.id, {
                 dispositivo,
@@ -435,10 +326,11 @@ export const Taller: React.FC = () => {
             setTelefonoCliente(''); 
             setEmailCliente('');
             setModoNuevoCliente(false);
+            setTabActiva('kanban');
             
             cargarDatos();
         } catch (err) {
-            mostrarToast("Error en el flujo de registro del taller.", "error");
+            mostrarToast("Error al registrar en el taller.", "error");
         }
     };
 
@@ -475,7 +367,7 @@ export const Taller: React.FC = () => {
                 mostrarToast(`Orden #${id} movida a ${siguienteEstado}.`, "exito");
             }
         } catch (err) {
-            mostrarToast("Error al actualizar el estado técnico.", "error");
+            mostrarToast("Error al actualizar el estado.", "error");
         }
     };
 
@@ -486,7 +378,7 @@ export const Taller: React.FC = () => {
         try {
             const payload = {
                 diagnosticoFinal,
-                herramientasUsed: herramientasUsadas || 'Herramientas básicas de banco técnico',
+                herramientasUsed: herramientasUsadas || 'Herramientas de banco técnico',
                 costoReparacion: Number(costoReparacion),
                 metodoPago: metodoPagoEntrega,
                 idProductoServicio: 1 
@@ -517,381 +409,367 @@ export const Taller: React.FC = () => {
 
             setMostrarModalAccion(true);
         } catch (err) {
-            mostrarToast("Error al procesar la entrega final del equipo.", "error");
+            mostrarToast("Error al procesar la entrega final.", "error");
         }
     };
 
-    const getColumnHeaderClass = (columnaName: string) => {
-        if (columnaName === 'Listo') return styles.colListo;
-        if (columnaName === 'En Revisión') return styles.colRevision;
-        return styles.colRecibido;
-    };
+    if (cargando) return (
+        <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>
+            Cargando tablero del taller...
+        </div>
+    );
 
     return (
-        <div className={styles.tallerContainer}>
+        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
             
-            {/* NOTIFICACIÓN TIPO TOAST ELEGANTE */}
+            {/* NOTIFICACIÓN TIPO TOAST */}
             {notificacion.mostrar && (
                 <div 
                     style={{
                         position: 'fixed',
-                        bottom: '24px',
-                        right: '24px',
-                        zIndex: 9999,
+                        bottom: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 99999,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
-                        padding: '12px 20px',
+                        gap: '8px',
+                        padding: '10px 16px',
                         borderRadius: '8px',
                         color: '#fff',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
-                        backgroundColor: notificacion.tipo === 'exito' ? '#10b981' : notificacion.tipo === 'warning' ? '#f59e0b' : '#ef4444',
-                        transition: 'all 0.3s ease'
+                        fontWeight: '700',
+                        fontSize: '0.8rem',
+                        backgroundColor: notificacion.tipo === 'exito' ? '#10b981' : notificacion.tipo === 'warning' ? '#f59e0b' : '#ef4444'
                     }}
                 >
-                    {notificacion.tipo === 'exito' && <FaCheckCircle size={18} />}
-                    {notificacion.tipo === 'warning' && <FaExclamationTriangle size={18} />}
-                    {notificacion.tipo === 'error' && <FaTimes size={18} />}
+                    {notificacion.tipo === 'exito' && <FaCheckCircle />}
+                    {notificacion.tipo === 'warning' && <FaExclamationTriangle />}
+                    {notificacion.tipo === 'error' && <FaTimes />}
                     <span>{notificacion.mensaje}</span>
                 </div>
             )}
 
-            {/* FORMULARIO AVANZADO DE INGRESO */}
-            <form onSubmit={registrarIngresoTaller} className={styles.formIngreso}>
-                <h3 className={styles.formTitle}>
-                    <FaTools /> Registro de Ingreso de Equipos y Control de Dueños
-                </h3>
-                
-                <div className={styles.formGrid}>
-                    
-                    {/* BUSCADOR Y SELECTOR DE CLIENTE */}
-                    <div className={styles.formGroup}>
-                        <div className={styles.labelWrapper}>
-                            <label className={styles.label}>
-                                <FaUser /> Cliente de la Orden
-                            </label>
-                            
-                        </div>
+            {/* ENCABEZADO Y TABS DE NAVEGACIÓN MÓVIL */}
+            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Taller y Soporte Técnico</h3>
+                    <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Recepción, reparación y entrega de equipos</small>
+                </div>
 
-                        {modoNuevoCliente ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <input 
-                                    type="text" 
-                                    value={nombreCliente} 
-                                    onChange={e => setNombreCliente(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Nombre completo" 
-                                    required 
-                                />
-                                <input 
-                                    type="text" 
-                                    value={telefonoCliente} 
-                                    onChange={e => setTelefonoCliente(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Teléfono" 
-                                    required 
-                                />
-                                <input 
-                                    type="email" 
-                                    value={emailCliente} 
-                                    onChange={e => setEmailCliente(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Email (Opcional)" 
-                                />
+                {/* Conmutador de Pestañas Móviles */}
+                <div style={{ display: 'flex', gap: '6px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <button 
+                        onClick={() => setTabActiva('kanban')}
+                        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: tabActiva === 'kanban' ? '#38bdf8' : 'transparent', color: tabActiva === 'kanban' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                    >
+                        <FaTools /> Tablero ({ordenes.length})
+                    </button>
+                    <button 
+                        onClick={() => setTabActiva('ingreso')}
+                        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: tabActiva === 'ingreso' ? '#38bdf8' : 'transparent', color: tabActiva === 'ingreso' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                    >
+                        <FaPlus /> + Ingresar
+                    </button>
+                </div>
+            </div>
+
+            {/* PESTAÑA 1: TABLERO KANBAN MÓVIL */}
+            {tabActiva === 'kanban' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Filtro de Columna Kanban */}
+                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                        {(['Recibido', 'En Revisión', 'Listo'] as const).map(col => {
+                            const cant = ordenes.filter(o => o.estado === col).length;
+                            return (
+                                <button 
+                                    key={col}
+                                    onClick={() => setColumnaFiltroKanban(col)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px 12px',
+                                        borderRadius: '16px',
+                                        border: '1px solid #334155',
+                                        background: columnaFiltroKanban === col ? '#38bdf8' : '#1e293b',
+                                        color: columnaFiltroKanban === col ? '#0f172a' : '#94a3b8',
+                                        fontWeight: 800,
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {col === 'Recibido' ? '📥 Recibido' : col === 'En Revisión' ? '🛠️ En Revisión' : '✅ Listos'} ({cant})
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Feed de Órdenes filtradas por la columna activa */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {ordenes.filter(o => o.estado === columnaFiltroKanban).length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+                                No hay equipos en estado "{columnaFiltroKanban}".
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className={styles.inputIconWrapper}>
-                                    <FaSearch className={styles.inputIcon} />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Filtrar clientes por nombre o celular..." 
-                                        value={busquedaCliente} 
-                                        onChange={e => setBusquedaCliente(e.target.value)} 
-                                        className={`${styles.input} ${styles.inputWithIcon}`} 
-                                    />
+                            ordenes.filter(o => o.estado === columnaFiltroKanban).map(orden => (
+                                <div key={orden.id} style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <strong style={{ color: '#fff', fontSize: '0.9rem', display: 'block' }}>{orden.dispositivo}</strong>
+                                            <small style={{ color: '#38bdf8', fontSize: '0.72rem' }}>
+                                                👤 {orden.cliente?.nombre || 'Cliente General'} • 📞 {orden.cliente?.telefono || 'N/D'}
+                                            </small>
+                                        </div>
+                                        <span style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '2px 6px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800 }}>
+                                            #ORD-{orden.id}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155', fontSize: '0.75rem', color: '#cbd5e1' }}>
+                                        {orden.diagnostico}
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '8px' }}>
+                                        <small style={{ color: '#64748b', fontSize: '0.68rem' }}>
+                                            Ingresó: {new Date(orden.fechaIngreso).toLocaleDateString()}
+                                        </small>
+
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            {orden.estado === 'Listo' && (
+                                                <button 
+                                                    onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')}
+                                                    style={{ background: '#25D366', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                >
+                                                    <FaWhatsapp /> Avisar
+                                                </button>
+                                            )}
+
+                                            <button 
+                                                onClick={() => avanzarEstado(orden.id, orden.estado)}
+                                                style={{ background: orden.estado === 'Listo' ? '#10b981' : '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            >
+                                                {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'} <FaChevronRight size={10} />
+                                            </button>
+                                        </div>
+                                    </div>
+
                                 </div>
-                                <select 
-                                    value={idClienteSeleccionado || 0} 
-                                    onChange={e => setIdClienteSeleccionado(Number(e.target.value))} 
-                                    className={styles.select} 
-                                    required
-                                >
-                                    <option value={0}>-- Selecciona el Cliente --</option>
-                                    {clientesFiltrados.map(c => (
-                                        <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
-                                    ))}
-                                </select>
-                            </div>
+                            ))
                         )}
                     </div>
 
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                            <FaLaptop /> Dispositivo corporativo
-                        </label>
+                </div>
+            )}
+
+            {/* PESTAÑA 2: INGRESO DE NUEVOS EQUIPOS */}
+            {tabActiva === 'ingreso' && (
+                <form onSubmit={registrarIngresoTaller} style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #38bdf8', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaTools /> Registrar Ingreso de Equipo
+                    </h4>
+
+                    {/* Alternar modo cliente */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Cliente Asignado</label>
+                        <button 
+                            type="button" 
+                            onClick={() => setModoNuevoCliente(!modoNuevoCliente)}
+                            style={{ background: 'transparent', border: 'none', color: '#38bdf8', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                            {modoNuevoCliente ? "🔍 Buscar Cliente Existente" : "+ Registrar Cliente Nuevo"}
+                        </button>
+                    </div>
+
+                    {modoNuevoCliente ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                            <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} placeholder="Nombre completo *" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem' }} required />
+                            <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} placeholder="Teléfono *" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem' }} required />
+                            <input type="email" value={emailCliente} onChange={e => setEmailCliente(e.target.value)} placeholder="Email (Opcional)" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem' }} />
+                        </div>
+                    ) : (
+                        <div>
+                            <input 
+                                type="text" 
+                                placeholder="🔍 Filtrar cliente por nombre..." 
+                                value={busquedaCliente} 
+                                onChange={e => setBusquedaCliente(e.target.value)} 
+                                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '4px', boxSizing: 'border-box' }}
+                            />
+                            <select 
+                                value={idClienteSeleccionado || 0} 
+                                onChange={e => setIdClienteSeleccionado(Number(e.target.value))} 
+                                style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                                required
+                            >
+                                <option value={0}>-- Selecciona el Cliente --</option>
+                                {clientesFiltrados.map(c => (
+                                    <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    <div>
+                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Dispositivo / Consola</label>
                         <input 
                             type="text" 
                             value={dispositivo} 
                             onChange={e => setDispositivo(e.target.value)} 
-                            className={styles.input} 
                             placeholder="Ej: PS5 Slim o Nintendo Switch" 
+                            style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                             required 
                         />
                     </div>
-                </div>
 
-                <div className={styles.formGroup} style={{ marginBottom: '14px' }}>
-                    <label className={styles.label}>Falla y Diagnóstico Inicial</label>
-                    <textarea 
-                        value={diagnostico} 
-                        onChange={e => setDiagnostico(e.target.value)} 
-                        className={styles.textarea} 
-                        placeholder="Detalles de la falla técnica detectada..." 
-                        required 
-                    />
-                </div>
-
-                <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
-                    <label className={styles.label}>Condiciones y Póliza de Garantía a Imprimir</label>
-                    
-                    <input 
-                        type="text" 
-                        value={notasGarantia} 
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotasGarantia(e.target.value)} 
-                        className={styles.input} 
-                    />
-                </div>
-
-                <button type="submit" className={styles.btnSubmit}>
-                    Ingresar Equipo e Imprimir Soporte y Contrato
-                </button>
-            </form>
-
-            {/* TABLERO KANBAN ADAPTATIVO */}
-            <div className={styles.kanbanTablero}>
-                {['Recibido', 'En Revisión', 'Listo'].map(columna => (
-                    <div className={styles.kanbanColumna} key={columna}>
-                        <h4 className={`${styles.columnHeader} ${getColumnHeaderClass(columna)}`}>
-                            {columna} ({ordenes.filter(o => o.estado === columna).length})
-                        </h4>
-                        
-                        <div className={styles.cardsContainer}>
-                            {ordenes.filter(o => o.estado === columna).map(orden => (
-                                <div key={orden.id} className={styles.card}>
-                                    <div className={styles.cardHeader}>
-                                        <strong className={styles.cardTitle}>{orden.dispositivo}</strong>
-                                        <span className={styles.cardBadge}>#{orden.id}</span>
-                                    </div>
-                                    <p className={styles.cardDesc}>{orden.diagnostico}</p>
-                                    <div className={styles.cardDivider}>
-                                        <small className={styles.cardClientName}>Cliente: {orden.cliente?.nombre}</small>
-                                        <small className={styles.cardClientPhone}>Tel: {orden.cliente?.telefono}</small>
-                                    </div>
-                                    <div className={styles.cardActions}>
-                                        <button 
-                                            onClick={() => avanzarEstado(orden.id, orden.estado)} 
-                                            className={styles.btnAvanzar}
-                                        >
-                                            {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'} 
-                                            <FaChevronRight size={10} />
-                                        </button>
-                                        {orden.estado === 'Listo' && (
-                                            <button 
-                                                title="Notificar por WhatsApp de inmediato" 
-                                                onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} 
-                                                className={styles.btnWhatsAppQuick}
-                                            >
-                                                <FaWhatsapp size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {ordenes.filter(o => o.estado === columna).length === 0 && (
-                                <div className={styles.emptyColumnText}>
-                                    Sin órdenes en este estado
-                                </div>
-                            )}
-                        </div>
+                    <div>
+                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Falla y Diagnóstico Inicial</label>
+                        <textarea 
+                            value={diagnostico} 
+                            onChange={e => setDiagnostico(e.target.value)} 
+                            placeholder="Detalles de la falla técnica..." 
+                            rows={3}
+                            style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }}
+                            required 
+                        />
                     </div>
-                ))}
-            </div>
 
-            {/* MODAL DE LIQUIDACIÓN Y ENTREGA FINAL */}
+                    <div>
+                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Póliza de Garantía a Imprimir</label>
+                        <input 
+                            type="text" 
+                            value={notasGarantia} 
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotasGarantia(e.target.value)} 
+                            style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', boxSizing: 'border-box' }}
+                        />
+                    </div>
+
+                    <button type="submit" style={{ width: '100%', padding: '12px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                        Ingresar e Imprimir Contrato
+                    </button>
+                </form>
+            )}
+
+            {/* MODAL LIQUIDACIÓN Y ENTREGA FINAL */}
             {mostrarModalEntrega && ordenAEntregar && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '85vh', overflowY: 'auto' }}>
                         
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>
-                                <FaTools /> Liquidación de Orden #{ordenAEntregar.id}
-                            </h3>
-                            <button 
-                                onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} 
-                                className={styles.btnCloseModal}
-                            >
-                                <FaTimes />
-                            </button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>🛠️ Liquidación #{ordenAEntregar.id}</h4>
+                            <button onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
 
-                        <form onSubmit={ejecutarEntregaFinal} className={styles.modalForm}>
-                            <div className={styles.infoRow}>
-                                <small className={styles.infoRowLabel}>Equipo a Retirar:</small>
-                                <strong>{ordenAEntregar.dispositivo}</strong> ({ordenAEntregar.cliente?.nombre})
+                        <form onSubmit={ejecutarEntregaFinal} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', color: '#cbd5e1' }}>
+                                <strong style={{ color: '#fff', display: 'block' }}>{ordenAEntregar.dispositivo}</strong>
+                                <span>Cliente: {ordenAEntregar.cliente?.nombre}</span>
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}><FaUser /> Diagnóstico de Reparación Final</label>
-                                <textarea 
-                                    value={diagnosticoFinal} 
-                                    onChange={e => setDiagnosticoFinal(e.target.value)} 
-                                    className={styles.textarea} 
-                                    placeholder="Escriba la solución aplicada..." 
-                                    required 
-                                />
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Solución Técnica Aplicada</label>
+                                <textarea value={diagnosticoFinal} onChange={e => setDiagnosticoFinal(e.target.value)} rows={2} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} required />
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}><FaWrench /> Repuestos / Herramientas Utilizadas</label>
-                                <input 
-                                    type="text" 
-                                    value={herramientasUsadas} 
-                                    onChange={e => setHerramientasUsadas(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Ej: Cambio de puerto HDMI, limpieza interna" 
-                                    required 
-                                />
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Repuestos Utilizados</label>
+                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} placeholder="Ej: Cambio de puerto HDMI" style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}><FaMoneyBillWave /> Método de Pago</label>
-                                <select 
-                                    value={metodoPagoEntrega} 
-                                    onChange={e => setMetodoPagoEntrega(e.target.value)} 
-                                    className={styles.select} 
-                                    required
-                                >
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Método de Pago</label>
+                                <select value={metodoPagoEntrega} onChange={e => setMetodoPagoEntrega(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
                                     <option value="Efectivo">💵 Efectivo</option>
-                                    <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                                    <option value="Transferencia">🏦 Transferencia</option>
                                     <option value="Tarjeta">💳 Tarjeta</option>
-                                    <option value="Crédito">🛑 Crédito (Cuenta por Cobrar)</option>
+                                    <option value="Crédito">🛑 Crédito</option>
                                 </select>
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}><FaMoneyBillWave /> Costo del Servicio Técnico (C$)</label>
-                                <input 
-                                    type="number" 
-                                    value={costoReparacion || ''} 
-                                    onChange={e => setCostoReparacion(Number(e.target.value))} 
-                                    className={`${styles.input} ${styles.inputCosto}`} 
-                                    placeholder="Monto cobrado en Córdobas" 
-                                    min={0} 
-                                    required 
-                                />
+                            <div>
+                                <label style={{ color: '#10b981', fontSize: '0.7rem', display: 'block', fontWeight: 700 }}>Costo del Servicio (C$)</label>
+                                <input type="number" value={costoReparacion || ''} onChange={e => setCostoReparacion(Number(e.target.value))} min={0} style={{ width: '100%', background: '#0f172a', border: '1px solid #10b981', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 800, boxSizing: 'border-box' }} required />
                             </div>
 
-                            <div className={styles.modalActions}>
-                                <button type="submit" className={styles.btnModalConfirm}>
-                                    Procesar Salida
-                                </button>
-                                <button 
-                                    type="button" 
-                                    onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} 
-                                    className={styles.btnModalCancel}
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
+                            <button type="submit" style={{ width: '100%', padding: '10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                                Procesar Salida y Cobro
+                            </button>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* MODAL INTERACTIVO: ACCIÓN RÁPIDA / WHATSAPP / IMPRESIÓN */}
+            {/* MODAL INTERACTIVO ACCIONES COMERCIALES */}
             {mostrarModalAccion && ordenParaAccion && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalSuccessContent}>
-                        
-                        <FaCheckCircle size={50} className={styles.successIcon} />
-                        
-                        <h3 className={styles.successTitle}>
-                            {tipoAccionContexto === 'AlListo' ? '¡Equipo Marcado Como Listo!' : '¡Orden Procesada Exitosamente!'}
-                        </h3>
-                        <p className={styles.successDesc}>
-                            Selecciona las acciones comerciales inmediatas para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo}).
-                        </p>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
+                        <FaCheckCircle style={{ color: '#10b981', fontSize: '2.5rem', margin: '0 auto' }} />
+                        <h4 style={{ color: '#fff', margin: 0, fontSize: '1rem' }}>
+                            {tipoAccionContexto === 'AlListo' ? '¡Equipo Marcado Como Listo!' : '¡Orden Entregada!'}
+                        </h4>
+                        <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                            Orden #{ordenParaAccion.id} ({ordenParaAccion.dispositivo})
+                        </small>
 
-                        <div className={styles.actionButtonsContainer}>
-                            
-                            <button 
-                                onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)}
-                                className={`${styles.btnActionBase} ${styles.btnActionWhatsApp}`}
-                            >
-                                <FaWhatsapp size={18} /> Avisar al Cliente por WhatsApp
-                            </button>
+                        <button 
+                            onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)}
+                            style={{ background: '#25D366', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                            <FaWhatsapp /> Avisar por WhatsApp
+                        </button>
 
-                            <button 
-                                onClick={() => {
-                                    if (tipoAccionContexto === 'AlListo') {
-                                        imprimirDocumentosSoporte(ordenParaAccion.id, {
-                                            dispositivo: ordenParaAccion.dispositivo,
-                                            diagnostico: ordenParaAccion.diagnostico,
-                                            notasGarantia,
-                                            cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '', email: ordenParaAccion.cliente?.email || '' }
-                                        });
-                                    } else if (datosEntregaCache) {
-                                        imprimirVoucherEntrega(datosEntregaCache);
-                                    }
-                                }}
-                                className={`${styles.btnActionBase} ${styles.btnActionPrint}`}
-                            >
-                                <FaPrint size={18} /> Imprimir Ticket Comercial (Térmico)
-                            </button>
+                        <button 
+                            onClick={() => {
+                                if (tipoAccionContexto === 'AlListo') {
+                                    imprimirDocumentosSoporte(ordenParaAccion.id, {
+                                        dispositivo: ordenParaAccion.dispositivo,
+                                        diagnostico: ordenParaAccion.diagnostico,
+                                        notasGarantia,
+                                        cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '', email: ordenParaAccion.cliente?.email || '' }
+                                    });
+                                } else if (datosEntregaCache) {
+                                    imprimirVoucherEntrega(datosEntregaCache);
+                                }
+                            }}
+                            style={{ background: '#334155', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                            <FaPrint /> Imprimir Ticket
+                        </button>
 
-                            <button 
-                                onClick={() => {
-                                    const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo' 
-                                        ? {
-                                            dispositivo: ordenParaAccion.dispositivo,
-                                            diagnostico: ordenParaAccion.diagnostico,
-                                            notasGarantia,
-                                            cliente: ordenParaAccion.cliente || { nombre: 'Cliente General', telefono: 'N/D', email: '' }
-                                          }
-                                        : {
-                                            dispositivo: ordenParaAccion.dispositivo,
-                                            diagnostico: ordenParaAccion.diagnostico,
-                                            diagnosticoFinal: datosEntregaCache?.diagnosticoFinal,
-                                            herramientasUsadas: datosEntregaCache?.herramientasUsadas,
-                                            notasGarantia,
-                                            cliente: { 
-                                                nombre: datosEntregaCache?.clienteNombre, 
-                                                telefono: datosEntregaCache?.clienteTelefono, 
-                                                email: datosEntregaCache?.clienteEmail 
-                                            }
-                                          };
-                                    imprimirContratoGarantiaCompleto(ordenParaAccion.id, datosGarantiaParaImprimir);
-                                }}
-                                className={`${styles.btnActionBase}`}
-                                style={{ backgroundColor: '#2563eb', color: '#fff' }}
-                            >
-                                <FaFileContract size={18} /> Imprimir Contrato Garantía (Hoja Entera A4)
-                            </button>
+                        <button 
+                            onClick={() => {
+                                const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo' 
+                                    ? {
+                                        dispositivo: ordenParaAccion.dispositivo,
+                                        diagnostico: ordenParaAccion.diagnostico,
+                                        notasGarantia,
+                                        cliente: ordenParaAccion.cliente || { nombre: 'Cliente General', telefono: 'N/D', email: '' }
+                                      }
+                                    : {
+                                        dispositivo: ordenParaAccion.dispositivo,
+                                        diagnostico: ordenParaAccion.diagnostico,
+                                        diagnosticoFinal: datosEntregaCache?.diagnosticoFinal,
+                                        herramientasUsadas: datosEntregaCache?.herramientasUsadas,
+                                        notasGarantia,
+                                        cliente: { 
+                                            nombre: datosEntregaCache?.clienteNombre, 
+                                            telefono: datosEntregaCache?.clienteTelefono, 
+                                            email: datosEntregaCache?.clienteEmail 
+                                        }
+                                      };
+                                imprimirContratoGarantiaCompleto(ordenParaAccion.id, datosGarantiaParaImprimir);
+                            }}
+                            style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                            <FaFileContract /> Contrato de Garantía (A4)
+                        </button>
 
-                            <button 
-                                onClick={() => { 
-                                    setMostrarModalAccion(false); 
-                                    setOrdenParaAccion(null); 
-                                    setDatosEntregaCache(null); 
-                                }}
-                                className={`${styles.btnActionBase} ${styles.btnActionReturn}`}
-                            >
-                                Listo, Volver al Tablero
-                            </button>
-                        </div>
+                        <button 
+                            onClick={() => { setMostrarModalAccion(false); setOrdenParaAccion(null); setDatosEntregaCache(null); }}
+                            style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.8rem', cursor: 'pointer', marginTop: '4px' }}
+                        >
+                            Volver al Tablero
+                        </button>
                     </div>
                 </div>
             )}

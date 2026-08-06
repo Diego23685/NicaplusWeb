@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../services/api';
 import { 
-  FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
-  FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
-  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup 
-} from 'react-icons/fa';
-import styles from '../assets/styles/Caja.module.css';
+  FaTrashAlt, FaShoppingCart, 
+  FaSearch, FaTimes, FaWhatsapp, FaPrint, FaCheckCircle, 
+  FaExclamationTriangle} from 'react-icons/fa';
 
 interface Producto {
     id: number;
@@ -58,25 +56,17 @@ const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => 
     return formateador.format(d);
 };
 
-// Utilidad para calcular meses exactos considerando 28, 29, 30 o 31 días según el calendario real
 const sumarMesesExactos = (fechaBaseISO: string, meses: number): string => {
     const [year, month, day] = fechaBaseISO.split('-').map(Number);
     const fecha = new Date(year, month - 1, day);
-    
     fecha.setMonth(fecha.getMonth() + meses);
-    
-    if (fecha.getDate() !== day) {
-        fecha.setDate(0);
-    }
-
+    if (fecha.getDate() !== day) fecha.setDate(0);
     const yyyy = fecha.getFullYear();
     const mm = String(fecha.getMonth() + 1).padStart(2, '0');
     const dd = String(fecha.getDate()).padStart(2, '0');
-    
     return `${yyyy}-${mm}-${dd}`;
 };
 
-// Utilidad para calcular días reales transcurridos entre dos fechas
 const calcularDiasRealesEntreFechas = (fechaInicioStr: string, fechaFinStr: string): number => {
     const inicio = new Date(fechaInicioStr + "T00:00:00");
     const fin = new Date(fechaFinStr + "T00:00:00");
@@ -101,7 +91,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     const metodoUsado = datosVenta.metodoPagoCongelado || datosVenta.metodoPago || "Efectivo";
     const totalReal = datosVenta.totalCongelado ?? datosVenta.total ?? datosVenta.detalles.reduce((sum: number, i: any) => sum + (i.subTotal || 0), 0);
     const esVentaCredito = metodoUsado === "Crédito";
-    
     const separador = "--------------------------------------------------------------------";
 
     const lineas: string[] = [
@@ -127,7 +116,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     const procesarBloqueCredencial = (metaStr: string, indiceCredencial?: number) => {
         if (!metaStr) return;
         let accesosReales = metaStr.trim();
-        
         if (accesosReales.startsWith("DIAS:")) {
             const partes = accesosReales.split('|');
             accesosReales = partes.slice(1).join('|').trim();
@@ -139,7 +127,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
 
         if (accesosReales.includes('|')) {
             const fragmentos = accesosReales.split('|').map((f: string) => f.trim());
-            
             fragmentos.forEach(frag => {
                 if (/^perfil:/i.test(frag)) {
                     lineas.push(`   👤 *Perfil:* ${frag.replace(/^perfil:\s*/i, '')}`);
@@ -154,13 +141,11 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
                     lineas.push(`   🔹 ${frag}`);
                 }
             });
-        } 
-        else if (accesosReales.includes('/')) {
+        } else if (accesosReales.includes('/')) {
             const subPartes = accesosReales.split('/');
             if (subPartes[0]) lineas.push(`   📧 *Correo:* ${subPartes[0].trim()}`);
             if (subPartes[1]) lineas.push(`   🔑 *Contraseña:* ${subPartes[1].trim()}`);
-        } 
-        else if (accesosReales) {
+        } else if (accesosReales) {
             lineas.push(`   🔑 *Datos / Acceso:* ${accesosReales}`);
         }
     };
@@ -178,7 +163,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
         const meta = item.metadataDigital || item.metadata || '';
         if (meta) {
             const cuentasMultiples = meta.split(/\r?\n|;/).filter((c: string) => c.trim().length > 0);
-
             if (cuentasMultiples.length > 1) {
                 cuentasMultiples.forEach((bloqueMeta: string, subIdx: number) => {
                     procesarBloqueCredencial(bloqueMeta, subIdx);
@@ -212,24 +196,14 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     lineas.push("");
     lineas.push(separador);
     lineas.push("");
-    lineas.push("📌 *INFORMACIÓN OPERATIVA*:");
-    lineas.push("- Las caídas de perfiles o contraseñas deben reportarse inmediatamente.");
-    lineas.push("");
     lineas.push("¡Muchas gracias por su preferencia! 🤝");
 
     const mensajeFinal = lineas.join("\n");
     const urlWhatsApp = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeFinal)}`;
-    
     window.open(urlWhatsApp, '_blank');
 };
 
 export const imprimirTicketTermico = (datosVenta: any) => {
-    const ventanaImpresion = window.open('', '_blank');
-    if (!ventanaImpresion) {
-        alert("Permita los elementos emergentes para poder emitir el ticket físico.");
-        return;
-    }
-
     let descuentoTotalAcumulado = 0;
     const metodoUsado = datosVenta.metodoPagoCongelado || "Efectivo";
     const totalReal = datosVenta.totalCongelado || datosVenta.detalles.reduce((sum: number, i: any) => sum + i.subTotal, 0);
@@ -238,19 +212,26 @@ export const imprimirTicketTermico = (datosVenta: any) => {
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Factura Nicaplus</title>
             <style>
-                @page { margin: 0; }
+                @page { 
+                    margin: 0; 
+                    size: auto;
+                }
                 body { 
                     font-family: 'Courier New', Courier, monospace; 
-                    width: 200px; 
-                    margin: 4px 10px; 
+                    width: 100%;
+                    max-width: 280px;
+                    margin: 0 auto; 
+                    padding: 8px;
                     font-size: 11px; 
                     color: #000; 
                     line-height: 1.2;
+                    box-sizing: border-box;
                 }
                 .text-center { text-align: center; }
-                .text-right { text-align: right; }
                 .linea { border-bottom: 1px dashed #000; margin: 6px 0; }
                 table { width: 100%; border-collapse: collapse; }
                 .negrita { font-weight: bold; }
@@ -261,8 +242,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
             <div class="text-center">
                 <span class="negrita" style="font-size: 13px;">NICAPLUS GAMING</span><br>
                 Tienda Digital y Taller Técnico<br>
-                León, Nicaragua<br>
-                Tel: +505 8888-8888
+                Nicaragua
             </div>
             <div class="linea"></div>
             <div>
@@ -273,87 +253,72 @@ export const imprimirTicketTermico = (datosVenta: any) => {
             </div>
             <div class="linea"></div>
             <table class="tabla-detalles">
-                <thead>
-                    <tr>
-                        <th align="left" class="negrita">Cant/Desc</th>
-                        <th align="right" class="negrita">Total</th>
-                    </tr>
-                </thead>
                 <tbody>
                     ${datosVenta.detalles.map((item: any) => {
                         const descPorItem = (item.descuento || 0) * item.cantidad;
                         descuentoTotalAcumulado += descPorItem;
-                        
                         return `
                             <tr>
                                 <td>${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 15))}</td>
                                 <td align="right">C$ ${item.subTotal}</td>
                             </tr>
-                            ${item.descuento && item.descuento > 0 ? `
-                            <tr>
-                                <td colspan="2" style="font-size: 9px; color: #333; padding-left: 10px;">
-                                    (Descto: -C$ ${descPorItem})
-                                </td>
-                            </tr>
-                            ` : ''}
-                            ${item.metadataDigital ? `
-                            <tr>
-                                <td colspan="2" style="font-size:9px; padding-left:10px; color:#333; word-break: break-all;">
-                                    ID: ${escapeHtml(item.metadataDigital.replace(/^DIAS:\d+\|/, ''))}
-                                </td>
-                            </tr>
-                            ` : ''}
                         `;
                     }).join('')}
                 </tbody>
             </table>
             <div class="linea"></div>
-            
             <table style="width: 100%;">
-                ${descuentoTotalAcumulado > 0 ? `
-                <tr>
-                    <td align="left">Subtotal:</td>
-                    <td align="right">C$ ${totalReal + descuentoTotalAcumulado}</td>
-                </tr>
-                <tr>
-                    <td align="left">Descuento:</td>
-                    <td align="right">-C$ ${descuentoTotalAcumulado}</td>
-                </tr>
-                ` : ''}
                 <tr>
                     <td align="left" class="negrita" style="font-size: 12px;">TOTAL:</td>
                     <td align="right" class="negrita" style="font-size: 12px;">C$ ${totalReal}</td>
                 </tr>
             </table>
-
-            ${metodoUsado === "Crédito" && datosVenta.fechaVencimientoCreditoCongelado ? `
-            <div style="font-size: 9px; margin-top: 4px;" class="text-center">
-                * VENCE AL CRÉDITO EL: ${new Date(datosVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString('es-NI')} *
-            </div>
-            ` : ''}
-
             <div class="linea"></div>
             <div class="text-center" style="margin-top:8px;">
-                ¡Gracias por tu preferencia!<br>
-                Soporte y Garantía de Calidad.
+                ¡Gracias por tu preferencia!
             </div>
         </body>
         </html>
     `;
 
-    ventanaImpresion.document.open();
-    ventanaImpresion.document.write(contenidoTicket);
-    ventanaImpresion.document.close();
-    ventanaImpresion.focus();
+    // 1. Crear iframe oculto en el documento actual (Evita popups/window.open)
+    const idIframe = 'iframe_impresion_ticket';
+    let iframe = document.getElementById(idIframe) as HTMLIFrameElement;
+    if (iframe) {
+        document.body.removeChild(iframe);
+    }
+
+    iframe = document.createElement('iframe');
+    iframe.id = idIframe;
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const docIframe = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!docIframe) return;
+
+    docIframe.open();
+    docIframe.write(contenidoTicket);
+    docIframe.close();
+
+    // 2. Disparar impresión nativa directamente desde el iframe
     setTimeout(() => {
-        ventanaImpresion.print();
-        ventanaImpresion.close();
-    }, 300);
+        try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+        } catch (e) {
+            console.error("Error al imprimir:", e);
+        }
+    }, 600);
 };
 
 export const Caja: React.FC = () => {
     const [productos, setProductos] = useState<Producto[]>([]);
-    const [categorias, setCategorias] = useState<Categoria[]>([]);
+    const [, setCategorias] = useState<Categoria[]>([]);
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
     const [metodoPago, setMetodoPago] = useState('Efectivo');
     const [fechaVenta, setFechaVenta] = useState(obtenerFechaLocalISO());    
@@ -361,18 +326,18 @@ export const Caja: React.FC = () => {
 
     const [listaClientes, setListaClientes] = useState<any[]>([]);
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
-    const [vistaModo, setVistaModo] = useState<'cuadricula' | 'lista'>('cuadricula');
+
+    // Estado para alternar vistas en móvil (Productos / Carrito)
+    const [tabActiva, setTabActiva] = useState<'catalogo' | 'carrito'>('catalogo');
 
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [busquedaCliente, setBusquedaCliente] = useState('');
-    const [categoriaFiltroActiva, setCategoriaFiltroActiva] = useState<number | null>(null);
-    
+    const [categoriaFiltroActiva] = useState<number | null>(null);
     const [filtroRubroCaja, setFiltroRubroCaja] = useState<'todos' | 'fisico' | 'digital' | 'streaming'>('todos');
 
     const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
     const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
     const [diasCredito, setDiasCredito] = useState(15);
-
     const [mensajeErrorModal, setMensajeErrorModal] = useState<string | null>(null);
 
     const mostrarError = (mensaje: string) => {
@@ -427,7 +392,7 @@ export const Caja: React.FC = () => {
 
         if (existe) {
             if (!producto.esDigital && !producto.requiereServicio && producto.stockActual <= existe.cantidad) {
-                mostrarError(`No hay suficiente stock en inventario de "${producto.nombre}". Máximo disponible: ${producto.stockActual}.`);
+                mostrarError(`Stock insuficiente para "${producto.nombre}". Disponibles: ${producto.stockActual}.`);
                 return;
             }
 
@@ -437,7 +402,6 @@ export const Caja: React.FC = () => {
             if (producto.esDigital) {
                 try {
                     const paramsIgnorados = listaIdsPerfiles.join(',');
-
                     const res = await api.get(`/products/${producto.id}/siguiente-credencial`, {
                         params: { ignorados: paramsIgnorados }
                     });
@@ -452,12 +416,11 @@ export const Caja: React.FC = () => {
                             listaIdsPerfiles = [...listaIdsPerfiles, res.data.idPerfil];
                         }
                     } else {
-                        mostrarError(`No hay más credenciales o perfiles disponibles para "${producto.nombre}".`);
+                        mostrarError(`Sin más credenciales disponibles para "${producto.nombre}".`);
                         return;
                     }
                 } catch (error) {
-                    console.error('Error al solicitar credencial:', error);
-                    mostrarError('Ocurrió un problema al consultar el inventario de cuentas.');
+                    mostrarError('Error al consultar el inventario de cuentas.');
                     return;
                 }
             }
@@ -478,7 +441,7 @@ export const Caja: React.FC = () => {
 
         } else {
             if (!producto.esDigital && !producto.requiereServicio && producto.stockActual < 1) {
-                mostrarError(`El producto "${producto.nombre}" no cuenta con existencias disponibles.`);
+                mostrarError(`El producto "${producto.nombre}" no cuenta con existencias.`);
                 return;
             }
 
@@ -556,8 +519,6 @@ export const Caja: React.FC = () => {
             if (item.idProducto === idProducto) {
                 const pBase = productos.find(p => p.id === idProducto);
                 const diasBase = pBase?.diasDuracion || 30;
-                
-                // Prorrateo automático de tarifa basado en días contratados
                 const tarifaDiaria = pBase ? (pBase.precioVenta / diasBase) : (item.precioUnitario / 30);
                 const nuevoPrecioProporcional = Math.round(tarifaDiaria * dias);
 
@@ -598,7 +559,7 @@ export const Caja: React.FC = () => {
         });
 
         if (faltaMetadata) {
-            mostrarError("Debe ingresar las credenciales de acceso o referencia para los productos seleccionados.");
+            mostrarError("Faltan credenciales de acceso para algunos productos digitales seleccionados.");
             return;
         }
 
@@ -608,7 +569,7 @@ export const Caja: React.FC = () => {
         });
 
         if ((llevaSuscripcion || metodoPago === "Crédito") && (!idClienteSeleccionado || idClienteSeleccionado === 0)) {
-            mostrarError("Operación Denegada: Las ventas al crédito o configuradas como Suscripción requieren obligatoriamente asociar un cliente real.");
+            mostrarError("Las ventas al crédito o suscripciones requieren asociar un cliente obligatoriamente.");
             return;
         }
 
@@ -651,7 +612,6 @@ export const Caja: React.FC = () => {
 
         try {
             const res = await api.post('/ventas', payload);
-
             const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
                 const prodOriginal = productos.find(p => p.id === item.idProducto);
                 const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto);
@@ -684,289 +644,204 @@ export const Caja: React.FC = () => {
             setDiasCredito(15);
             setFechaVenta(obtenerFechaLocalISO());
             setFechaVencimientoCredito(obtenerFechaLocalISO(15));
+            setTabActiva('catalogo');
 
             const refreshRes = await api.get('/products');
             setProductos(refreshRes.data);
         } catch (err: any) {
             console.error("Error al procesar factura:", err);
-
-            let mensajeExtraido = "Ocurrió un error en el servidor al intentar procesar la venta.";
-
-            if (err.response?.data) {
-                const data = err.response.data;
-                if (typeof data === 'string') {
-                    mensajeExtraido = data;
-                } else if (data.mensaje) {
-                    mensajeExtraido = data.mensaje;
-                } else if (data.title) {
-                    mensajeExtraido = data.title;
-                } else {
-                    mensajeExtraido = JSON.stringify(data);
-                }
-            } else if (err.message) {
-                mensajeExtraido = err.message;
-            }
-
+            let mensajeExtraido = "Ocurrió un error al procesar la venta.";
+            if (err.response?.data?.mensaje) mensajeExtraido = err.response.data.mensaje;
             mostrarError(mensajeExtraido);
         }
     };
 
     return (
-        <div className={styles.container}>
-            <div className={styles.cajaWrapper}>
-                
-                {/* PANEL IZQUIERDO: PRODUCTOS */}
-                <div className={`${styles.panel} ${styles.productosPanel}`}>
-                    
-                    <div className={styles.panelHeader}>
-                        <h3>Inventario Disponible</h3>
-                        <div className={styles.viewToggle}>
-                            <button 
-                                onClick={() => setVistaModo('cuadricula')} 
-                                className={`${styles.toggleBtn} ${vistaModo === 'cuadricula' ? styles.toggleBtnActive : ''}`}
-                            >
-                                <FaTh /> Cuadrícula
-                            </button>
-                            <button 
-                                onClick={() => setVistaModo('lista')} 
-                                className={`${styles.toggleBtn} ${vistaModo === 'lista' ? styles.toggleBtnActive : ''}`}
-                            >
-                                <FaList /> Lista
-                            </button>
-                        </div>
-                    </div>
+        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
+            
+            {/* CONMUTADOR PRINCIPAL MÓVIL (CATÁLOGO / CARRITO) */}
+            <div style={{ display: 'flex', gap: '8px', background: '#1e293b', padding: '6px', borderRadius: '12px', border: '1px solid #334155' }}>
+                <button 
+                    onClick={() => setTabActiva('catalogo')}
+                    style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: tabActiva === 'catalogo' ? '#38bdf8' : 'transparent',
+                        color: tabActiva === 'catalogo' ? '#0f172a' : '#94a3b8',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                    }}
+                >
+                    📦 Productos
+                </button>
+                <button 
+                    onClick={() => setTabActiva('carrito')}
+                    style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: tabActiva === 'carrito' ? '#38bdf8' : 'transparent',
+                        color: tabActiva === 'carrito' ? '#0f172a' : '#94a3b8',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                    }}
+                >
+                    <FaShoppingCart /> Carrito ({carrito.length})
+                </button>
+            </div>
 
-                    <div className={styles.searchContainer}>
-                        <FaSearch className={styles.searchIcon} />
+            {/* TAB 1: PRODUCTOS / CATÁLOGO */}
+            {tabActiva === 'catalogo' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Buscador de productos */}
+                    <div style={{ position: 'relative' }}>
+                        <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
                         <input 
                             type="text" 
                             placeholder="Buscar producto por nombre..." 
                             value={busquedaProducto} 
                             onChange={e => setBusquedaProducto(e.target.value)} 
-                            className={styles.searchInput}
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px 10px 38px',
+                                background: '#1e293b',
+                                border: '1px solid #334155',
+                                borderRadius: '10px',
+                                color: '#fff',
+                                fontSize: '0.85rem',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                            }}
                         />
                     </div>
 
-                    {/* FILTROS DE RUBRO PRINCIPAL */}
-                    <div className={styles.categoriasScroll} style={{ marginBottom: '6px' }}>
-                        <button 
-                            onClick={() => setFiltroRubroCaja('todos')} 
-                            className={`${styles.catBtn} ${filtroRubroCaja === 'todos' ? styles.catBtnActive : ''}`}
-                        >
-                            <FaLayerGroup size={11} /> Todos los Rubros
-                        </button>
-                        <button 
-                            onClick={() => setFiltroRubroCaja('fisico')} 
-                            className={`${styles.catBtn} ${filtroRubroCaja === 'fisico' ? styles.catBtnActive : ''}`}
-                            style={{ borderColor: '#047688' }}
-                        >
-                            <FaBoxes size={11} /> Físicos
-                        </button>
-                        <button 
-                            onClick={() => setFiltroRubroCaja('digital')} 
-                            className={`${styles.catBtn} ${filtroRubroCaja === 'digital' ? styles.catBtnActive : ''}`}
-                            style={{ borderColor: '#38bdf8' }}
-                        >
-                            <FaGamepad size={11} /> Digitales
-                        </button>
-                        <button 
-                            onClick={() => setFiltroRubroCaja('streaming')} 
-                            className={`${styles.catBtn} ${filtroRubroCaja === 'streaming' ? styles.catBtnActive : ''}`}
-                            style={{ borderColor: '#f43f5e' }}
-                        >
-                            <FaTv size={11} /> Streaming
-                        </button>
+                    {/* Filtros horizontales por rubro */}
+                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                        <button onClick={() => setFiltroRubroCaja('todos')} style={{ background: filtroRubroCaja === 'todos' ? '#38bdf8' : '#0f172a', color: filtroRubroCaja === 'todos' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 10px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Todos</button>
+                        <button onClick={() => setFiltroRubroCaja('fisico')} style={{ background: filtroRubroCaja === 'fisico' ? '#38bdf8' : '#0f172a', color: filtroRubroCaja === 'fisico' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 10px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Físicos</button>
+                        <button onClick={() => setFiltroRubroCaja('digital')} style={{ background: filtroRubroCaja === 'digital' ? '#38bdf8' : '#0f172a', color: filtroRubroCaja === 'digital' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 10px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Digitales</button>
+                        <button onClick={() => setFiltroRubroCaja('streaming')} style={{ background: filtroRubroCaja === 'streaming' ? '#38bdf8' : '#0f172a', color: filtroRubroCaja === 'streaming' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 10px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Streaming</button>
                     </div>
 
-                    {/* FILTROS POR CATEGORÍA SECUNDARIA */}
-                    <div className={styles.categoriasScroll}>
-                        <button 
-                            onClick={() => setCategoriaFiltroActiva(null)} 
-                            className={`${styles.catBtn} ${categoriaFiltroActiva === null ? styles.catBtnActive : ''}`}
-                        >
-                            <FaThList size={11} /> Todas las Categorías
-                        </button>
-                        {categorias.map(c => (
-                            <button 
-                                key={c.id}
-                                onClick={() => setCategoriaFiltroActiva(c.id)} 
-                                className={`${styles.catBtn} ${categoriaFiltroActiva === c.id ? styles.catBtnActive : ''}`}
+                    {/* Grid de productos */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
+                        {productosFiltrados.map(p => (
+                            <div 
+                                key={p.id} 
+                                onClick={() => agregarAlCarrito(p)} 
+                                style={{
+                                    background: '#1e293b',
+                                    border: '1px solid #334155',
+                                    borderRadius: '12px',
+                                    padding: '10px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer'
+                                }}
                             >
-                                <FaTags size={11} /> {c.nombre}
-                            </button>
+                                <div>
+                                    <strong style={{ color: '#f8fafc', fontSize: '0.8rem', display: 'block', marginBottom: '4px', lineHeight: '1.2' }}>{p.nombre}</strong>
+                                    <small style={{ color: '#38bdf8', fontSize: '0.7rem', display: 'block' }}>
+                                        {p.esSuscripcion ? '📺 Streaming' : p.esDigital ? '🎮 Digital' : `Stock: ${p.stockActual}`}
+                                    </small>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                                    <strong style={{ color: '#10b981', fontSize: '0.85rem' }}>C$ {p.precioVenta}</strong>
+                                    <span style={{ background: '#38bdf8', color: '#0f172a', padding: '2px 6px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800 }}>+</span>
+                                </div>
+                            </div>
                         ))}
                     </div>
+                </div>
+            )}
 
-                    <div className={styles.scrollContainer}>
-                        {productosFiltrados.length === 0 ? (
-                            <div className={styles.noProducts}>No se encontraron productos coincidentes.</div>
-                        ) : vistaModo === 'cuadricula' ? (
-                            <div className={styles.productGrid}>
-                                {productosFiltrados.map(p => (
-                                    <div 
-                                        key={p.id} 
-                                        onClick={() => agregarAlCarrito(p)} 
-                                        className={styles.productCard}
-                                    >
-                                        <div className={styles.productImgContainer}>
-                                            {p.imagenUrl ? (
-                                                <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} />
-                                            ) : (
-                                                <div className={styles.productNoImg}>SIN FOTO</div>
-                                            )}
-                                        </div>
-                                        
-                                        <div className={styles.productDetails}>
-                                            <div className={styles.productName} title={p.nombre}>
-                                                {p.nombre}
-                                            </div>
-                                            <div className={styles.productMetaRow}>
-                                                <span className={styles.productPrice}>C$ {p.precioVenta}</span>
-                                                <small className={styles.productProfit}>+C$ {p.precioVenta - p.precioCosto}</small>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.productBadges}>
-                                            <span className={`${styles.badge} ${p.esDigital ? (p.esSuscripcion ? styles.badgeRecurrente : styles.badgeDigital) : p.requiereServicio ? styles.badgeServicio : styles.badgeFisico}`}>
-                                                {p.esSuscripcion ? "Streaming" : p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
-                                            </span>
-                                            {!p.esDigital && !p.requiereServicio && (
-                                                <small className={`${styles.stockText} ${p.stockActual <= 3 ? styles.stockCritical : ''}`}>
-                                                    Cant: {p.stockActual}
-                                                </small>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className={styles.productList}>
-                                {productosFiltrados.map(p => (
-                                    <div 
-                                        key={p.id} 
-                                        onClick={() => agregarAlCarrito(p)} 
-                                        className={styles.productRow}
-                                    >
-                                        <div className={styles.productRowLeft}>
-                                            <div className={styles.productRowImg}>
-                                                {p.imagenUrl ? (
-                                                    <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} />
-                                                ) : (
-                                                    <div className={styles.productNoImg}>N/A</div>
-                                                )}
-                                            </div>
-                                            <div className={styles.productRowInfo}>
-                                                <strong className={styles.productRowName} title={p.nombre}>
-                                                    {p.nombre}
-                                                </strong>
-                                                <small className={styles.productRowSub}>
-                                                    {p.esSuscripcion ? "📺 Streaming" : p.esDigital ? "🎮 Recarga Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <span className={styles.productPrice}>C$ {p.precioVenta}</span>
-                                    </div>
-                                ))}
-                            </div>
+            {/* TAB 2: CARRITO DE COMPRAS Y CONTROLES COMPLETOS */}
+            {tabActiva === 'carrito' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    
+                    {/* Encabezado del Carrito */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '10px 12px', borderRadius: '10px', border: '1px solid #334155' }}>
+                        <span style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.85rem' }}>Resumen de Orden ({carrito.length})</span>
+                        {carrito.length > 0 && (
+                            <button 
+                                onClick={limpiarCarrito}
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                            >
+                                <FaTrashAlt /> Vaciar Carrito
+                            </button>
                         )}
                     </div>
-                </div>
 
-                {/* PANEL DERECHO: CARRITO Y ACCIONES */}
-                <div className={styles.carritoPanel}>
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '45%', minHeight: '180px', flex: 1 }}>
-                        <div className={styles.carritoHeader}>
-                            <h4 className={styles.carritoTitle}>
-                                <FaShoppingCart style={{ color: '#38bdf8' }} /> Resumen de Orden
-                            </h4>
-                            {carrito.length > 0 && (
-                                <button onClick={limpiarCarrito} className={styles.vaciarBtn}>
-                                    <FaTrashAlt /> Vaciar
-                                </button>
-                            )}
-                        </div>
-                        
-                        <div className={styles.scrollContainer}>
-                            {carrito.length === 0 && (
-                                <div className={styles.cartEmpty}>
-                                    <FaShoppingCart size={24} style={{ opacity: 0.4 }} />
-                                    <p>El carrito está vacío.</p>
-                                </div>
-                            )}
-                            {carrito.map(item => {
+                    {/* Lista de Items con todos los controles operativos */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {carrito.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px' }}>
+                                El carrito está vacío. Agrega productos desde el catálogo.
+                            </div>
+                        ) : (
+                            carrito.map(item => {
                                 const pBase = productos.find(p => p.id === item.idProducto);
                                 return (
-                                    <div key={item.idProducto} className={styles.cartItem}>
-                                        <div className={styles.cartItemMain}>
-                                            <div className={styles.cartItemLeft}>
-                                                <button onClick={() => eliminarDelCarrito(item.idProducto)} className={styles.eliminarItem} title="Eliminar artículo">
-                                                    <FaTimes size={14} />
-                                                </button>
-                                                <span className={styles.cartItemName}>
-                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(📺)</span>}
-                                                </span>
-                                            </div>
-                                            <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap' }}>C$ {item.subTotal}</strong>
+                                    <div key={item.idProducto} style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        
+                                        {/* Título y botón eliminar */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <strong style={{ color: '#fff', fontSize: '0.85rem' }}>
+                                                {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(📺)</span>}
+                                            </strong>
+                                            <button onClick={() => eliminarDelCarrito(item.idProducto)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                <FaTimes />
+                                            </button>
                                         </div>
 
-                                        <div className={styles.cartItemSubRow}>
-                                            <div className={styles.controlGroup}>
-                                                <span className={styles.cartLabel}>Cant:</span>
-                                                <input 
-                                                    type="number" 
-                                                    value={item.cantidad} 
-                                                    min={1} 
-                                                    onChange={(e) => cambiarCantidadManual(item.idProducto, Number(e.target.value))} 
-                                                    className={styles.cantInput} 
-                                                />
+                                        {/* Fila de Cantidad, Precio y Descuento */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                                            <div>
+                                                <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block' }}>Cant.</small>
+                                                <input type="number" min={1} value={item.cantidad} onChange={(e) => cambiarCantidadManual(item.idProducto, Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
                                             </div>
-
-                                            <div className={styles.controlGroup}>
-                                                <span className={styles.cartLabel}>P.Unit (C$):</span>
-                                                <input 
-                                                    type="number" 
-                                                    min={0} 
-                                                    value={item.precioUnitario} 
-                                                    onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, Number(e.target.value))} 
-                                                    className={styles.smallInput} 
-                                                />
+                                            <div>
+                                                <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block' }}>P.Unit C$</small>
+                                                <input type="number" min={0} value={item.precioUnitario} onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
                                             </div>
-
-                                            <div className={styles.controlGroup}>
-                                                <span className={`${styles.cartLabel} ${styles.labelDescuento}`}>Desc (C$):</span>
-                                                <input 
-                                                    type="number" 
-                                                    min={0} 
-                                                    max={item.precioUnitario} 
-                                                    value={item.descuento || 0} 
-                                                    onChange={(e) => cambiarDescuentoManual(item.idProducto, Number(e.target.value))} 
-                                                    className={styles.smallInput} 
-                                                />
+                                            <div>
+                                                <small style={{ color: '#f59e0b', fontSize: '0.68rem', display: 'block' }}>Desc C$</small>
+                                                <input type="number" min={0} max={item.precioUnitario} value={item.descuento || 0} onChange={(e) => cambiarDescuentoManual(item.idProducto, Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
                                             </div>
                                         </div>
 
+                                        {/* Controles de Suscripción (Días / Meses Exactos) */}
                                         {pBase?.esSuscripcion && (
-                                            <div className={styles.cartItemSubRow} style={{ marginTop: '4px', gap: '8px' }}>
-                                                <div className={styles.controlGroup}>
-                                                    <span className={`${styles.cartLabel} ${styles.labelSuscripcion}`}>Días:</span>
+                                            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                <div>
+                                                    <small style={{ color: '#38bdf8', fontSize: '0.68rem', display: 'block', fontWeight: 700 }}>Días Manuales</small>
                                                     <input 
                                                         type="number" 
                                                         min={1} 
                                                         value={item.diasSuscripcion} 
                                                         onChange={(e) => actualizarDiasItemCarrito(item.idProducto, Number(e.target.value))} 
-                                                        className={styles.smallInput} 
+                                                        style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '4px 6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} 
                                                     />
                                                 </div>
 
-                                                <div className={styles.controlGroup}>
-                                                    <span className={styles.cartLabel}>Meses Exactos:</span>
+                                                <div>
+                                                    <small style={{ color: '#10b981', fontSize: '0.68rem', display: 'block', fontWeight: 700 }}>Meses Exactos</small>
                                                     <select 
                                                         onChange={(e) => {
                                                             const m = Number(e.target.value);
                                                             if (m > 0) aplicarMesesExactosCarrito(item.idProducto, m);
                                                         }}
-                                                        className={styles.selectControl}
-                                                        style={{ padding: '2px 4px', fontSize: '0.75rem' }}
+                                                        style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '4px 6px', borderRadius: '6px', fontSize: '0.75rem', boxSizing: 'border-box' }}
                                                         defaultValue=""
                                                     >
                                                         <option value="" disabled>Seleccionar...</option>
@@ -980,195 +855,175 @@ export const Caja: React.FC = () => {
                                             </div>
                                         )}
 
+                                        {/* Textarea de Metadata Digital (Credenciales / PIN) */}
                                         {pBase?.esDigital && (
-                                            <div style={{ marginTop: '6px' }}>
-                                                <small style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                                                    🔒 Credenciales Asignadas (Auto):
+                                            <div>
+                                                <small style={{ color: '#38bdf8', fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
+                                                    🔒 Credenciales / Accesos Asignados:
                                                 </small>
                                                 <textarea 
                                                     rows={2}
-                                                    placeholder="No hay credenciales registradas en el inventario..."
+                                                    placeholder="Credencial / Perfil / PIN asignado..."
                                                     value={item.metadataDigital} 
                                                     onChange={(e) => actualizarMetadata(item.idProducto, e.target.value)} 
-                                                    className={styles.metaInput} 
-                                                    style={{ width: '100%', marginTop: '2px', fontSize: '0.8rem', resize: 'vertical' }}
+                                                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.78rem', resize: 'vertical', boxSizing: 'border-box' }}
                                                 />
                                             </div>
                                         )}
+
+                                        {/* Subtotal por Item */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '6px' }}>
+                                            <small style={{ color: '#64748b', fontSize: '0.7rem' }}>Subtotal calculado:</small>
+                                            <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>C$ {item.subTotal}</strong>
+                                        </div>
+
                                     </div>
                                 );
-                            })}
-                        </div>
+                            })
+                        )}
                     </div>
 
-                    <div className={styles.carritoFooter}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}><FaUser size={10} /> Cliente Asociado</label>
-                            <input 
-                                type="text" 
-                                placeholder="🔍 Buscar por nombre o móvil..." 
-                                value={busquedaCliente} 
-                                onChange={e => setBusquedaCliente(e.target.value)} 
-                                className={styles.searchInput}
-                                style={{ padding: '8px 12px', fontSize: '0.8rem', marginBottom: '4px' }} 
-                            />
-                            <select 
-                                value={idClienteSeleccionado || 0} 
-                                onChange={e => { 
-                                    const val = Number(e.target.value);
-                                    setIdClienteSeleccionado(val); 
-                                    const selectText = e.target.options[e.target.selectedIndex].text; 
-                                    if (val !== 0) setBusquedaCliente(selectText.split(' (')[0]); 
-                                }} 
-                                className={styles.selectControl}
-                            >
-                                <option value={0}>Venta de Mostrador (Genérico)</option>
-                                {clientesFiltrados.map((c: any) => (
-                                    <option key={c.id} value={c.id}>{c.nombre} ({c.telefono || 'Sin tel'})</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Método de Pago</label>
-                            <select 
-                                value={metodoPago} 
-                                onChange={e => setMetodoPago(e.target.value)} 
-                                className={styles.selectControl}
-                            >
-                                <option value="Efectivo">💵 Efectivo</option>
-                                <option value="Transferencia">🏦 Transferencia Bancaria</option>
-                                <option value="Tarjeta">💳 Tarjeta</option>
-                                <option value="Crédito">🛑 Crédito (Cuenta por Cobrar)</option>
-                            </select>
-                        </div>
-
-                        {metodoPago === "Crédito" && (
-                            <div className={styles.creditoBox}>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.formLabel} style={{ color: '#f87171' }}>Plazo del Crédito (Días)</label>
-                                    <input 
-                                        type="number" 
-                                        min="1" 
-                                        value={diasCredito} 
-                                        onChange={e => { 
-                                            const dias = Number(e.target.value); 
-                                            setDiasCredito(dias); 
-                                            setFechaVencimientoCredito(obtenerFechaLocalISO(dias, fechaVenta)); 
-                                        }} 
-                                        className={styles.searchInput}
-                                        style={{ border: '1px solid #ef4444', padding: '8px' }} 
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.formLabel} style={{ color: '#f87171' }}><FaCalendarAlt size={10} /> Fecha de Vencimiento</label>
-                                    <input 
-                                        type="date" 
-                                        value={fechaVencimientoCredito} 
-                                        onChange={e => setFechaVencimientoCredito(e.target.value)} 
-                                        className={styles.searchInput}
-                                        style={{ border: '1px solid #ef4444', padding: '8px' }} 
-                                    />
-                                </div>
+                    {/* Resumen Final, Datos del Cliente y Métodos de Pago */}
+                    {carrito.length > 0 && (
+                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            
+                            {/* Búsqueda y Selección de Cliente */}
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '4px' }}>Cliente Asociado</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="🔍 Filtrar cliente por nombre..." 
+                                    value={busquedaCliente} 
+                                    onChange={e => setBusquedaCliente(e.target.value)} 
+                                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '4px', boxSizing: 'border-box' }}
+                                />
+                                <select 
+                                    value={idClienteSeleccionado || 0} 
+                                    onChange={e => setIdClienteSeleccionado(Number(e.target.value))}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '8px', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                                >
+                                    <option value={0}>Venta de Mostrador (Genérico)</option>
+                                    {clientesFiltrados.map((c: any) => (
+                                        <option key={c.id} value={c.id}>{c.nombre} ({c.telefono || 'Sin tel'})</option>
+                                    ))}
+                                </select>
                             </div>
-                        )}
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Fecha de Facturación</label>
-                            <input 
-                                type="date" 
-                                value={fechaVenta} 
-                                onChange={e => { 
-                                    const nuevaFechaVenta = e.target.value; 
-                                    setFechaVenta(nuevaFechaVenta); 
-                                    setFechaVencimientoCredito(obtenerFechaLocalISO(diasCredito, nuevaFechaVenta)); 
-                                }} 
-                                className={styles.searchInput}
-                                style={{ padding: '8px' }} 
-                            />
-                        </div>
-
-                        {carrito.length > 0 && (
-                            <div className={styles.utilityBadge}>
-                                <FaMoneyBillWave style={{ color: '#c084fc', flexShrink: 0 }} />
-                                <span>Utilidad: <strong style={{ color: '#4ade80', fontSize: '0.9rem' }}>C$ {margenGananciaTotal}</strong></span>
+                            {/* Método de Pago */}
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '4px' }}>Método de Pago</label>
+                                <select 
+                                    value={metodoPago} 
+                                    onChange={e => setMetodoPago(e.target.value)}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '8px', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                                >
+                                    <option value="Efectivo">💵 Efectivo</option>
+                                    <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                                    <option value="Tarjeta">💳 Tarjeta</option>
+                                    <option value="Crédito">🛑 Crédito</option>
+                                </select>
                             </div>
-                        )}
 
-                        <div className={styles.totalRow}>
-                            <span className={styles.totalLabel}>Monto Total:</span>
-                            <strong className={styles.totalAmount}>C$ {totalVenta}</strong>
-                        </div>
+                            {/* Plazo del Crédito (si aplica) */}
+                            {metodoPago === "Crédito" && (
+                                <div style={{ background: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #ef4444', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div>
+                                        <label style={{ color: '#f87171', fontSize: '0.7rem', display: 'block' }}>Plazo del Crédito (Días)</label>
+                                        <input 
+                                            type="number" 
+                                            min="1" 
+                                            value={diasCredito} 
+                                            onChange={e => { 
+                                                const dias = Number(e.target.value); 
+                                                setDiasCredito(dias); 
+                                                setFechaVencimientoCredito(obtenerFechaLocalISO(dias, fechaVenta)); 
+                                            }} 
+                                            style={{ width: '100%', background: '#1e293b', border: '1px solid #ef4444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ color: '#f87171', fontSize: '0.7rem', display: 'block' }}>Fecha de Vencimiento</label>
+                                        <input 
+                                            type="date" 
+                                            value={fechaVencimientoCredito} 
+                                            onChange={e => setFechaVencimientoCredito(e.target.value)} 
+                                            style={{ width: '100%', background: '#1e293b', border: '1px solid #ef4444', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                        <button 
-                            onClick={finalizarVenta} 
-                            disabled={carrito.length === 0} 
-                            className={`${styles.submitBtn} ${carrito.length === 0 ? styles.submitBtnDisabled : styles.submitBtnActive}`}
-                        >
-                            Procesar Factura
-                        </button>
-                    </div>
-                </div>
-            </div>
+                            {/* Margen de Utilidad */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                <span style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>Margen de Utilidad:</span>
+                                <strong style={{ color: '#10b981', fontSize: '0.85rem' }}>C$ {margenGananciaTotal}</strong>
+                            </div>
 
-            {/* MODAL FLOTANTE DE ERROR */}
-            {mensajeErrorModal && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent} style={{ borderTop: '4px solid #ef4444' }}>
-                        <div className={styles.modalIcon} style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
-                            <FaExclamationTriangle />
-                        </div>
-                        <h3 className={styles.modalTitle} style={{ color: '#f87171' }}>Operación Denegada</h3>
-                        <p className={styles.modalText} style={{ fontSize: '0.95rem', color: '#e2e8f0' }}>
-                            {mensajeErrorModal}
-                        </p>
-                        <div className={styles.modalActions}>
+                            {/* Total Final y Botón de Cobro */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '8px' }}>
+                                <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total a cobrar:</span>
+                                <strong style={{ color: '#38bdf8', fontSize: '1.4rem' }}>C$ {totalVenta}</strong>
+                            </div>
+
                             <button 
-                                onClick={() => setMensajeErrorModal(null)} 
-                                className={`${styles.modalBtn}`}
-                                style={{ background: '#334155', color: '#fff' }}
+                                onClick={finalizarVenta}
+                                style={{ width: '100%', padding: '12px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
                             >
-                                Entendido
+                                Procesar Factura
                             </button>
                         </div>
+                    )}
+                </div>
+            )}
+
+            {/* MODAL DE DESPACHO EXITOSO */}
+            {mostrarModalDespacho && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' }}>
+                        <FaCheckCircle style={{ color: '#10b981', fontSize: '2.5rem', margin: '0 auto' }} />
+                        <h3 style={{ color: '#fff', margin: 0, fontSize: '1.1rem' }}>¡Transacción Guardada!</h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>La venta fue registrada. Elige la vía de despacho para el cliente:</p>
+
+                        {datosUltimaVenta && datosUltimaVenta.cliente && datosUltimaVenta.cliente.id !== 0 ? (
+                            <button 
+                                onClick={() => enviarWhatsAppVenta(datosUltimaVenta)}
+                                style={{ background: '#25D366', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                            >
+                                <FaWhatsapp /> Enviar Accesos (WhatsApp)
+                            </button>
+                        ) : (
+                            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', color: '#f59e0b', fontSize: '0.75rem' }}>
+                                Venta de mostrador sin WhatsApp vinculado.
+                            </div>
+                        )}
+
+                        <button 
+                            onClick={() => imprimirTicketTermico(datosUltimaVenta)}
+                            style={{ background: '#334155', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                            <FaPrint /> Imprimir Ticket
+                        </button>
+
+                        <button 
+                            onClick={() => { setMostrarModalDespacho(false); setDatosUltimaVenta(null); }}
+                            style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.8rem', cursor: 'pointer', marginTop: '4px' }}
+                        >
+                            Cerrar y Siguiente Venta
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* MODAL INTERACTIVO FLOTANTE: DESPACHO EXITOSO */}
-            {mostrarModalDespacho && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalIcon}><FaCheckCircle /></div>
-                        <h3 className={styles.modalTitle}>¡Transacción Guardada!</h3>
-                        <p className={styles.modalText}>La venta se registró correctamente en el sistema. Selecciona la vía de despacho de credenciales para el cliente.</p>
-                        
-                        <div className={styles.modalActions}>
-                            {datosUltimaVenta && datosUltimaVenta.cliente && datosUltimaVenta.cliente.id !== 0 ? (
-                                <button 
-                                    onClick={() => enviarWhatsAppVenta(datosUltimaVenta)} 
-                                    className={`${styles.modalBtn} ${styles.btnWhatsapp}`}
-                                >
-                                    <FaWhatsapp size={18} /> Enviar Comprobante y Accesos (WhatsApp)
-                                </button>
-                            ) : (
-                                <div className={styles.warningBanner}>
-                                    Venta genérica de mostrador: No vinculada a número de WhatsApp para envío directo.
-                                </div>
-                            )}
-                            <button 
-                                onClick={() => imprimirTicketTermico(datosUltimaVenta)} 
-                                className={`${styles.modalBtn} ${styles.btnPrint}`}
-                            >
-                                <FaPrint /> Imprimir Copia Física (Ticketera)
-                            </button>
-                            <button 
-                                onClick={() => { setMostrarModalDespacho(false); setDatosUltimaVenta(null); }} 
-                                className={`${styles.modalBtn} ${styles.btnClose}`}
-                            >
-                                Cerrar Caja POS y Siguiente Venta
-                            </button>
-                        </div>
+            {/* MODAL ERROR */}
+            {mensajeErrorModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
+                        <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '2rem', margin: '0 auto' }} />
+                        <h4 style={{ color: '#f87171', margin: 0 }}>Operación Denegada</h4>
+                        <p style={{ color: '#e2e8f0', fontSize: '0.82rem', margin: 0 }}>{mensajeErrorModal}</p>
+                        <button onClick={() => setMensajeErrorModal(null)} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', marginTop: '6px', fontSize: '0.85rem' }}>
+                            Entendido
+                        </button>
                     </div>
                 </div>
             )}

@@ -10,14 +10,18 @@ import {
     FaSearch, 
     FaChevronLeft, 
     FaChevronRight, 
-    FaLock 
+    FaLock,
+    FaPlus,
+    FaChartBar
 } from 'react-icons/fa';
-import styles from '../assets/styles/ContabilidadCaja.module.css';
 
 export const ContabilidadCaja: React.FC = () => {
     const [movimientos, setMovimientos] = useState<any[]>([]);
     const [reporte, setReporte] = useState<any>(null);
     const [cargando, setCargando] = useState(true);
+
+    // CONTROL DE NAVEGACIÓN MÓVIL (Pestañas)
+    const [tabActiva, setTabActiva] = useState<'balance' | 'registrar' | 'libro'>('balance');
 
     // FILTROS DE HISTORIAL
     const [desde, setDesde] = useState('');
@@ -129,6 +133,7 @@ export const ContabilidadCaja: React.FC = () => {
             alert("Movimiento financiero asentado de forma conforme.");
             setMonto(0); 
             setDetalle('');
+            setTabActiva('libro');
             cargarDatosCaja();
         } catch {
             alert("Error de red al registrar flujo.");
@@ -179,201 +184,255 @@ export const ContabilidadCaja: React.FC = () => {
         }
     };
 
-    if (cargando) return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Procesando balances contables...</div>;
+    if (cargando) return (
+        <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>
+            Procesando balances contables...
+        </div>
+    );
 
     return (
-        <div className={styles.container}>
+        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
             
-            {/* ENCABEZADO */}
-            <div className={styles.header}>
-                <h3>Arqueo de Caja y Libro Contable</h3>
-                <p>Control de flujos brutos, costos operativos y utilidades netas reales.</p>
+            {/* ENCABEZADO Y TABS DE NAVEGACIÓN MÓVIL */}
+            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Arqueo y Libro Contable</h3>
+                    <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Control de flujos brutos, costos y utilidad neta</small>
+                </div>
+
+                {/* Conmutador de Capas */}
+                <div style={{ display: 'flex', gap: '6px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <button 
+                        onClick={() => setTabActiva('balance')}
+                        style={{
+                            flex: 1, padding: '8px', borderRadius: '6px', border: 'none',
+                            background: tabActiva === 'balance' ? '#38bdf8' : 'transparent',
+                            color: tabActiva === 'balance' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                    >
+                        <FaChartBar /> Balance
+                    </button>
+                    <button 
+                        onClick={() => setTabActiva('registrar')}
+                        style={{
+                            flex: 1, padding: '8px', borderRadius: '6px', border: 'none',
+                            background: tabActiva === 'registrar' ? '#38bdf8' : 'transparent',
+                            color: tabActiva === 'registrar' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                    >
+                        <FaPlus /> + Flujo
+                    </button>
+                    <button 
+                        onClick={() => setTabActiva('libro')}
+                        style={{
+                            flex: 1, padding: '8px', borderRadius: '6px', border: 'none',
+                            background: tabActiva === 'libro' ? '#38bdf8' : 'transparent',
+                            color: tabActiva === 'libro' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                    >
+                        <FaHistory /> Libro ({movimientos.length})
+                    </button>
+                </div>
             </div>
 
-            {/* SECCIÓN 1: METRICAS REALES (DÍA VS MES) */}
-            <div className={styles.metricsGrid}>
-                <div className={`${styles.card} ${styles.cardUtilidadDiaria}`}>
-                    <small>UTILIDAD DIARIA NETAL</small>
-                    <h3 style={{ color: '#10b981' }}>C$ {reporte?.dia?.utilidad?.toLocaleString() ?? 0}</h3>
-                    <span className={styles.subtext}>Ingresos Hoy: C$ {reporte?.dia?.ingresos ?? 0}</span>
-                </div>
-                <div className={`${styles.card} ${styles.cardUtilidadMensual}`}>
-                    <small>UTILIDAD MENSUAL NETAL</small>
-                    <h3 style={{ color: '#38bdf8' }}>C$ {reporte?.mes?.utilidad?.toLocaleString() ?? 0}</h3>
-                    <span className={styles.subtext}>Ingresos Mes: C$ {reporte?.mes?.ingresos ?? 0}</span>
-                </div>
-                <div className={`${styles.card} ${styles.cardCostoCompras}`}>
-                    <small>COSTO EN COMPRAS (MES)</small>
-                    <h3 style={{ color: '#a855f7' }}>C$ {reporte?.mes?.compras?.toLocaleString() ?? 0}</h3>
-                    <span className={styles.subtext}>Inversión en reabastecimiento</span>
-                </div>
-                <div className={`${styles.card} ${styles.cardGastosOperativos}`}>
-                    <small>GASTOS OPERATIVOS (MES)</small>
-                    <h3 style={{ color: '#ef4444' }}>C$ {reporte?.mes?.gastos?.toLocaleString() ?? 0}</h3>
-                    <span className={styles.subtext}>Luz, internet, pérdidas fijos</span>
-                </div>
-            </div>
+            {/* PESTAÑA 1: BALANCE DE UTILIDADES Y METRICAS REALES (2x2 Grid Móvil) */}
+            {tabActiva === 'balance' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #10b981' }}>
+                        <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block', fontWeight: 700 }}>UTILIDAD DÍA NETAL</small>
+                        <h3 style={{ color: '#10b981', margin: '4px 0', fontSize: '1.2rem', fontWeight: 800 }}>
+                            C$ {reporte?.dia?.utilidad?.toLocaleString() ?? 0}
+                        </h3>
+                        <small style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Ingresos: C$ {reporte?.dia?.ingresos ?? 0}</small>
+                    </div>
 
-            <div className={styles.mainLayout}>
-                {/* PANEL IZQUIERDO: REGISTRO DE MOVIMIENTO MANUAL */}
-                <div className={styles.formPanel}>
-                    <h4><FaFileInvoiceDollar /> Registrar Flujo Manual</h4>
-                    <form onSubmit={guardarMovimiento} className={styles.form}>
-                        <div className={styles.formGroup}>
-                            <label>Tipo de Movimiento</label>
-                            <select value={tipo} onChange={e => setTipo(e.target.value)} className={styles.input} style={{ cursor: 'pointer' }}>
+                    <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #38bdf8' }}>
+                        <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block', fontWeight: 700 }}>UTILIDAD MES NETAL</small>
+                        <h3 style={{ color: '#38bdf8', margin: '4px 0', fontSize: '1.2rem', fontWeight: 800 }}>
+                            C$ {reporte?.mes?.utilidad?.toLocaleString() ?? 0}
+                        </h3>
+                        <small style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Ingresos: C$ {reporte?.mes?.ingresos ?? 0}</small>
+                    </div>
+
+                    <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #a855f7' }}>
+                        <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block', fontWeight: 700 }}>COMPRAS (MES)</small>
+                        <h3 style={{ color: '#a855f7', margin: '4px 0', fontSize: '1.2rem', fontWeight: 800 }}>
+                            C$ {reporte?.mes?.compras?.toLocaleString() ?? 0}
+                        </h3>
+                        <small style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Inversión reabastecimiento</small>
+                    </div>
+
+                    <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #ef4444' }}>
+                        <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block', fontWeight: 700 }}>GASTOS (MES)</small>
+                        <h3 style={{ color: '#ef4444', margin: '4px 0', fontSize: '1.2rem', fontWeight: 800 }}>
+                            C$ {reporte?.mes?.gastos?.toLocaleString() ?? 0}
+                        </h3>
+                        <small style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Luz, renta, servicios</small>
+                    </div>
+                </div>
+            )}
+
+            {/* PESTAÑA 2: REGISTRO DE MOVIMIENTO MANUAL */}
+            {tabActiva === 'registrar' && (
+                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: '#38bdf8', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaFileInvoiceDollar /> Registrar Flujo Manual
+                    </h4>
+                    
+                    <form onSubmit={guardarMovimiento} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Tipo de Movimiento</label>
+                            <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}>
                                 <option value="Egreso">🛑 Egreso / Salida</option>
                                 <option value="Ingreso">💵 Ingreso / Entrada</option>
                             </select>
                         </div>
-                        <div className={styles.formGroup}>
-                            <label>Concepto Contable</label>
-                            <select value={concepto} onChange={e => setConcepto(e.target.value)} className={styles.input} style={{ cursor: 'pointer' }}>
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Concepto Contable</label>
+                            <select value={concepto} onChange={e => setConcepto(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}>
                                 <option value="Gasto Ordinario">Gasto Ordinario (Luz, Renta, Servicios)</option>
                                 <option value="Ajuste">Ajuste de Caja</option>
                                 <option value="Venta">Ingreso Extraordinario</option>
                             </select>
                         </div>
-                        <div className={styles.formGroup}>
-                            <label>Monto Transacción (C$)</label>
-                            <input type="number" min={1} value={monto || ''} onChange={e => setMonto(Number(e.target.value))} className={styles.input} required />
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Monto Transacción (C$)</label>
+                            <input type="number" min={1} value={monto || ''} onChange={e => setMonto(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label>Descripción / Justificación</label>
-                            <input type="text" placeholder="Ej: Pago de recibo Claro internet" value={detalle} onChange={e => setDetalle(e.target.value)} className={styles.input} required />
+
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>Descripción / Justificación</label>
+                            <input type="text" placeholder="Ej: Pago de recibo internet" value={detalle} onChange={e => setDetalle(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
                         </div>
-                        <button type="submit" className={styles.btnSubmit}><FaSave /> Asentar en Libro</button>
+
+                        <button type="submit" style={{ width: '100%', padding: '12px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <FaSave /> Asentar en Libro
+                        </button>
                     </form>
                 </div>
+            )}
 
-                {/* PANEL DERECHO: HISTORIAL CONTABLE GENERAL CON FILTROS Y NAVEGACIÓN */}
-                <div className={styles.tablePanel}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                        <h4><FaHistory /> Auditoría de Libro Diario</h4>
-                        
-                        {/* CONTROLES DE FECHAS */}
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <button onClick={() => aplicarRangoRapido('hoy')} className={styles.btnRango} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Hoy</button>
-                            <button onClick={() => aplicarRangoRapido('mes')} className={styles.btnRango} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Este Mes</button>
-                            <button onClick={() => aplicarRangoRapido('mesPasado')} className={styles.btnRango} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Mes Pasado</button>
+            {/* PESTAÑA 3: AUDITORÍA Y LIBRO DIARIO CON FILTROS */}
+            {tabActiva === 'libro' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Filtros Rápidos de Fecha */}
+                    <div style={{ background: '#1e293b', padding: '10px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '4px', overflowX: 'auto' }}>
+                            <button onClick={() => aplicarRangoRapido('hoy')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Hoy</button>
+                            <button onClick={() => aplicarRangoRapido('mes')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Este Mes</button>
+                            <button onClick={() => aplicarRangoRapido('mesPasado')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '4px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Mes Pasado</button>
                             
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: '4px' }}>
-                                <button onClick={() => cambiarMesRelativo(-1)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '2px 6px' }} title="Mes Anterior">
-                                    <FaChevronLeft size={10} />
-                                </button>
-                                <span style={{ fontSize: '0.7rem', color: '#e2e8f0', fontWeight: 'bold' }}>
-                                    {fechaReferenciaMes.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase()}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#0f172a', padding: '2px 6px', borderRadius: '6px', border: '1px solid #334155', marginLeft: 'auto' }}>
+                                <button onClick={() => cambiarMesRelativo(-1)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer' }}><FaChevronLeft size={10} /></button>
+                                <span style={{ fontSize: '0.68rem', color: '#fff', fontWeight: 700 }}>
+                                    {fechaReferenciaMes.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }).toUpperCase()}
                                 </span>
-                                <button onClick={() => cambiarMesRelativo(1)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '2px 6px' }} title="Mes Siguiente">
-                                    <FaChevronRight size={10} />
-                                </button>
+                                <button onClick={() => cambiarMesRelativo(1)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer' }}><FaChevronRight size={10} /></button>
                             </div>
+                        </div>
+
+                        {/* Rango Desde - Hasta */}
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '4px 6px', borderRadius: '6px', fontSize: '0.75rem' }} />
+                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>a</span>
+                            <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '4px 6px', borderRadius: '6px', fontSize: '0.75rem' }} />
+                            <button onClick={consultarHistorialPorFechas} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '5px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>
+                                <FaSearch size={10} />
+                            </button>
                         </div>
                     </div>
 
-                    {/* RANGO DESDE - HASTA */}
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
-                        <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className={styles.input} style={{ fontSize: '0.75rem', padding: '4px 8px' }} />
-                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>a</span>
-                        <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className={styles.input} style={{ fontSize: '0.75rem', padding: '4px 8px' }} />
-                        <button onClick={consultarHistorialPorFechas} className={styles.btnSubmit} style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <FaSearch size={10} /> Filtrar
-                        </button>
-                    </div>
+                    {/* Timeline de Transacciones Contables */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {Array.isArray(movimientos) && movimientos.length > 0 ? (
+                            movimientos.map((m) => {
+                                const esIngreso = m.tipo === 'Ingreso';
+                                const esAuto = m.esAutomatico || m.es_automatico;
 
-                    <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>Detalle / Concepto</th>
-                                    <th style={{ textAlign: 'right' }}>Monto</th>
-                                    <th style={{ textAlign: 'center', width: '80px' }}>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {Array.isArray(movimientos) && movimientos.length > 0 ? (
-                                    movimientos.map((m) => {
-                                        const esIngreso = m.tipo === 'Ingreso';
-                                        const esAuto = m.esAutomatico || m.es_automatico;
+                                return (
+                                    <div 
+                                        key={m.id} 
+                                        style={{ 
+                                            background: '#1e293b', 
+                                            padding: '10px 12px', 
+                                            borderRadius: '10px', 
+                                            borderLeft: `4px solid ${esIngreso ? '#10b981' : '#ef4444'}`,
+                                            borderTop: '1px solid #334155',
+                                            borderRight: '1px solid #334155',
+                                            borderBottom: '1px solid #334155',
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            gap: '4px' 
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', maxWidth: '70%' }}>
+                                                {esAuto && <FaLock size={10} style={{ color: '#f59e0b', flexShrink: 0 }} title="Automático de sistema" />}
+                                                <strong style={{ color: '#fff', fontSize: '0.82rem', lineHeight: '1.2' }}>{m.detalle}</strong>
+                                            </div>
+                                            <strong style={{ color: esIngreso ? '#10b981' : '#ef4444', fontSize: '0.9rem' }}>
+                                                {esIngreso ? '+' : '-'} C$ {m.monto.toLocaleString()}
+                                            </strong>
+                                        </div>
 
-                                        return (
-                                            <tr key={m.id} className={esIngreso ? styles.rowIngreso : styles.rowEgreso}>
-                                                <td>
-                                                    <strong style={{ color: '#fff' }}>
-                                                        {esAuto && <FaLock size={10} style={{ color: '#f59e0b', marginRight: '6px' }} title="Movimiento automático de sistema" />}
-                                                        {m.detalle}
-                                                    </strong>
-                                                    <span className={styles.subRowText}>
-                                                        📂 {m.concepto} • 📅 {new Date(m.fecha).toLocaleString()}
-                                                    </span>
-                                                </td>
-                                                <td className={`${styles.txtMonto} ${esIngreso ? styles.txtIngreso : styles.txtEgreso}`}>
-                                                    {esIngreso ? '+' : '-'} C$ {m.monto.toLocaleString()}
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    {!esAuto ? (
-                                                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                                            <button 
-                                                                onClick={() => abrirModalEdicion(m)} 
-                                                                style={{ background: '#3b82f6', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                                                                title="Editar Movimiento Manual"
-                                                            >
-                                                                <FaEdit size={12} />
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => eliminarMovimiento(m)} 
-                                                                style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                                                                title="Eliminar Movimiento Manual"
-                                                            >
-                                                                <FaTrash size={12} />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <span style={{ fontSize: '0.65rem', color: '#64748b', fontStyle: 'italic' }}>Sistema</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>
-                                            No hay movimientos de caja registrados.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                            <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                                📂 {m.concepto} • 📅 {new Date(m.fecha).toLocaleDateString('es-NI')}
+                                            </span>
+
+                                            {!esAuto ? (
+                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                    <button onClick={() => abrirModalEdicion(m)} style={{ background: '#3b82f6', border: 'none', color: '#fff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}>
+                                                        <FaEdit />
+                                                    </button>
+                                                    <button onClick={() => eliminarMovimiento(m)} style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}>
+                                                        <FaTrash />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span style={{ fontSize: '0.65rem', color: '#64748b', fontStyle: 'italic' }}>Sistema</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+                                No hay movimientos de caja en este rango.
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* MODAL DE EDICIÓN DE MOVIMIENTO MANUAL */}
             {movimientoAEditar && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-                }}>
-                    <div style={{
-                        background: '#1e293b', border: '1px solid #334155', borderRadius: '8px',
-                        padding: '20px', width: '400px', maxWidth: '90%', color: '#f8fafc'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h4 style={{ margin: 0, fontSize: '1.1rem' }}>✏️ Editar Movimiento #{movimientoAEditar.id}</h4>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>✏️ Editar Movimiento #{movimientoAEditar.id}</h4>
                             <button onClick={() => setMovimientoAEditar(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                                <FaTimes size={16} />
+                                <FaTimes />
                             </button>
                         </div>
 
-                        <form onSubmit={guardarEdicionMovimiento} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <form onSubmit={guardarEdicionMovimiento} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Tipo de Movimiento</label>
+                                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Tipo</label>
                                 <select 
                                     value={movimientoAEditar.tipo} 
                                     onChange={e => setMovimientoAEditar({ ...movimientoAEditar, tipo: e.target.value })}
-                                    className={styles.input}
-                                    style={{ width: '100%', marginTop: '4px' }}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                                 >
                                     <option value="Egreso">🛑 Egreso / Salida</option>
                                     <option value="Ingreso">💵 Ingreso / Entrada</option>
@@ -381,51 +440,48 @@ export const ContabilidadCaja: React.FC = () => {
                             </div>
 
                             <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Concepto Contable</label>
+                                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Concepto</label>
                                 <select 
                                     value={movimientoAEditar.concepto} 
                                     onChange={e => setMovimientoAEditar({ ...movimientoAEditar, concepto: e.target.value })}
-                                    className={styles.input}
-                                    style={{ width: '100%', marginTop: '4px' }}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                                 >
-                                    <option value="Gasto Ordinario">Gasto Ordinario (Luz, Renta, Servicios)</option>
+                                    <option value="Gasto Ordinario">Gasto Ordinario</option>
                                     <option value="Ajuste">Ajuste de Caja</option>
                                     <option value="Venta">Ingreso Extraordinario</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Monto (C$)</label>
+                                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Monto (C$)</label>
                                 <input 
                                     type="number" 
                                     min={0.01}
                                     step="0.01"
                                     value={movimientoAEditar.monto} 
                                     onChange={e => setMovimientoAEditar({ ...movimientoAEditar, monto: e.target.value })}
-                                    className={styles.input}
-                                    style={{ width: '100%', marginTop: '4px' }}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                                     required 
                                 />
                             </div>
 
                             <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Descripción / Justificación</label>
+                                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Descripción</label>
                                 <input 
                                     type="text" 
                                     value={movimientoAEditar.detalle} 
                                     onChange={e => setMovimientoAEditar({ ...movimientoAEditar, detalle: e.target.value })}
-                                    className={styles.input}
-                                    style={{ width: '100%', marginTop: '4px' }}
+                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                                     required 
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end' }}>
-                                <button type="button" onClick={() => setMovimientoAEditar(null)} style={{ background: '#64748b', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                <button type="button" onClick={() => setMovimientoAEditar(null)} style={{ flex: 1, background: '#475569', border: 'none', color: '#fff', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
                                     Cancelar
                                 </button>
-                                <button type="submit" style={{ background: '#10b981', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>
-                                    Guardar Cambios
+                                <button type="submit" style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                                    Guardar
                                 </button>
                             </div>
                         </form>

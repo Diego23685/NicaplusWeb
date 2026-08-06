@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './views/Login';
-import { Catalogo } from './views/Catalogo';
 import { Sidebar } from './components/Sidebar';
 import { InicioDashboard } from './views/InicioDashboard';
 import { Caja } from './views/Caja';
@@ -20,10 +19,8 @@ import { ContabilidadCaja } from './views/ContabilidadCaja';
 import { Analitica } from './views/Analitica';
 import { Auditoria } from './views/Auditoria';
 import { Notificaciones } from './views/Notificaciones';
-import { ClientesLoginRegister } from './views/ClientesLoginRegister';
 import { ConfirmarEmail } from './views/ConfirmarEmail';
-import { MiCuenta } from './views/MiCuenta'; // ◄ Importación de la nueva vista
-import api from './services/api';
+
 
 const PanelLayout: React.FC = () => {
     const { usuario } = useAuth();
@@ -95,46 +92,7 @@ const PanelLayout: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const hostname = window.location.hostname;
     const pathname = window.location.pathname;
-    
-    // Transiciones expandidas para la tienda: catálogo, login, o mi cuenta
-    const [vistaCliente, setVistaCliente] = useState<'catalogo' | 'login' | 'micuenta'>('catalogo');
-    const [clienteLogueado, setClienteLogueado] = useState<any>(null);
-
-    // Recuperar perfil en tiempo de ejecución conectando al Endpoint real de tu backend
-    const cargarPerfilDesdeBackend = async (token: string) => {
-        try {
-            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            const respuesta = await api.get('/micuenta/perfil'); // ◄ Endpoint de perfil provisto
-            setClienteLogueado(respuesta.data);
-        } catch (error) {
-            console.error("Error cargando perfil del backend, limpiando sesión:", error);
-            manejarCerrarSesionCliente();
-        }
-    };
-
-    useEffect(() => {
-        const tokenGuardado = localStorage.getItem('token_cliente');
-        if (tokenGuardado) {
-            cargarPerfilDesdeBackend(tokenGuardado);
-        }
-    }, []);
-
-    const manejarCerrarSesionCliente = () => {
-        localStorage.removeItem('token_cliente');
-        delete api.defaults.headers.common['Authorization'];
-        setClienteLogueado(null);
-        setVistaCliente('catalogo');
-    };
-
-    if (hostname.startsWith('administration.')) {
-        return (
-            <AuthProvider>
-                <PanelLayout />
-            </AuthProvider>
-        );
-    }
 
     if (pathname === '/confirmar-email') {
         return (
@@ -144,39 +102,11 @@ const App: React.FC = () => {
         );
     }
 
-    if (vistaCliente === 'login') {
-        return (
-            <AuthProvider>
-                <ClientesLoginRegister 
-                    alVolver={() => setVistaCliente('catalogo')} 
-                    alIniciarSesion={(datos) => {
-                        // Si el login no trae todo el objeto, leemos directo del backend mediante el token guardado
-                        const token = localStorage.getItem('token_cliente');
-                        if (token) cargarPerfilDesdeBackend(token);
-                        else setClienteLogueado(datos);
-                    }} 
-                />
-            </AuthProvider>
-        );
-    }
-
-    // ◄ NUEVO ENRUTAMIENTO PÚBLICO: Renderiza la vista de mi cuenta
-    if (vistaCliente === 'micuenta') {
-        return (
-            <MiCuenta 
-                alVolver={() => setVistaCliente('catalogo')}
-                alCerrarSesion={manejarCerrarSesionCliente}
-            />
-        );
-    }
-
+    // Carga directa del panel de administración
     return (
-        <Catalogo 
-            alIrAlLogin={() => setVistaCliente('login')} 
-            cliente={clienteLogueado}
-            alCerrarSesion={manejarCerrarSesionCliente}
-            alIrAMiCuenta={() => setVistaCliente('micuenta')} // ◄ Nueva acción enviada al catálogo
-        />
+        <AuthProvider>
+            <PanelLayout />
+        </AuthProvider>
     );
 };
 

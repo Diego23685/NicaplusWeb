@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
-    FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
-    FaChartLine, FaPercentage, FaExclamationTriangle, 
-    FaCalendarDay, FaCalendarTimes, FaClipboardList,
-    FaSearch, FaUser, FaTv, FaLock, FaTimes
+    FaSearch, FaUser, FaTv, FaTimes,
+    FaCalendarDay, FaCalendarTimes,
+    FaMoneyBillWave, FaChevronDown, FaChevronUp
 } from 'react-icons/fa';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
-import styles from '../assets/styles/InicioDashboard.module.css'; // ◄ NUEVOS ESTILOS PREMIUM
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Line } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 interface InicioDashboardProps {
     setVistaActiva: (vista: any) => void;
@@ -33,9 +31,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
         alertas: []
     });
     const [cargando, setCargando] = useState(true);
-    const [indicadores, setIndicadores] = useState<any>(null);
+    const [periodoKPI, setPeriodoKPI] = useState<'dia' | 'semana' | 'mes'>('dia');
+    const [mostrarGrafica, setMostrarGrafica] = useState(false);
 
-    // NUEVOS ESTADOS: Buscador Universal Integrado
+    // Buscador Universal
     const [query, setQuery] = useState('');
     const [resultados, setResultados] = useState<any>(null);
     const [buscando, setBuscando] = useState(false);
@@ -43,9 +42,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                const [resResumen, resIndicadores] = await Promise.all([
-                    api.get('/reportes/resumen-dashboard'),
-                    api.get('/reportes/indicadores')
+                const [resResumen] = await Promise.all([
+                    api.get('/reportes/resumen-dashboard')
                 ]);
 
                 setResumen({
@@ -63,10 +61,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     ultimosClientes: resResumen.data.ultimosClientes ?? [],
                     alertas: resResumen.data.alertas ?? []
                 });
-
-                setIndicadores(resIndicadores.data);
             } catch (err) {
-                console.error("Error al sincronizar métricas del dashboard:", err);
+                console.error("Error al sincronizar dashboard:", err);
             } finally {
                 setCargando(false);
             }
@@ -86,341 +82,209 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
             const res = await api.get(`/busqueda/universal?query=${valorQuery}`);
             setResultados(res.data);
         } catch (err) {
-            console.error("Error en búsqueda universal:", err);
+            console.error("Error en búsqueda:", err);
         }
     };
 
-    const limpiarBuscador = () => {
-        setQuery('');
-        setResultados(null);
-        setBuscando(false);
-    };
-
-    const porcentajeMargen = resumen.ventasMes > 0 ? ((resumen.utilidadMes / resumen.ventasMes) * 100).toFixed(1) : "0";
+    const ventasActuales = 
+        periodoKPI === 'dia' ? resumen.ventasDia :
+        periodoKPI === 'semana' ? resumen.ventasSemana : resumen.ventasMes;
 
     const datosGraficaLinea = {
         labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
         datasets: [{
-            label: 'Ingresos (C$)',
             data: resumen.semanaFlujo,
             borderColor: '#38bdf8',
-            backgroundColor: 'rgba(56, 189, 248, 0.05)',
-            tension: 0.35,
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            tension: 0.4,
             fill: true,
-            pointBackgroundColor: '#38bdf8',
-            pointHoverRadius: 6,
+            pointRadius: 3
         }]
-    };
-
-    const datosGraficaBarra = {
-        labels: ['Productos', 'Digitales', 'Soporte'],
-        datasets: [{
-            label: 'Ventas (C$)',
-            data: resumen.rubros,
-            backgroundColor: ['#a855f7', '#10b981', '#38bdf8'],
-            borderRadius: 6,
-            borderSkipped: false,
-        }]
-    };
-
-    const opcionesComunes = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { 
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: '#1e293b',
-                titleColor: '#38bdf8',
-                bodyColor: '#fff',
-                borderColor: '#334155',
-                borderWidth: 1,
-                padding: 10,
-                displayColors: false
-            }
-        },
-        scales: {
-            y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
-        }
     };
 
     if (cargando) {
         return (
-            <div className={styles.loadingScreen}>
-                <div className={styles.loaderPulse} />
-                <span>Sincronizando cuadro de mando...</span>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#94a3b8' }}>
+                <span>Cargando resumen...</span>
             </div>
         );
     }
 
     return (
-        <div className={styles.dashboardContainer}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '30px' }}>
             
-            {/* ENCABEZADO */}
-            <header className={styles.dashboardHeader}>
-                <div>
-                    <h3 className={styles.headerTitle}>Panel de Control</h3>
-                    <p className={styles.headerSubtitle}>Monitoreo en tiempo real del negocio.</p>
-                </div>
-                <span className={styles.activeBadge}>
-                    SISTEMA ACTIVO — 2026
-                </span>
-            </header>
-
-            {/* BARRA DE BÚSQUEDA UNIVERSAL */}
-            <div className={styles.searchSection}>
-                <FaSearch className={styles.searchIcon} />
+            {/* 1. BUSCADOR RÁPIDO UNIVERSAL */}
+            <div style={{ position: 'relative' }}>
+                <FaSearch style={{ position: 'absolute', left: '14px', top: '14px', color: '#64748b' }} />
                 <input 
                     type="text" 
-                    placeholder="Búsqueda rápida universal: Escribe 'Juan', 'Netflix' o 'Spotify'..." 
+                    placeholder="Buscar cliente, servicio o PIN..." 
                     value={query}
                     onChange={e => ejecutarBusqueda(e.target.value)}
-                    className={styles.searchInput}
+                    style={{
+                        width: '100%',
+                        padding: '12px 36px 12px 42px',
+                        background: '#1e293b',
+                        border: '1px solid #334155',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '0.9rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                    }}
                 />
                 {query && (
-                    <button onClick={limpiarBuscador} className={styles.searchClearBtn} aria-label="Limpiar búsqueda">
-                        <FaTimes />
-                    </button>
+                    <FaTimes 
+                        onClick={() => { setQuery(''); setBuscando(false); }} 
+                        style={{ position: 'absolute', right: '14px', top: '14px', color: '#64748b', cursor: 'pointer' }} 
+                    />
                 )}
             </div>
 
-            {/* SECCIÓN: SALUD DEL NEGOCIO E INDICADORES */}
-            {indicadores && (
-                <section className={styles.indicatorGrid}>
-                    <div className={styles.indicatorCard}>
-                        <h4 className={styles.indicatorLabel}>Salud de Clientes</h4>
-                        <div className={styles.indicatorValue}>
-                            <span className={styles.textGreen}>● {indicadores.clientesActivos} Activos</span>
-                            <span className={styles.divider}>|</span>
-                            <span className={styles.textRed}>● {indicadores.clientesInactivos} Inactivos</span>
-                        </div>
-                    </div>
-                    <div className={styles.indicatorCard}>
-                        <h4 className={styles.indicatorLabel}>Mejor Proveedor (Margen)</h4>
-                        <div className={`${styles.indicatorValue} ${styles.textCyan}`}>{indicadores.proveedorConMayorMargen}</div>
-                    </div>
-                    <div className={styles.indicatorCard}>
-                        <h4 className={styles.indicatorLabel}>Proveedor (Reclamos)</h4>
-                        <div className={`${styles.indicatorValue} ${styles.textRed}`}>{indicadores.proveedorConMasReclamos}</div>
-                    </div>
-                    <div className={styles.indicatorCard}>
-                        <h4 className={styles.indicatorLabel}>Tasa Renovaciones</h4>
-                        <div className={`${styles.indicatorValue} ${styles.textGreen}`}>
-                            {((indicadores.renovacionesExitosas / (indicadores.renovacionesExitosas + indicadores.renovacionesPerdidas || 1)) * 100).toFixed(0)}%
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* CONTROL DINÁMICO DE BÚSQUEDA / DASHBOARD */}
+            {/* VISTA DE RESULTADOS DE BÚSQUEDA */}
             {buscando ? (
-                <div className={styles.searchResultsWrapper}>
-                    {/* RESULTADOS DE CLIENTES */}
-                    {resultados?.clientes?.length > 0 && (
-                        <div className={styles.resultsCard}>
-                            <h4 className={styles.resultsTitle}><FaUser className={styles.titleIconCyan} /> Historial de Clientes Encontrados</h4>
-                            <div className={styles.resultsList}>
-                                {resultados.clientes.map((c: any, idx: number) => (
-                                    <div key={idx} className={styles.customerResultItem}>
-                                        <div className={styles.customerItemHeader}>
-                                            <span className={styles.customerName}>{c.nombre}</span>
-                                            <span className={styles.customerPhone}>— 📱 {c.telefono}</span>
-                                        </div>
-                                        <div className={styles.customerItemBadges}>
-                                            <span className={styles.badgeGreen}>🛒 Facturas en Historial: {c.historialCompras?.length || 0}</span>
-                                            <span className={styles.badgePurple}>🔄 Servicios Activos: {c.serviciosActivos?.length || 0}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {resultados?.clientes?.map((c: any, idx: number) => (
+                        <div key={idx} style={{ background: '#1e293b', padding: '12px', borderRadius: '10px', borderLeft: '4px solid #38bdf8' }}>
+                            <div style={{ color: '#fff', fontWeight: 600 }}><FaUser size={12} /> {c.nombre}</div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '4px' }}>📱 {c.telefono}</div>
                         </div>
-                    )}
-
-                    {/* RESULTADOS DE CUENTAS / ESPACIOS LIBRES */}
-                    {resultados?.cuentas?.length > 0 && (
-                        <div className={styles.resultsCard}>
-                            <h4 className={styles.resultsTitle}><FaTv className={styles.titleIconPurple} /> Estado de Cuentas y Espacios Libres</h4>
-                            <div className={styles.accountsGrid}>
-                                {resultados.cuentas.map((cu: any, idx: number) => (
-                                    <div 
-                                        key={idx} 
-                                        className={`${styles.accountResultItem} ${cu.ocupado ? styles.borderLeftRed : styles.borderLeftGreen}`}
-                                    >
-                                        <div className={styles.accountHeader}>
-                                            <strong className={styles.accountName}>{cu.servicio} — {cu.nombrePerfil}</strong>
-                                            <span className={cu.ocupado ? styles.statusBadgeRed : styles.statusBadgeGreen}>
-                                                {cu.ocupado ? 'Ocupado' : 'DISPONIBLE'}
-                                            </span>
-                                        </div>
-                                        <div className={styles.accountEmail}>✉️ {cu.correoCuenta}</div>
-                                        <div className={styles.accountSecrets}>
-                                            <span><FaLock size={8} /> PIN: <strong className={styles.textOrange}>{cu.pin}</strong></span>
-                                            <span className={styles.divider}>|</span>
-                                            <span>Clave: {cu.clave}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                    ))}
+                    {resultados?.cuentas?.map((cu: any, idx: number) => (
+                        <div key={idx} style={{ background: '#1e293b', padding: '12px', borderRadius: '10px', borderLeft: cu.ocupado ? '4px solid #ef4444' : '4px solid #10b981' }}>
+                            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem' }}><FaTv size={12} /> {cu.servicio} — {cu.nombrePerfil}</div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '4px' }}>PIN: {cu.pin} | Clave: {cu.clave}</div>
                         </div>
-                    )}
-
-                    {resultados?.clientes?.length === 0 && resultados?.cuentas?.length === 0 && (
-                        <div className={styles.noResultsCard}>
-                            No se encontraron registros ni perfiles libres que coincidan con la consulta.
-                        </div>
-                    )}
+                    ))}
                 </div>
             ) : (
-                /* FLUJO OPERATIVO POR DEFECTO DEL DASHBOARD */
                 <>
-                    {/* SECCIÓN 1: KPI CARDS */}
-                    <section className={styles.kpiGrid}>
-                        <div className={`${styles.kpiCard} ${styles.kpiGreen}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>VENTAS DEL DÍA</small>
-                                <FaMoneyBillWave className={styles.kpiIcon} />
+                    {/* 2. CARD CONSOLIDADA DE INGRESOS */}
+                    <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: '16px', padding: '18px', border: '1px solid #334155' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <span style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ingresos Registrados</span>
+                            {/* Selector de Periodo con llaves JSX corregidas */}
+                            <div style={{ display: 'flex', background: '#0f172a', borderRadius: '8px', padding: '2px', border: '1px solid #334155' }}>
+                                {(['dia', 'semana', 'mes'] as const).map(p => (
+                                    <button 
+                                        key={p} 
+                                        onClick={() => setPeriodoKPI(p)}
+                                        style={{
+                                            background: periodoKPI === p ? '#38bdf8' : 'transparent',
+                                            color: periodoKPI === p ? '#0f172a' : '#94a3b8',
+                                            border: 'none',
+                                            padding: '4px 8px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            textTransform: 'capitalize',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
                             </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h4>
                         </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiCyan}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>VENTAS SEMANALES</small>
-                                <FaChartLine className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</h4>
+                        <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 800, marginBottom: '8px' }}>
+                            C$ {ventasActuales.toLocaleString('es-NI')}
                         </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiPurple}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>INGRESOS (MES)</small>
-                                <FaPercentage className={styles.kpiIcon} />
+                        <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', borderTop: '1px solid #334155', paddingTop: '12px', marginTop: '12px' }}>
+                            <div style={{ color: '#10b981' }}>
+                                <small style={{ color: '#64748b', display: 'block' }}>Utilidad Mes</small>
+                                <strong>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</strong>
                             </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</h4>
-                            <small className={styles.kpiSubtitle}>Margen: {porcentajeMargen}%</small>
+                            <div style={{ color: '#38bdf8' }}>
+                                <small style={{ color: '#64748b', display: 'block' }}>Clientes Nuevos</small>
+                                <strong>+{resumen.cantidadClientesNuevos}</strong>
+                            </div>
                         </div>
+                    </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiOrange}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>UTILIDAD (MES)</small>
-                                <FaChartLine className={styles.kpiIcon} />
+                    {/* 3. ACCIONES Y COBROS URGENTES */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div 
+                            onClick={() => setVistaActiva('renovaciones')}
+                            style={{ background: '#1e293b', border: '1px solid #059669', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>
+                                <FaCalendarDay /> RENOVACIONES HOY
                             </div>
-                            <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</h4>
+                            <div style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, marginTop: '4px' }}>
+                                {resumen.renovacionesHoy}
+                            </div>
                         </div>
 
                         <div 
                             onClick={() => setVistaActiva('renovaciones')}
-                            className={`${styles.kpiCard} ${styles.kpiGreenActive}`}
+                            style={{ background: '#1e293b', border: '1px solid #dc2626', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
                         >
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>RENOVACIONES HOY</small>
-                                <FaCalendarDay className={styles.kpiIcon} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontSize: '0.75rem', fontWeight: 700 }}>
+                                <FaCalendarTimes /> VENCIDAS (COBRAR)
                             </div>
-                            <h4 className={styles.kpiValue}>
-                                {resumen.renovacionesHoy} 
-                                <span className={styles.kpiActionLabel}>→ Revisar</span>
-                            </h4>
+                            <div style={{ color: '#ef4444', fontSize: '1.4rem', fontWeight: 800, marginTop: '4px' }}>
+                                {resumen.renovacionesVencidas}
+                            </div>
                         </div>
+                    </div>
 
-                        <div 
-                            onClick={() => setVistaActiva('renovaciones')}
-                            className={`${styles.kpiCard} ${styles.kpiRedActive}`}
+                    {/* 4. BOTONES DE ACCIÓN DIRECTA */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                            onClick={() => setVistaActiva('caja')}
+                            style={{ flex: 1, padding: '14px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
                         >
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>RENOVACIONES VENCIDAS</small>
-                                <FaCalendarTimes className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={`${styles.kpiValue} ${styles.textRed}`}>
-                                {resumen.renovacionesVencidas} 
-                                <span className={styles.kpiActionLabelRed}>→ Cobrar</span>
-                            </h4>
-                        </div>
-
-                        <div className={`${styles.kpiCard} ${styles.kpiPink}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>TICKETS ABIERTOS</small>
-                                <FaClipboardList className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={styles.kpiValue}>{resumen.ticketsAbiertos}</h4>
-                        </div>
-
-                        <div className={`${styles.kpiCard} ${styles.kpiBlue}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>CLIENTES TOTALES</small>
-                                <FaUserPlus className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={styles.kpiValue}>{resumen.cantidadClientesNuevos}</h4>
-                        </div>
-                    </section>
-
-                    {/* SECCIÓN 2: GRÁFICAS DEL FLUJO */}
-                    <section className={styles.chartsGrid}>
-                        <div className={styles.chartCard}>
-                            <span className={styles.chartTitle}>Flujo de Caja Semanal</span>
-                            <div className={styles.chartWrapper}>
-                                <Line data={datosGraficaLinea} options={opcionesComunes} />
-                            </div>
-                        </div>
-                        <div className={styles.chartCard}>
-                            <span className={styles.chartTitle}>Ventas por Categoría de Rubro</span>
-                            <div className={styles.chartWrapper}>
-                                <Bar data={datosGraficaBarra} options={opcionesComunes} />
-                            </div>
-                        </div>
-                    </section>
-                </>
-            )}
-
-            {/* SECCIÓN 3: COMPONENTES OPERATIVOS Y DETALLES */}
-            <section className={styles.operationalGrid}>
-                <div className={styles.detailsCard}>
-                    <span className={styles.detailsHeaderTitle}><FaBoxOpen /> PRODUCTOS MÁS VENDIDOS</span>
-                    <div className={styles.detailsList}>
-                        {resumen.productosMasVendidos.map((p: any, idx: number) => (
-                            <div key={idx} className={styles.detailsListItem}>
-                                <span className={styles.itemText}>{p.nombre}</span>
-                                <strong className={styles.itemBadgeCyan}>{p.cantidad} unds</strong>
-                            </div>
-                        ))}
-                        {resumen.productosMasVendidos.length === 0 && <small className={styles.noDataText}>Sin datos de transacciones este mes.</small>}
+                            <FaMoneyBillWave /> Ir a Caja POS
+                        </button>
+                        <button 
+                            onClick={() => setVistaActiva('taller')}
+                            style={{ flex: 1, padding: '14px', background: '#334155', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                            Taller ({resumen.ticketsAbiertos})
+                        </button>
                     </div>
-                </div>
 
-                <div className={styles.detailsCard}>
-                    <span className={styles.detailsHeaderTitle}><FaUserPlus /> ÚLTIMOS CLIENTES REGISTRADOS</span>
-                    <div className={styles.detailsList}>
-                        {resumen.ultimosClientes.map((c: any) => (
-                            <div key={c.id} className={styles.detailsListItem}>
-                                <span className={styles.itemText}>{c.nombre}</span>
-                                <small className={styles.itemSecondaryText}>{c.telefono || 'Sin Teléfono'}</small>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className={styles.detailsCard}>
-                    <span className={styles.detailsHeaderTitleRed}><FaExclamationTriangle /> ALERTAS DEL SISTEMA</span>
-                    <div className={styles.detailsList}>
-                        {resumen.alertas.map((alerta: string, idx: number) => (
-                            <div key={idx} className={styles.alertItemRed}>
-                                {alerta}
-                            </div>
-                        ))}
-                        {resumen.alertas.length === 0 && (
-                            <div className={styles.alertItemGreen}>
-                                Sistema operando con normalidad. No hay alertas críticas.
+                    {/* 5. ACORDEÓN DESPLEGABLE PARA GRÁFICAS */}
+                    <div style={{ background: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
+                        <button 
+                            onClick={() => setMostrarGrafica(!mostrarGrafica)}
+                            style={{ width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                        >
+                            <span>Tendencia de Flujo Semanal</span>
+                            {mostrarGrafica ? <FaChevronUp /> : <FaChevronDown />}
+                        </button>
+                        
+                        {mostrarGrafica && (
+                            <div style={{ padding: '0 16px 16px 16px', height: '160px' }}>
+                                <Line 
+                                    data={datosGraficaLinea} 
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: { legend: { display: false } },
+                                        scales: { x: { grid: { display: false } }, y: { display: false } }
+                                    }} 
+                                />
                             </div>
                         )}
                     </div>
-                </div>
-            </section>
 
-            {/* BARRA INFERIOR DE ACCESOS RÁPIDOS */}
-            <footer className={styles.actionFooter}>
-                <button onClick={() => setVistaActiva('caja')} className={styles.btnActionBlue}>Ir a Caja POS</button>
-                <button onClick={() => setVistaActiva('taller')} className={styles.btnActionGreen}>Órdenes de Taller ({resumen.ticketsAbiertos})</button>
-            </footer>
-
+                    {/* 6. LISTA COMPACTA DE PRODUCTOS */}
+                    <div style={{ background: '#1e293b', borderRadius: '12px', padding: '14px', border: '1px solid #334155' }}>
+                        <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px' }}>Top Vendidos del Mes</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {resumen.productosMasVendidos.slice(0, 3).map((p: any, idx: number) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #334155', paddingBottom: '6px' }}>
+                                    <span style={{ color: '#94a3b8' }}>{p.nombre}</span>
+                                    <strong style={{ color: '#38bdf8' }}>{p.cantidad} und.</strong>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

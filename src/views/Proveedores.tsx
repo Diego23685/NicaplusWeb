@@ -3,20 +3,14 @@ import api from '../services/api';
 import {
   FaTruck,
   FaShoppingCart,
-  FaChartLine,
-  FaUserCheck,
   FaSave,
   FaPlus,
-  FaBoxes,
   FaEdit,
   FaTrash,
-  FaTimes,
-  FaHistory
-} from 'react-icons/fa';
-import styles from '../assets/styles/Proveedores.module.css';
+  FaTimes} from 'react-icons/fa';
 
 export const Proveedores: React.FC = () => {
-  const [subTab, setSubTab] = useState<'registro' | 'historial' | 'analisis'>('registro');
+  const [subTab, setSubTab] = useState<'registro' | 'historial' | 'analisis' | 'proveedores'>('registro');
 
   const [proveedores, setProveedores] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
@@ -39,7 +33,7 @@ export const Proveedores: React.FC = () => {
   const [costoUnitarioCompra, setCostoUnitarioCompra] = useState(0);
   const [nuevoPrecioVenta, setNuevoPrecioVenta] = useState<number | ''>('');
   const [garantiaCompra, setGarantiaCompra] = useState(30);
-  const [tiempoEntregaRealDias, setTiempoEntregaRealDias] = useState(1);
+  const [tiempoEntregaRealDias] = useState(1);
   const [observacionesCompra, setObservacionesCompra] = useState('');
 
   // ESTADO PARA MODAL DE EDICIÓN DE COMPRA
@@ -68,10 +62,10 @@ export const Proveedores: React.FC = () => {
         api.get('/proveedores/compras')
       ]);
 
-      setProveedores(resProv.data);
-      setProductos(resProd.data);
-      setMetricas(resMet.data);
-      setHistorialCompras(resComp.data);
+      setProveedores(resProv.data || []);
+      setProductos(resProd.data || []);
+      setMetricas(resMet.data || []);
+      setHistorialCompras(resComp.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -98,8 +92,7 @@ export const Proveedores: React.FC = () => {
     setRuc(proveedor.ruc);
     setTelefono(proveedor.telefono);
     setEmail(proveedor.email);
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSubTab('proveedores');
   };
 
   const eliminarProveedor = async (id: number) => {
@@ -160,7 +153,7 @@ export const Proveedores: React.FC = () => {
 
     try {
       await api.put(`/proveedores/compras/${compraAEditar.id}`, payload);
-      alert("Compra modificada con éxito. El inventario y dinero en caja han sido recalculados.");
+      alert("Compra modificada con éxito.");
       setCompraAEditar(null);
       await cargarDatos();
     } catch (err: any) {
@@ -169,7 +162,7 @@ export const Proveedores: React.FC = () => {
   };
 
   const anularCompra = async (idCompra: number) => {
-    if (!window.confirm(`¿Está seguro de ANULAR la Orden de Compra #${idCompra}? Se restará el stock ingresado y se revertirá el egreso en caja.`)) return;
+    if (!window.confirm(`¿Está seguro de ANULAR la Orden de Compra #${idCompra}?`)) return;
 
     try {
       await api.delete(`/proveedores/compras/${idCompra}`);
@@ -228,6 +221,7 @@ export const Proveedores: React.FC = () => {
       setCostoUnitarioCompra(0);
       setNuevoPrecioVenta('');
       setObservacionesCompra('');
+      setSubTab('historial');
       await cargarDatos();
     } catch {
       alert("No fue posible registrar la compra.");
@@ -235,480 +229,268 @@ export const Proveedores: React.FC = () => {
   };
 
   if (cargando) {
-    return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Analizando abastecimiento...</div>;
+    return <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>Analizando abastecimiento...</div>;
   }
 
   return (
-    <div className={styles.container}>
-      {/* CABECERA */}
-      <div className={styles.header}>
-        <div className={styles.headerTitle}>
-          <h3>Módulo de Proveedores y Logística</h3>
-          <p>Administración de proveedores, abastecimiento y análisis.</p>
+    <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
+      
+      {/* ENCABEZADO Y TABS */}
+      <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div>
+          <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Logística y Proveedores</h3>
+          <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Abastecimiento de inventario y rendimiento</small>
         </div>
 
-        <div className={styles.tabContainer}>
+        <div style={{ display: 'flex', gap: '4px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155', overflowX: 'auto' }}>
           <button
             onClick={() => setSubTab('registro')}
-            className={`${styles.tabBtn} ${subTab === 'registro' ? styles.tabBtnActive : ''}`}
+            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'registro' ? '#38bdf8' : 'transparent', color: subTab === 'registro' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            📦 Abastecimiento
+            📦 Comprar
           </button>
           <button
             onClick={() => setSubTab('historial')}
-            className={`${styles.tabBtn} ${subTab === 'historial' ? styles.tabBtnActive : ''}`}
+            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'historial' ? '#38bdf8' : 'transparent', color: subTab === 'historial' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            📜 Historial Compras
+            📜 Historial
           </button>
           <button
             onClick={() => setSubTab('analisis')}
-            className={`${styles.tabBtn} ${subTab === 'analisis' ? styles.tabBtnActive : ''}`}
+            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'analisis' ? '#38bdf8' : '#1e293b', color: subTab === 'analisis' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            📊 Rentabilidad
+            📊 Ránking
+          </button>
+          <button
+            onClick={() => setSubTab('proveedores')}
+            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'proveedores' ? '#38bdf8' : 'transparent', color: subTab === 'proveedores' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            🚚 Proveedores
           </button>
         </div>
       </div>
 
-      {subTab === "registro" && (
-        <>
-          <div className={styles.flexLayout}>
-            {/* FORMULARIO PROVEEDOR */}
-            <div className={styles.formProveedorPanel}>
-              <h4>
-                <FaTruck /> {editando === null ? "Nuevo proveedor" : "Editar proveedor"}
-              </h4>
+      {/* PESTAÑA 1: REGISTRAR COMPRA */}
+      {subTab === 'registro' && (
+        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FaShoppingCart /> Registrar Compra e Ingresar Stock
+          </h4>
 
-              <form onSubmit={guardarProveedor} className={styles.verticalForm}>
-                <div className={styles.formGroup}>
-                  <label>Razón Social</label>
-                  <input type="text" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} className={styles.input} required />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>RUC</label>
-                  <input type="text" value={ruc} onChange={e => setRuc(e.target.value)} className={styles.input} />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Teléfono</label>
-                  <input type="text" value={telefono} onChange={e => setTelefono(e.target.value)} className={styles.input} />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Email</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={styles.input} />
-                </div>
-
-                <div className={styles.btnActionsWrapper}>
-                  <button type="submit" className={styles.btnGuardar}>
-                    <FaSave /> {editando === null ? "Guardar proveedor" : "Actualizar proveedor"}
-                  </button>
-                  {editando !== null && (
-                    <button type="button" onClick={limpiarFormularioProveedor} className={styles.btnCancelar}>
-                      <FaTimes />
-                    </button>
-                  )}
-                </div>
-              </form>
+          <form onSubmit={registrarIngresoInventario} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div>
+              <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Proveedor</label>
+              <select value={idProvSeleccionado} onChange={e => setIdProvSeleccionado(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
+                <option value="">-- Seleccionar Proveedor --</option>
+                {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
+              </select>
             </div>
 
-            {/* FORMULARIO DE COMPRA */}
-            <div className={styles.formCompraPanel}>
-              <h4><FaShoppingCart /> Registrar compra</h4>
-              <form onSubmit={registrarIngresoInventario} className={styles.gridForm}>
-                <div className={styles.gridSpan2}>
-                  <div className={styles.formGroup}>
-                    <label>Proveedor</label>
-                    <select value={idProvSeleccionado} onChange={e => setIdProvSeleccionado(e.target.value)} className={styles.input} required>
-                      <option value="">Seleccionar proveedor</option>
-                      {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className={styles.gridSpan2}>
-                  <div className={styles.formGroup}>
-                    <label>Producto</label>
-                    <select value={idProdSeleccionado} onChange={e => seleccionarProductoCompra(e.target.value)} className={styles.input} required>
-                      <option value="">Seleccionar producto</option>
-                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stockActual})</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Cantidad</label>
-                  <input type="number" min={1} value={cantidadCompra} onChange={e => setCantidadCompra(Number(e.target.value))} className={styles.input} />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Costo Unit. (Compra)</label>
-                  <input type="number" min={0} value={costoUnitarioCompra} onChange={e => setCostoUnitarioCompra(Number(e.target.value))} className={styles.input} />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Precio Venta (Catálogo)</label>
-                  <input 
-                    type="number" 
-                    min={0} 
-                    placeholder="Opcional"
-                    value={nuevoPrecioVenta} 
-                    onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} 
-                    className={styles.input} 
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Días de entrega</label>
-                  <input 
-                    type="number" 
-                    min={0} 
-                    value={tiempoEntregaRealDias} 
-                    onChange={e => setTiempoEntregaRealDias(Number(e.target.value))} 
-                    className={styles.input} 
-                  />
-                </div>
-                <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
-                  <label>Garantía (días)</label>
-                  <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} className={styles.input} />
-                </div>
-
-                <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
-                  <label>Notas / Cuenta o Correo Renovado</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej: Cuenta renovada gomez@gmail.com o Lote #412" 
-                    value={observacionesCompra} 
-                    onChange={e => setObservacionesCompra(e.target.value)} 
-                    className={styles.input} 
-                  />
-                </div>
-
-                <button type="submit" className={styles.btnRegistrarCompra} style={{ gridColumn: 'span 2' }}>
-                  <FaPlus /> Registrar compra e ingresar stock
-                </button>
-              </form>
+            <div>
+              <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Producto a Abastecer</label>
+              <select value={idProdSeleccionado} onChange={e => seleccionarProductoCompra(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
+                <option value="">-- Seleccionar Producto --</option>
+                {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stockActual})</option>)}
+              </select>
             </div>
-          </div>
 
-          {/* TABLA DE PROVEEDORES REGISTRADOS */}
-          <div className={styles.tablePanel}>
-            <h4>Proveedores registrados</h4>
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Proveedor</th>
-                    <th>RUC</th>
-                    <th>Teléfono</th>
-                    <th>Email</th>
-                    <th style={{ textAlign: "center" }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {proveedores.map(p => (
-                    <tr key={p.id}>
-                      <td>{p.razonSocial}</td>
-                      <td>{p.ruc}</td>
-                      <td>{p.telefono}</td>
-                      <td>{p.email}</td>
-                      <td style={{ textAlign: "center" }}>
-                        <button onClick={() => editarProveedor(p)} className={styles.btnEdit}><FaEdit /></button>
-                        <button onClick={() => eliminarProveedor(p.id)} className={styles.btnDelete}><FaTrash /></button>
-                      </td>
-                    </tr>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Cantidad</label>
+                <input type="number" min={1} value={cantidadCompra} onChange={e => setCantidadCompra(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Costo Unit. (C$)</label>
+                <input type="number" min={0} value={costoUnitarioCompra} onChange={e => setCostoUnitarioCompra(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ color: '#38bdf8', fontSize: '0.72rem', display: 'block' }}>Nuevo Precio Venta</label>
+                <input type="number" min={0} placeholder="Opcional" value={nuevoPrecioVenta} onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Garantía (Días)</label>
+                <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Notas / Correos Renovados</label>
+              <input type="text" placeholder="Ej: Lote #412 o Cuenta renovada..." value={observacionesCompra} onChange={e => setObservacionesCompra(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8' }}>
+              <span>Total calculado:</span>
+              <strong style={{ color: '#ef4444' }}>C$ {(cantidadCompra * costoUnitarioCompra).toLocaleString()}</strong>
+            </div>
+
+            <button type="submit" style={{ width: '100%', padding: '12px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+              <FaPlus /> Confirmar e Ingresar Stock
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* PESTAÑA 2: HISTORIAL DE COMPRAS */}
+      {subTab === 'historial' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {historialCompras.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+              No hay compras registradas en el historial.
+            </div>
+          ) : (
+            historialCompras.map(c => (
+              <div key={c.id} style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '10px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ color: '#38bdf8', fontSize: '0.85rem' }}>Orden #{c.id} — {c.proveedorNombre}</strong>
+                  <strong style={{ color: '#ef4444', fontSize: '0.9rem' }}>C$ {c.totalCompra.toLocaleString()}</strong>
+                </div>
+
+                <div style={{ background: '#0f172a', padding: '6px 8px', borderRadius: '6px', fontSize: '0.72rem', color: '#cbd5e1' }}>
+                  {c.detalles?.map((d: any, idx: number) => (
+                    <div key={idx}>• {d.cantidad}x {d.productoNombre} (a C$ {d.costoUnitario})</div>
                   ))}
-                  {proveedores.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: 25, textAlign: "center", color: "#94a3b8" }}>
-                        No existen proveedores registrados.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  {c.observaciones && <div style={{ color: '#94a3b8', marginTop: '2px', fontStyle: 'italic' }}>Note: {c.observaciones}</div>}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                  <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Fecha: {new Date(c.fechaCompra).toLocaleDateString()}</small>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => abrirModalEditarCompra(c)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><FaEdit /></button>
+                    <button onClick={() => anularCompra(c.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}><FaTrash /></button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* PESTAÑA 3: RÁNKING / RENTABILIDAD PROVEEDORES */}
+      {subTab === 'analisis' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {metricas.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+              No existen datos de métricas disponibles.
             </div>
-          </div>
-        </>
+          ) : (
+            metricas.map(m => (
+              <div key={m.id} style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '10px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ color: '#fff', fontSize: '0.88rem' }}>{m.razonSocial}</strong>
+                  <span style={{ background: m.scoreConfiabilidad >= 80 ? 'rgba(16,185,129,.2)' : 'rgba(245,158,11,.2)', color: m.scoreConfiabilidad >= 80 ? '#10b981' : '#f59e0b', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700 }}>
+                    Score: {m.scoreConfiabilidad}%
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', background: '#0f172a', padding: '6px', borderRadius: '6px', fontSize: '0.7rem' }}>
+                  <div>
+                    <span style={{ color: '#64748b', display: 'block' }}>Órdenes</span>
+                    <strong style={{ color: '#fff' }}>{m.totalOrdenes}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', display: 'block' }}>Invertido</span>
+                    <strong style={{ color: '#ef4444' }}>C$ {m.totalInvertido.toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', display: 'block' }}>Margen</span>
+                    <strong style={{ color: '#10b981' }}>C$ {m.margenGananciaHistorico.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
-      {subTab === "historial" && (
-        <div className={styles.tablePanel}>
-          <h4><FaHistory /> Historial de Compras y Lotes Abastecidos</h4>
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>N° Orden</th>
-                  <th>Fecha</th>
-                  <th>Proveedor</th>
-                  <th>Detalle Items</th>
-                  <th>Notas / Correos</th>
-                  <th style={{ textAlign: "right" }}>Total</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historialCompras.map(c => (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>#{c.id}</td>
-                    <td>{new Date(c.fechaCompra).toLocaleDateString()}</td>
-                    <td>{c.proveedorNombre}</td>
-                    <td>
-                      <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                        {c.detalles?.map((d: any, idx: number) => (
-                          <div key={idx}>• {d.cantidad}x {d.productoNombre} (a C$ {d.costoUnitario})</div>
-                        ))}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontStyle: c.observaciones ? 'normal' : 'italic' }}>
-                        {c.observaciones || 'Sin notas'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#ef4444" }}>
-                      C$ {c.totalCompra.toLocaleString()}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        <button onClick={() => abrirModalEditarCompra(c)} className={styles.btnEdit} title="Editar Compra">
-                          <FaEdit />
-                        </button>
-                        <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular Compra">
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {historialCompras.length === 0 && (
-                  <tr>
-                    <td colSpan={7} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
-                      No hay compras registradas en el historial.
-                    </td>
-                  </tr>
+      {/* PESTAÑA 4: DIRECTORIO DE PROVEEDORES */}
+      {subTab === 'proveedores' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Formulario Proveedor */}
+          <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#38bdf8', fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FaTruck /> {editando === null ? "Nuevo Proveedor" : "Editar Proveedor"}
+            </h4>
+
+            <form onSubmit={guardarProveedor} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <input type="text" placeholder="Razón Social" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} required />
+              <input type="text" placeholder="RUC Comercial" value={ruc} onChange={e => setRuc(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} />
+              <input type="text" placeholder="Teléfono" value={telefono} onChange={e => setTelefono(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} />
+              <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} />
+              
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                <button type="submit" style={{ flex: 1, padding: '8px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>
+                  <FaSave /> {editando === null ? "Guardar" : "Actualizar"}
+                </button>
+                {editando !== null && (
+                  <button type="button" onClick={limpiarFormularioProveedor} style={{ background: '#475569', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
+                    <FaTimes />
+                  </button>
                 )}
-              </tbody>
-            </table>
+              </div>
+            </form>
+          </div>
+
+          {/* Lista de Proveedores */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {proveedores.map(p => (
+              <div key={p.id} style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ color: '#fff', fontSize: '0.85rem', display: 'block' }}>{p.razonSocial}</strong>
+                  <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Tel: {p.telefono || 'N/A'} • RUC: {p.ruc || 'N/A'}</small>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => editarProveedor(p)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><FaEdit /></button>
+                  <button onClick={() => eliminarProveedor(p.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}><FaTrash /></button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {subTab === "analisis" && (
-        <div className={styles.tablePanel}>
-          <h4><FaChartLine /> Ranking Estratégico de Proveedores</h4>
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Proveedor</th>
-                  <th style={{ textAlign: "center" }}>Órdenes</th>
-                  <th>Total Invertido</th>
-                  <th>Ganancia</th>
-                  <th>Entrega</th>
-                  <th style={{ textAlign: "center" }}>Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metricas.map(m => (
-                  <tr key={m.id}>
-                    <td style={{ fontWeight: "bold" }}>{m.razonSocial}</td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className={styles.badgeMetrica}>
-                        <FaBoxes size={11} /> {m.totalOrdenes}
-                      </span>
-                    </td>
-                    <td>C$ {m.totalInvertido.toLocaleString()}</td>
-                    <td style={{ fontWeight: "bold", color: "#4ade80" }}>C$ {m.margenGananciaHistorico.toLocaleString()}</td>
-                    <td>{m.tiempoRespuestaPromedio} días</td>
-                    <td style={{ textAlign: "center" }}>
-                      <span
-                        className={styles.badgeScore}
-                        style={{
-                          background: m.scoreConfiabilidad >= 80
-                            ? "rgba(16,185,129,.15)"
-                            : m.scoreConfiabilidad >= 50
-                              ? "rgba(245,158,11,.15)"
-                              : "rgba(239,68,68,.15)",
-                          color: m.scoreConfiabilidad >= 80 ? "#10b981" : m.scoreConfiabilidad >= 50 ? "#f59e0b" : "#ef4444"
-                        }}
-                      >
-                        <FaUserCheck size={10} /> {m.scoreConfiabilidad}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {metricas.length === 0 && (
-                  <tr>
-                    <td colSpan={6} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
-                      No existen datos para analizar.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE EDICIÓN DE COMPRA */}
+      {/* MODAL EDITAR COMPRA */}
       {compraAEditar && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent} style={{ maxWidth: '650px', width: '90%' }}>
-            <div className={styles.modalHeader}>
-              <h4>🛠️ Auditoría de Compra #{compraAEditar.id}</h4>
-              <button onClick={() => setCompraAEditar(null)} className={styles.btnCancelar}>
-                <FaTimes />
-              </button>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>🛠️ Editar Compra #{compraAEditar.id}</h4>
+              <button onClick={() => setCompraAEditar(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
             </div>
 
-            <form onSubmit={guardarEdicionCompra} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-              <div className={styles.formGroup}>
-                <label>Proveedor</label>
-                <select 
-                  value={compraAEditar.idProveedor} 
-                  onChange={e => setCompraAEditar({ ...compraAEditar, idProveedor: Number(e.target.value) })}
-                  className={styles.input}
-                  required
-                >
+            <form onSubmit={guardarEdicionCompra} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Proveedor</label>
+                <select value={compraAEditar.idProveedor} onChange={e => setCompraAEditar({ ...compraAEditar, idProveedor: Number(e.target.value) })} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
                 </select>
               </div>
 
-              <div className={styles.formGroup}>
-                <label>Notas / Cuenta o Correo Renovado</label>
-                <input 
-                  type="text" 
-                  value={compraAEditar.observaciones || ''} 
-                  onChange={e => setCompraAEditar({ ...compraAEditar, observaciones: e.target.value })}
-                  className={styles.input}
-                  placeholder="Ej: Cuenta renovada gomez@gmail.com"
-                />
-              </div>
-
               <div>
-                <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>Detalle de Lote e Ítems</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                  {compraAEditar.detalles?.map((det: any, idx: number) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '6px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '6px' }}>
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Producto</small>
-                        <select 
-                          value={det.idProducto} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].idProducto = Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ fontSize: '0.75rem', padding: '4px' }}
-                        >
-                          {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                        </select>
-                      </div>
-
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cantidad</small>
-                        <input 
-                          type="number" 
-                          min={1} 
-                          value={det.cantidad} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].cantidad = Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ padding: '4px', textAlign: 'center' }}
-                        />
-                      </div>
-
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Costo Unit.</small>
-                        <input 
-                          type="number" 
-                          min={0} 
-                          value={det.costoUnitario} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].costoUnitario = Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ padding: '4px', textAlign: 'center' }}
-                        />
-                      </div>
-
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#38bdf8' }}>Precio Venta</small>
-                        <input 
-                          type="number" 
-                          min={0} 
-                          value={det.nuevoPrecioVenta || ''} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].nuevoPrecioVenta = e.target.value === '' ? '' : Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ padding: '4px', textAlign: 'center' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Observaciones</label>
+                <input type="text" value={compraAEditar.observaciones || ''} onChange={e => setCompraAEditar({ ...compraAEditar, observaciones: e.target.value })} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>Nuevo Total Recalculado:</span>
-                <strong style={{ fontSize: '1.1rem', color: '#ef4444' }}>
-                  C$ {compraAEditar.detalles?.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0).toLocaleString()}
-                </strong>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
-                <button type="button" onClick={() => setCompraAEditar(null)} className={styles.btnCancelar}>
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.btnGuardar}>
-                  Guardar y Recalcular
-                </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button type="button" onClick={() => setCompraAEditar(null)} style={{ flex: 1, background: '#475569', border: 'none', color: '#fff', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>Cancelar</button>
+                <button type="submit" style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>Guardar</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL DE CONFLICTO */}
+      {/* MODAL CONFLICTO */}
       {modalConflicto.visible && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHeader}>
-              <span style={{ color: '#ef4444', fontSize: '1.5rem', display: 'flex' }}><FaTrash /></span>
-              <h4>Acción Bloqueada</h4>
-            </div>
-
-            <p style={{ color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.5', margin: '0 0 16px 0' }}>
-              {modalConflicto.mensaje}
-            </p>
-
-            <div className={styles.modalBodyList}>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                Compras que dependen de este proveedor:
-              </span>
-              <div className={styles.modalScrollBox}>
-                {modalConflicto.compras.map(c => (
-                  <div key={c.id} className={styles.modalRow}>
-                    <span style={{ color: '#38bdf8', fontWeight: '500' }}>ID Compra: #{c.id}</span>
-                    <span style={{ color: '#94a3b8' }}>{new Date(c.fecha).toLocaleDateString()}</span>
-                    <span style={{ color: '#4ade80', fontWeight: 'bold' }}>C$ {c.total.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setModalConflicto({ visible: false, mensaje: '', compras: [] })}
-                className={styles.btnEntendido}
-              >
-                Entendido
-              </button>
-            </div>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
+            <h4 style={{ color: '#f87171', margin: 0 }}>Acción Bloqueada</h4>
+            <p style={{ color: '#e2e8f0', fontSize: '0.82rem', margin: 0 }}>{modalConflicto.mensaje}</p>
+            <button onClick={() => setModalConflicto({ visible: false, mensaje: '', compras: [] })} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', marginTop: '6px', fontSize: '0.85rem' }}>
+              Entendido
+            </button>
           </div>
         </div>
       )}

@@ -1,11 +1,9 @@
-// Cuentas.tsx
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { 
     FaHandHoldingUsd, FaFileInvoiceDollar, FaCoins, FaCheckCircle, 
     FaExclamationTriangle, FaClock, FaPlus, FaTimes, FaTruck 
 } from 'react-icons/fa';
-import styles from '../assets/styles/Cuenta.module.css';
 
 export const Cuentas: React.FC = () => {
     const [subModulo, setSubModulo] = useState<'cobrar' | 'pagar'>('cobrar');
@@ -95,7 +93,7 @@ export const Cuentas: React.FC = () => {
             setRazonSocial(''); setRuc(''); setTelefono(''); setEmail('');
             api.get('/Proveedores').then(res => setListaProveedores(res.data)).catch(() => {});
         } catch {
-            alert("Error de red al insertar proveedor. Asegúrate de tener la tabla Proveedores creada.");
+            alert("Error de red al insertar proveedor.");
         }
     };
 
@@ -128,180 +126,213 @@ export const Cuentas: React.FC = () => {
     };
 
     return (
-        <div className={styles.cuentasContainer}>
+        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
             
-            {/* ENCABEZADO Y CONTROLADORES */}
-            <div className={styles.headerControls}>
-                <div className={styles.subModuloTabs}>
+            {/* ENCABEZADO Y PESTAÑAS MÓVILES */}
+            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '6px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
                     <button 
                         onClick={() => { setSubModulo('cobrar'); setFiltroEstado('Todos'); }}
-                        className={`${styles.tabBtn} ${subModulo === 'cobrar' ? styles.tabBtnCobrarActive : ''}`}
+                        style={{
+                            flex: 1, padding: '8px', borderRadius: '6px', border: 'none',
+                            background: subModulo === 'cobrar' ? '#38bdf8' : 'transparent',
+                            color: subModulo === 'cobrar' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
                     >
-                        <FaHandHoldingUsd /> Cuentas por Cobrar (Clientes)
+                        <FaHandHoldingUsd /> Cobrar
                     </button>
                     <button 
                         onClick={() => { setSubModulo('pagar'); setFiltroEstado('Todos'); }}
-                        className={`${styles.tabBtn} ${subModulo === 'pagar' ? styles.tabBtnPagarActive : ''}`}
+                        style={{
+                            flex: 1, padding: '8px', borderRadius: '6px', border: 'none',
+                            background: subModulo === 'pagar' ? '#38bdf8' : 'transparent',
+                            color: subModulo === 'pagar' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
                     >
-                        <FaFileInvoiceDollar /> Cuentas por Pagar (Proveedores)
+                        <FaFileInvoiceDollar /> Pagar
                     </button>
                 </div>
 
-                <div className={styles.actionWrapper}>
+                {/* Acciones para Cuentas por Pagar y Filtro de Estado */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {subModulo === 'pagar' && (
                         <>
                             <button 
                                 onClick={() => setMostrarModalProveedor(true)} 
-                                className={`${styles.btnAction} ${styles.btnProveedor}`}
+                                style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
-                                <FaTruck /> + Proveedor
+                                <FaTruck /> + Prov.
                             </button>
                             <button 
                                 onClick={() => setMostrarModalPago(true)} 
-                                className={`${styles.btnAction} ${styles.btnCuentaPagar}`}
+                                style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
-                                <FaPlus /> Agregar Cuenta por Pagar
+                                <FaPlus /> + Deuda
                             </button>
                         </>
                     )}
+                    
                     <select 
                         value={filtroEstado} 
                         onChange={e => setFiltroEstado(e.target.value)}
-                        className={styles.selectFilter}
+                        style={{ flex: 1, background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }}
                     >
-                        <option value="Todos">Ver Todos los Estados</option>
-                        <option value="Pendiente">Solo Pendientes</option>
-                        <option value="Pagado">Solo Liquidados</option>
+                        <option value="Todos">Ver Todos</option>
+                        <option value="Pendiente">Pendientes</option>
+                        <option value="Pagado">Liquidados</option>
                     </select>
                 </div>
             </div>
 
-            {/* TABLA DE RENDIMIENTO */}
-            <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>{subModulo === 'cobrar' ? 'Cliente' : 'Referencia Factura / Proveedor'}</th>
-                            <th>Monto Total</th>
-                            <th>Saldo Pendiente</th>
-                            <th>{subModulo === 'cobrar' ? 'Emisión' : 'Registro'}</th>
-                            <th>Vencimiento</th>
-                            <th>Estado</th>
-                            <th style={{ textAlign: 'center' }}>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {subModulo === 'cobrar' ? (
-                            cuentasCobrar.map(c => {
-                                const vencio = esVencida(c.fechaVencimiento, c.estado);
-                                return (
-                                    <tr key={c.id}>
-                                        <td className={styles.idCell}>#{c.id}</td>
-                                        <td>
-                                            <span className={styles.bold}>{c.nombreCliente || c.cliente?.nombre || 'Desconocido'}</span>
-                                            <div className={styles.subText}>Tel: {c.telefonoCliente || c.cliente?.telefono || 'N/A'}</div>
-                                        </td>
-                                        <td className={styles.bold}>C$ {c.montoTotal}</td>
-                                        <td className={c.saldoPendiente > 0 ? styles.saldoPendiente : styles.saldoSaldado}>
-                                            C$ {c.saldoPendiente}
-                                        </td>
-                                        <td>{new Date(c.fechaEmision).toLocaleDateString()}</td>
-                                        <td className={vencio ? styles.fechaVencida : ''}>
-                                            {new Date(c.fechaVencimiento).toLocaleDateString()}
-                                        </td>
-                                        <td>
-                                            {c.estado === 'Pagado' ? (
-                                                <span className={`${styles.badge} ${styles.badgePagado}`}><FaCheckCircle /> Pagado</span>
-                                            ) : vencio ? (
-                                                <span className={`${styles.badge} ${styles.badgeVencido}`}><FaExclamationTriangle /> Vencido</span>
-                                            ) : (
-                                                <span className={`${styles.badge} ${styles.badgePendiente}`}><FaClock /> Pendiente</span>
-                                            )}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {c.saldoPendiente > 0 && (
-                                                <button 
-                                                    onClick={() => setCuentaSeleccionada(c)} 
-                                                    className={`${styles.btnAbonar} ${styles.btnAbonarCobrar}`}
-                                                >
-                                                    Abonar
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        ) : (
-                            cuentasPagar.map(p => {
-                                const vencio = esVencida(p.fechaVencimiento, p.estado);
-                                return (
-                                    <tr key={p.id}>
-                                        <td className={styles.idCell}>#{p.id}</td>
-                                        <td>
-                                            <span className={styles.bold}>Factura: {p.numeroFactura}</span>
-                                            <div className={`${styles.subText} ${styles.subTextBlue}`}>Proveedor ID: #{p.idProveedor}</div>
-                                        </td>
-                                        <td className={styles.bold}>C$ {p.montoTotal}</td>
-                                        <td className={p.saldoPendiente > 0 ? styles.saldoPendiente : styles.saldoSaldado}>
-                                            C$ {p.saldoPendiente}
-                                        </td>
-                                        <td>{new Date(p.fechaRegistro).toLocaleDateString()}</td>
-                                        <td className={vencio ? styles.fechaVencida : ''}>
-                                            {new Date(p.fechaVencimiento).toLocaleDateString()}
-                                        </td>
-                                        <td>
-                                            {p.estado === 'Pagado' ? (
-                                                <span className={`${styles.badge} ${styles.badgePagado}`}><FaCheckCircle /> Liquidado</span>
-                                            ) : vencio ? (
-                                                <span className={`${styles.badge} ${styles.badgeVencido}`}><FaExclamationTriangle /> Vencido</span>
-                                            ) : (
-                                                <span className={`${styles.badge} ${styles.badgePendiente}`}><FaClock /> Pendiente</span>
-                                            )}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {p.saldoPendiente > 0 && (
-                                                <button 
-                                                    onClick={() => setCuentaSeleccionada(p)} 
-                                                    className={`${styles.btnAbonar} ${styles.btnAbonarPagar}`}
-                                                >
-                                                    Abonar
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
+            {/* FEED MÓVIL DE TARJETAS DE DEUDA Y CRÉDITO */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {subModulo === 'cobrar' ? (
+                    cuentasCobrar.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+                            No hay cuentas por cobrar registradas.
+                        </div>
+                    ) : (
+                        cuentasCobrar.map(c => {
+                            const vencio = esVencida(c.fechaVencimiento, c.estado);
+                            return (
+                                <div key={c.id} style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <strong style={{ color: '#fff', fontSize: '0.88rem', display: 'block' }}>
+                                                {c.nombreCliente || c.cliente?.nombre || 'Desconocido'}
+                                            </strong>
+                                            <small style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                                Tel: {c.telefonoCliente || c.cliente?.telefono || 'N/A'} • #{c.id}
+                                            </small>
+                                        </div>
+
+                                        {c.estado === 'Pagado' ? (
+                                            <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid #10b981', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaCheckCircle /> Pagado
+                                            </span>
+                                        ) : vencio ? (
+                                            <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid #ef4444', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaExclamationTriangle /> Vencido
+                                            </span>
+                                        ) : (
+                                            <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid #f59e0b', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaClock /> Pendiente
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                        <div>
+                                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>Monto Total</small>
+                                            <strong style={{ color: '#fff', fontSize: '0.85rem' }}>C$ {c.montoTotal}</strong>
+                                        </div>
+                                        <div>
+                                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>Saldo Pendiente</small>
+                                            <strong style={{ color: c.saldoPendiente > 0 ? '#ef4444' : '#10b981', fontSize: '0.85rem' }}>C$ {c.saldoPendiente}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '6px' }}>
+                                        <small style={{ color: vencio ? '#ef4444' : '#94a3b8', fontSize: '0.7rem' }}>
+                                            Vence: {new Date(c.fechaVencimiento).toLocaleDateString()}
+                                        </small>
+
+                                        {c.saldoPendiente > 0 && (
+                                            <button 
+                                                onClick={() => setCuentaSeleccionada(c)} 
+                                                style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}
+                                            >
+                                                Abonar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )
+                ) : (
+                    cuentasPagar.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
+                            No hay cuentas por pagar registradas.
+                        </div>
+                    ) : (
+                        cuentasPagar.map(p => {
+                            const vencio = esVencida(p.fechaVencimiento, p.estado);
+                            return (
+                                <div key={p.id} style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <strong style={{ color: '#fff', fontSize: '0.88rem', display: 'block' }}>
+                                                Factura: {p.numeroFactura}
+                                            </strong>
+                                            <small style={{ color: '#38bdf8', fontSize: '0.7rem' }}>
+                                                Proveedor ID: #{p.idProveedor}
+                                            </small>
+                                        </div>
+
+                                        {p.estado === 'Pagado' ? (
+                                            <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid #10b981', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaCheckCircle /> Liquidado
+                                            </span>
+                                        ) : vencio ? (
+                                            <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid #ef4444', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaExclamationTriangle /> Vencido
+                                            </span>
+                                        ) : (
+                                            <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid #f59e0b', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FaClock /> Pendiente
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                                        <div>
+                                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>Monto Total</small>
+                                            <strong style={{ color: '#fff', fontSize: '0.85rem' }}>C$ {p.montoTotal}</strong>
+                                        </div>
+                                        <div>
+                                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>Saldo Pendiente</small>
+                                            <strong style={{ color: p.saldoPendiente > 0 ? '#ef4444' : '#10b981', fontSize: '0.85rem' }}>C$ {p.saldoPendiente}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '6px' }}>
+                                        <small style={{ color: vencio ? '#ef4444' : '#94a3b8', fontSize: '0.7rem' }}>
+                                            Vence: {new Date(p.fechaVencimiento).toLocaleDateString()}
+                                        </small>
+
+                                        {p.saldoPendiente > 0 && (
+                                            <button 
+                                                onClick={() => setCuentaSeleccionada(p)} 
+                                                style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}
+                                            >
+                                                Abonar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )
+                )}
             </div>
 
-            {/* MODAL 1: REGISTRAR CUENTA POR PAGAR MANUAL */}
+            {/* MODAL 1: REGISTRAR CUENTA POR PAGAR */}
             {mostrarModalPago && (
-                <div className={styles.modalOverlay}>
-                    <form onSubmit={guardarCuentaPorPagar} className={styles.modalForm}>
-                        <div className={styles.modalHeader}>
-                            <h4 className={`${styles.modalTitle} ${styles.titlePagar}`}>
-                                <FaFileInvoiceDollar /> Nueva Cuenta por Pagar
-                            </h4>
-                            <button 
-                                type="button" 
-                                onClick={() => setMostrarModalPago(false)} 
-                                className={styles.btnCloseModal}
-                            >
-                                <FaTimes />
-                            </button>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <form onSubmit={guardarCuentaPorPagar} style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}><FaFileInvoiceDollar /> Nueva Cuenta por Pagar</h4>
+                            <button type="button" onClick={() => setMostrarModalPago(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
                         
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Seleccionar Proveedor</label>
-                            <select 
-                                value={idProveedor} 
-                                onChange={e => setIdProveedor(e.target.value)} 
-                                className={styles.select} 
-                                required
-                            >
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Proveedor</label>
+                            <select value={idProveedor} onChange={e => setIdProveedor(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
                                 <option value="">-- Seleccionar --</option>
                                 {listaProveedores.map(p => (
                                     <option key={p.id} value={p.id}>{p.razonSocial}</option>
@@ -309,164 +340,72 @@ export const Cuentas: React.FC = () => {
                             </select>
                         </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Número de Factura</label>
-                            <input 
-                                type="text" 
-                                value={numeroFactura} 
-                                onChange={e => setNumeroFactura(e.target.value)} 
-                                className={styles.input} 
-                                required 
-                                placeholder="Ej: FAC-4589" 
-                            />
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Número de Factura</label>
+                            <input type="text" value={numeroFactura} onChange={e => setNumeroFactura(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required placeholder="Ej: FAC-4589" />
                         </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Monto de Deuda (C$)</label>
-                            <input 
-                                type="number" 
-                                step="0.01" 
-                                value={montoTotal} 
-                                onChange={e => setMontoTotal(e.target.value)} 
-                                className={styles.input} 
-                                required 
-                                placeholder="0.00" 
-                            />
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Monto Deuda (C$)</label>
+                            <input type="number" step="0.01" value={montoTotal} onChange={e => setMontoTotal(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required placeholder="0.00" />
                         </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Fecha de Vencimiento</label>
-                            <input 
-                                type="date" 
-                                value={fechaVencimiento} 
-                                onChange={e => setFechaVencimiento(e.target.value)} 
-                                className={styles.input} 
-                                required 
-                            />
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Vencimiento</label>
+                            <input type="date" value={fechaVencimiento} onChange={e => setFechaVencimiento(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
                         </div>
 
-                        <div className={styles.modalActions}>
-                            <button 
-                                type="button" 
-                                onClick={() => setMostrarModalPago(false)} 
-                                className={styles.btnCancel}
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                type="submit" 
-                                className={`${styles.btnSubmit} ${styles.btnSubmitPagar}`}
-                            >
-                                Insertar Deuda
-                            </button>
-                        </div>
+                        <button type="submit" style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                            Insertar Deuda
+                        </button>
                     </form>
                 </div>
             )}
 
             {/* MODAL 2: NUEVO PROVEEDOR RÁPIDO */}
             {mostrarModalProveedor && (
-                <div className={styles.modalOverlay}>
-                    <form onSubmit={guardarProveedor} className={styles.modalForm}>
-                        <div className={styles.modalHeader}>
-                            <h4 className={`${styles.modalTitle} ${styles.titleProveedor}`}>
-                                <FaTruck /> Registrar Proveedor Nuevo
-                            </h4>
-                            <button 
-                                type="button" 
-                                onClick={() => setMostrarModalProveedor(false)} 
-                                className={styles.btnCloseModal}
-                            >
-                                <FaTimes />
-                            </button>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <form onSubmit={guardarProveedor} style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}><FaTruck /> Nuevo Proveedor</h4>
+                            <button type="button" onClick={() => setMostrarModalProveedor(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
                         
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Nombre / Razón Social</label>
-                            <input 
-                                type="text" 
-                                value={razonSocial} 
-                                onChange={e => setRazonSocial(e.target.value)} 
-                                className={styles.input} 
-                                required 
-                                placeholder="Ej: Distribuidora Claro" 
-                            />
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Razón Social</label>
+                            <input type="text" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required placeholder="Ej: Distribuidora Claro" />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Cédula / RUC Comercial</label>
-                            <input 
-                                type="text" 
-                                value={ruc} 
-                                onChange={e => setRuc(e.target.value)} 
-                                className={styles.input} 
-                                placeholder="Ej: J03100000000" 
-                            />
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>RUC Comercial</label>
+                            <input type="text" value={ruc} onChange={e => setRuc(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} placeholder="J03100000000" />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Teléfono de Contacto</label>
-                            <input 
-                                type="text" 
-                                value={telefono} 
-                                onChange={e => setTelefono(e.target.value)} 
-                                className={styles.input} 
-                                placeholder="Ej: 8888-8888" 
-                            />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Correo Electrónico</label>
-                            <input 
-                                type="email" 
-                                value={email} 
-                                onChange={e => setEmail(e.target.value)} 
-                                className={styles.input} 
-                                placeholder="proveedor@nicaplus.com" 
-                            />
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Teléfono</label>
+                            <input type="text" value={telefono} onChange={e => setTelefono(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} placeholder="8888-8888" />
                         </div>
 
-                        <div className={styles.modalActions}>
-                            <button 
-                                type="button" 
-                                onClick={() => setMostrarModalProveedor(false)} 
-                                className={styles.btnCancel}
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                type="submit" 
-                                className={`${styles.btnSubmit} ${styles.btnSubmitProveedor}`}
-                            >
-                                Guardar
-                            </button>
-                        </div>
+                        <button type="submit" style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                            Guardar Proveedor
+                        </button>
                     </form>
                 </div>
             )}
 
             {/* MODAL 3: MODAL DE ABONOS */}
             {cuentaSeleccionada && (
-                <div className={styles.modalOverlay}>
-                    <form onSubmit={ejecutarAbono} className={styles.modalForm}>
-                        <div className={styles.modalHeader}>
-                            <h4 className={`${styles.modalTitle} ${styles.titleAbono}`}>
-                                <FaCoins /> Registrar Abono
-                            </h4>
-                            <button 
-                                type="button" 
-                                onClick={() => setCuentaSeleccionada(null)} 
-                                className={styles.btnCloseModal}
-                            >
-                                <FaTimes />
-                            </button>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <form onSubmit={ejecutarAbono} style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}><FaCoins /> Registrar Abono</h4>
+                            <button type="button" onClick={() => setCuentaSeleccionada(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
 
-                        <div className={styles.formGroup}>
-                            <div className={styles.bold}>
-                                Saldo actual: <span style={{ color: '#ffffff' }}>C$ {cuentaSeleccionada.saldoPendiente}</span>
-                            </div>
+                        <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', color: '#94a3b8' }}>
+                            Saldo actual: <strong style={{ color: '#ef4444' }}>C$ {cuentaSeleccionada.saldoPendiente}</strong>
                         </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Monto a Abonar (C$)</label>
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Monto a Abonar (C$)</label>
                             <input 
                                 type="number" 
                                 step="0.01" 
@@ -475,17 +414,17 @@ export const Cuentas: React.FC = () => {
                                 value={montoAbono} 
                                 onChange={e => setMontoAbono(e.target.value)} 
                                 placeholder="0.00" 
-                                className={styles.input}
+                                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                                 required 
                             />
                         </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Método de Pago</label>
+                        <div>
+                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Método de Pago</label>
                             <select 
                                 value={metodoPago} 
                                 onChange={e => setMetodoPago(e.target.value)}
-                                className={styles.select}
+                                style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
                             >
                                 <option value="Efectivo">Efectivo</option>
                                 <option value="Transferencia">Transferencia Bancaria</option>
@@ -493,23 +432,9 @@ export const Cuentas: React.FC = () => {
                             </select>
                         </div>
 
-                        <div className={styles.modalActions}>
-                            <button 
-                                type="button" 
-                                onClick={() => setCuentaSeleccionada(null)} 
-                                className={styles.btnCancel}
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                type="submit" 
-                                className={`${styles.btnSubmit} ${
-                                    subModulo === 'cobrar' ? styles.btnSubmitAbonoCobrar : styles.btnSubmitAbonoPagar
-                                }`}
-                            >
-                                Confirmar
-                            </button>
-                        </div>
+                        <button type="submit" style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                            Confirmar Abono
+                        </button>
                     </form>
                 </div>
             )}

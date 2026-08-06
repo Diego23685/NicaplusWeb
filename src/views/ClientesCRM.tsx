@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, type FormEvent, type MouseEvent } from 'react';
 import api from '../services/api';
 import { 
-    FaSearch, FaWhatsapp, FaUserTag, FaHistory, FaCalendarAlt, 
-    FaFolderOpen, FaUserPlus, FaEdit, FaTrash, FaSave, FaTimes, 
-    FaExclamationTriangle, FaCheckCircle, FaBan
+    FaSearch, FaWhatsapp, FaUserTag, 
+    FaUserPlus, FaEdit, FaTrash, FaSave, FaTimes, 
+    FaExclamationTriangle, FaCheckCircle, FaBan, FaArrowLeft, FaPhoneAlt
 } from 'react-icons/fa';
-import styles from '../assets/styles/ClientesCRM.module.css';
 
 // --- INTERFACES Y TIPOS ---
 interface Cliente {
@@ -97,6 +96,9 @@ export const ClientesCRM: React.FC = () => {
     const [historialData, setHistorialData] = useState<ExpedienteClienteData | null>(null);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
+    // CONTROL DE PESTAÑAS MÓVILES EN EXPEDIENTE
+    const [seccionExpediente, setSeccionExpediente] = useState<'resumen' | 'servicios' | 'compras' | 'deudas'>('resumen');
+
     // FORMULARIO Y MODALES
     const [mostrarModalCliente, setMostrarModalCliente] = useState(false);
     const [editandoClienteId, setEditandoClienteId] = useState<number | null>(null);
@@ -129,6 +131,7 @@ export const ClientesCRM: React.FC = () => {
     const seleccionarCliente = async (cliente: Cliente) => {
         setClienteSeleccionado(cliente);
         setCargandoHistorial(true);
+        setSeccionExpediente('resumen');
         try {
             const res = await api.get<ExpedienteClienteData>(`/clientes/${cliente.id}/historial`);
             setHistorialData(res.data);
@@ -226,371 +229,380 @@ export const ClientesCRM: React.FC = () => {
     );
 
     return (
-        <div className={styles.crmContainer}>
+        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
             
-            {/* PANEL IZQUIERDO: BUSCADOR Y LISTA */}
-            <div className={styles.crmSidebar}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 className={styles.sidebarTitle} style={{ margin: 0 }}>Directorio CRM</h3>
-                    <button onClick={abrirModalClienteNuevo} className={styles.btnNuevoCliente}>
-                        <FaUserPlus /> Nuevo
-                    </button>
-                </div>
-                
-                <div className={styles.searchWrapper}>
-                    <input 
-                        type="text" 
-                        placeholder="Buscar por nombre o teléfono..." 
-                        value={busqueda} 
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        className={styles.searchInput}
-                    />
-                    <FaSearch className={styles.searchIcon} />
-                </div>
+            {/* VISTA 1: LISTA Y BÚSQUEDA DE CLIENTES (MÓVIL) */}
+            {!clienteSeleccionado && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    
+                    {/* Encabezado Directorio */}
+                    <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Directorio de Clientes</h3>
+                            <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Total: {clientes.length} registrados</small>
+                        </div>
+                        <button 
+                            onClick={abrirModalClienteNuevo}
+                            style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                            <FaUserPlus /> Nuevo
+                        </button>
+                    </div>
 
-                <div className={styles.clientList}>
-                    {clientesFiltrados.map(c => {
-                        const esActivo = clienteSeleccionado?.id === c.id;
-                        return (
-                            <div 
-                                key={c.id} 
-                                onClick={() => seleccionarCliente(c)}
-                                className={`${styles.clientItem} ${esActivo ? styles.clientItemActive : ''}`}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <div className={styles.clientName}>{c.nombre}</div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <FaEdit size={13} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} title="Editar" />
-                                        <FaTrash size={13} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} title="Eliminar" />
+                    {/* Buscador táctil */}
+                    <div style={{ position: 'relative' }}>
+                        <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar por nombre o teléfono..." 
+                            value={busqueda} 
+                            onChange={(e) => setBusqueda(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px 10px 38px',
+                                background: '#1e293b',
+                                border: '1px solid #334155',
+                                borderRadius: '10px',
+                                color: '#fff',
+                                fontSize: '0.85rem',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                    </div>
+
+                    {/* Lista de clientes (Cards Ligeras) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {clientesFiltrados.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.85rem' }}>
+                                No se encontraron clientes coincidentes.
+                            </div>
+                        ) : (
+                            clientesFiltrados.map(c => (
+                                <div 
+                                    key={c.id} 
+                                    onClick={() => seleccionarCliente(c)}
+                                    style={{
+                                        background: '#1e293b',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        border: '1px solid #334155',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '6px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{c.nombre}</strong>
+                                        <div style={{ display: 'flex', gap: '10px' }} onClick={e => e.stopPropagation()}>
+                                            <FaEdit size={14} onClick={(e) => abrirModalClienteEditor(c, e)} style={{ color: '#f59e0b', cursor: 'pointer' }} />
+                                            <FaTrash size={14} onClick={(e) => eliminarCliente(c.id, e)} style={{ color: '#ef4444', cursor: 'pointer' }} />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                        <span style={{ color: '#38bdf8', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <FaPhoneAlt size={10} /> {c.telefono}
+                                        </span>
+                                        {c.etiquetas && (
+                                            <span style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', border: '1px solid #38bdf8', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 600 }}>
+                                                {c.etiquetas.split(',')[0]}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                <div className={styles.clientMetaRow}>
-                                    <span>{c.telefono}</span>
-                                    {c.etiquetas && (
-                                        <span className={styles.sidebarTag}>
-                                            {c.etiquetas.split(',')[0]}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+                            ))
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            {/* PANEL DERECHO: EXPEDIENTE COMPLETO */}
-            <div className={styles.crmMainContent}>
-                {!clienteSeleccionado ? (
-                    <div className={styles.emptyState}>
-                        <FaFolderOpen size={48} style={{ marginBottom: '12px' }} />
-                        <p className={styles.emptyStateText}>
-                            Seleccione un cliente del panel izquierdo para auditar su historia completa.
-                        </p>
-                    </div>
-                ) : cargandoHistorial ? (
-                    <div className={styles.loadingState}>
-                        Consultando expediente de transacciones...
-                    </div>
-                ) : (
-                    <div>
-                        {/* ENCABEZADO EXPEDIENTE CLIENTE */}
-                        <div className={styles.crmHeaderActions}>
+            {/* VISTA 2: EXPEDIENTE COMPLETO DEL CLIENTE SELECCIONADO (MÓVIL) */}
+            {clienteSeleccionado && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    
+                    {/* Botón de retorno al directorio */}
+                    <button 
+                        onClick={() => { setClienteSeleccionado(null); setHistorialData(null); }}
+                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '8px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', width: 'fit-content' }}
+                    >
+                        <FaArrowLeft /> Volver al Directorio
+                    </button>
+
+                    {/* Tarjeta de Perfil del Cliente */}
+                    <div style={{ background: '#1e293b', padding: '14px', borderRadius: '14px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <h2 className={styles.clientTitle}>{historialData?.cliente.nombre || clienteSeleccionado.nombre}</h2>
-                                <p className={styles.registerDate}>
-                                    Registrado el: {formatearFecha(historialData?.cliente.fechaRegistro || clienteSeleccionado.fechaRegistro)}
-                                </p>
-                                <div className={styles.tagContainer}>
-                                    {(historialData?.cliente.etiquetas || clienteSeleccionado.etiquetas) ? (
-                                        (historialData?.cliente.etiquetas || clienteSeleccionado.etiquetas || '')
-                                            .split(',')
-                                            .map((tag: string, i: number) => (
-                                                <span key={i} className={styles.tag}>
-                                                    <FaUserTag /> {tag.trim()}
-                                                </span>
-                                            ))
-                                    ) : (
-                                        <span className={styles.noTags}>Sin etiquetas asignadas</span>
-                                    )}
-                                </div>
+                                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', fontWeight: 800 }}>
+                                    {historialData?.cliente.nombre || clienteSeleccionado.nombre}
+                                </h3>
+                                <small style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                    Registrado: {formatearFecha(historialData?.cliente.fechaRegistro || clienteSeleccionado.fechaRegistro)}
+                                </small>
                             </div>
 
-                            <div>
-                                <a 
-                                    href={`https://wa.me/${sanitizarTelefonoWhatsapp(historialData?.cliente.telefono || clienteSeleccionado.telefono)}`} 
-                                    target="_blank" 
-                                    rel="noreferrer"
-                                    className={styles.btnWhatsapp}
-                                >
-                                    <FaWhatsapp size={18} /> WhatsApp
-                                </a>
-                            </div>
+                            <a 
+                                href={`https://wa.me/${sanitizarTelefonoWhatsapp(historialData?.cliente.telefono || clienteSeleccionado.telefono)}`} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                style={{ background: '#25D366', color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <FaWhatsapp size={16} /> WhatsApp
+                            </a>
                         </div>
 
-                        {/* KPIS FINANCIEROS Y DE FIDELIZACIÓN */}
-                        <div className={styles.crmKpiGrid}>
-                            <div className={`${styles.kpiCard} ${styles.kpiCardInvertido}`}>
-                                <small className={styles.kpiLabel}>TOTAL INVERTIDO</small>
-                                <h3 className={`${styles.kpiValue} ${styles.valueInvertido}`}>
-                                    {formatearCordobas(historialData?.totalGastado)}
-                                </h3>
-                            </div>
-                            <div className={styles.kpiCardActivo}>
-                                <small className={styles.kpiLabel}>SERVICIOS ACTIVOS</small>
-                                <h3 className={`${styles.kpiValue} ${styles.valueActivo}`}>
-                                    {(historialData?.serviciosActivos?.tallerEquiposEnRevision?.length ?? 0) + 
-                                    (historialData?.serviciosActivos?.suscripcionesVigentes?.length ?? 0)}
-                                </h3>
-                            </div>
-                            <div className={styles.kpiCardVencido}>
-                                <small className={styles.kpiLabel}>SERVICIOS VENCIDOS</small>
-                                <h3 className={`${styles.kpiValue} ${styles.valueVencido}`}>
-                                    {(historialData?.serviciosVencidos?.tallerEquiposEntregados?.length ?? 0) + 
-                                    (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0)}
-                                </h3>
-                            </div>
-                            <div className={styles.kpiCardClub}>
-                                <small className={styles.kpiLabel}>PUNTOS CLUB</small>
-                                <h3 className={`${styles.kpiValue} ${styles.valueClub}`}>
-                                    {historialData?.cliente?.puntosClub ?? historialData?.cliente?.puntosAcumulados ?? clienteSeleccionado.puntosAcumulados ?? 0} pts
-                                </h3>
-                            </div>
+                        {/* Etiquetas */}
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {(historialData?.cliente.etiquetas || clienteSeleccionado.etiquetas) ? (
+                                (historialData?.cliente.etiquetas || clienteSeleccionado.etiquetas || '')
+                                    .split(',')
+                                    .map((tag: string, i: number) => (
+                                        <span key={i} style={{ background: '#0f172a', color: '#cbd5e1', border: '1px solid #334155', padding: '2px 8px', borderRadius: '6px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <FaUserTag size={10} style={{ color: '#38bdf8' }} /> {tag.trim()}
+                                        </span>
+                                    ))
+                            ) : (
+                                <small style={{ color: '#64748b', fontSize: '0.7rem' }}>Sin etiquetas asignadas</small>
+                            )}
                         </div>
+                    </div>
 
-                        {/* SECCIÓN OBSERVACIONES */}
-                        <div className={styles.observacionesBox}>
-                            <h4 className={styles.observacionesTitle}>Observaciones del CRM</h4>
-                            <p className={styles.observacionesContent}>
-                                {historialData?.cliente.observaciones || clienteSeleccionado.observaciones || 
-                                "No se han ingresado notas u observaciones de comportamiento de este cliente."}
-                            </p>
+                    {/* ESTADO DE CARGA */}
+                    {cargandoHistorial ? (
+                        <div style={{ textAlign: 'center', padding: '30px', color: '#38bdf8', background: '#1e293b', borderRadius: '12px', fontSize: '0.85rem' }}>
+                            Consultando expediente de transacciones...
                         </div>
+                    ) : (
+                        <>
+                            {/* PESTAÑAS HORIZONTALES PARA EXPEDIENTE */}
+                            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                <button onClick={() => setSeccionExpediente('resumen')} style={{ background: seccionExpediente === 'resumen' ? '#38bdf8' : '#1e293b', color: seccionExpediente === 'resumen' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Resumen</button>
+                                <button onClick={() => setSeccionExpediente('servicios')} style={{ background: seccionExpediente === 'servicios' ? '#38bdf8' : '#1e293b', color: seccionExpediente === 'servicios' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Servicios</button>
+                                <button onClick={() => setSeccionExpediente('compras')} style={{ background: seccionExpediente === 'compras' ? '#38bdf8' : '#1e293b', color: seccionExpediente === 'compras' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Compras</button>
+                                <button onClick={() => setSeccionExpediente('deudas')} style={{ background: seccionExpediente === 'deudas' ? '#38bdf8' : '#1e293b', color: seccionExpediente === 'deudas' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Deudas</button>
+                            </div>
 
-                        {/* CONTENEDOR DE DOS COLUMNAS DE HISTORIAL */}
-                        <div className={styles.crmHistoryGrid}>
-                            {/* COLUMNA: HISTORIAL DE COMPRAS */}
-                            <div className={styles.crmHistoryColumn}>
-                                <h4 className={styles.columnHeaderCompras}>
-                                    <FaHistory /> Historial de Compras
-                                </h4>
-                                <div className={styles.listWrapper}>
-                                    {historialData?.historialCompras?.map((compra) => (
-                                        <div key={compra.id} className={styles.compraItem}>
-                                            <div className={styles.compraInfo}>
-                                                <strong className={styles.compraTitle}>Factura #{compra.id}</strong>
-                                                <small className={styles.compraSub}>
-                                                    {formatearFecha(compra.fecha)}
-                                                </small>
-                                            </div>
-                                            <span className={styles.compraPrice}>
-                                                {formatearCordobas(compra.total)}
-                                            </span>
+                            {/* PESTAÑA 1: RESUMEN Y KPIS */}
+                            {seccionExpediente === 'resumen' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
+                                            <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block' }}>TOTAL INVERTIDO</small>
+                                            <strong style={{ color: '#10b981', fontSize: '1.1rem', fontWeight: 800 }}>
+                                                {formatearCordobas(historialData?.totalGastado)}
+                                            </strong>
                                         </div>
-                                    ))}
-                                    {(!historialData?.historialCompras || historialData.historialCompras.length === 0) && (
-                                        <small className={styles.emptyText}>El cliente no registra compras.</small>
-                                    )}
+
+                                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
+                                            <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block' }}>PUNTOS CLUB</small>
+                                            <strong style={{ color: '#c084fc', fontSize: '1.1rem', fontWeight: 800 }}>
+                                                {historialData?.cliente?.puntosClub ?? historialData?.cliente?.puntosAcumulados ?? clienteSeleccionado.puntosAcumulados ?? 0} pts
+                                            </strong>
+                                        </div>
+
+                                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
+                                            <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block' }}>SERVICIOS ACTIVOS</small>
+                                            <strong style={{ color: '#38bdf8', fontSize: '1.1rem', fontWeight: 800 }}>
+                                                {(historialData?.serviciosActivos?.tallerEquiposEnRevision?.length ?? 0) + 
+                                                (historialData?.serviciosActivos?.suscripcionesVigentes?.length ?? 0)}
+                                            </strong>
+                                        </div>
+
+                                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
+                                            <small style={{ color: '#64748b', fontSize: '0.68rem', display: 'block' }}>VENCIDOS / HISTORIAL</small>
+                                            <strong style={{ color: '#ef4444', fontSize: '1.1rem', fontWeight: 800 }}>
+                                                {(historialData?.serviciosVencidos?.tallerEquiposEntregados?.length ?? 0) + 
+                                                (historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0)}
+                                            </strong>
+                                        </div>
+                                    </div>
+
+                                    {/* Observaciones */}
+                                    <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
+                                        <strong style={{ color: '#f59e0b', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Observaciones del CRM</strong>
+                                        <p style={{ color: '#cbd5e1', fontSize: '0.8rem', margin: 0, lineHeight: '1.3' }}>
+                                            {historialData?.cliente.observaciones || clienteSeleccionado.observaciones || "Sin observaciones registradas."}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* COLUMNA: ESTADO DE SERVICIOS */}
-                            <div className={styles.crmHistoryColumn}>
-                                <h4 className={styles.columnHeaderServicios}>
-                                    <FaCalendarAlt /> Estado de Servicios
-                                </h4>
-                                <div className={styles.listWrapper}>
-                                    {(((historialData?.serviciosActivos?.tallerEquiposEnRevision?.length ?? 0) > 0) || 
-                                      ((historialData?.serviciosActivos?.suscripcionesVigentes?.length ?? 0) > 0)) && (
-                                        <div className={styles.sectionSubTitle}>ACTIVOS / EN CURSO</div>
-                                    )}
-
+                            {/* PESTAÑA 2: ESTADO DE SERVICIOS */}
+                            {seccionExpediente === 'servicios' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    
+                                    {/* Activos */}
+                                    <strong style={{ color: '#10b981', fontSize: '0.78rem' }}>SERVICIOS ACTIVOS Y EN CURSO</strong>
+                                    
                                     {historialData?.serviciosActivos?.tallerEquiposEnRevision?.map((srv) => (
-                                        <div key={`taller-act-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceTallerAct}`}>
-                                            <div className={styles.serviceTallerActHeader}>
-                                                <strong className={styles.serviceTallerActTitle}>{srv.dispositivo}</strong>
-                                                <span className={styles.badgeService}>{srv.estado || 'En Revisión'}</span>
+                                        <div key={`taller-act-${srv.id}`} style={{ background: '#1e293b', borderLeft: '4px solid #38bdf8', padding: '10px', borderRadius: '8px', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 700 }}>
+                                                <span>🛠️ {srv.dispositivo}</span>
+                                                <span style={{ color: '#38bdf8' }}>{srv.estado || 'En Revisión'}</span>
                                             </div>
-                                            <div className={styles.serviceTallerActDesc}>{srv.diagnostico || 'Diagnóstico pendiente'}</div>
-                                            <small className={styles.serviceDateMeta}>
-                                                Ingresó: {formatearFecha(srv.fechaIngreso)}
-                                            </small>
+                                            <div style={{ color: '#cbd5e1', fontSize: '0.75rem', marginTop: '2px' }}>{srv.diagnostico || 'Diagnóstico pendiente'}</div>
+                                            <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Ingresó: {formatearFecha(srv.fechaIngreso)}</small>
                                         </div>
                                     ))}
 
                                     {historialData?.serviciosActivos?.suscripcionesVigentes?.map((srv) => (
-                                        <div key={`susc-act-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceSuscripAct}`}>
-                                            <strong className={styles.serviceSuscripActTitle}>{srv.nombreServicio}</strong>
-                                            <div className={styles.serviceSuscripActSub}>{srv.detallesCredenciales}</div>
-                                            <small className={styles.dateActiveMeta}>
-                                                Vence: {formatearFecha(srv.fechaVencimiento)}
-                                            </small>
+                                        <div key={`susc-act-${srv.id}`} style={{ background: '#1e293b', borderLeft: '4px solid #10b981', padding: '10px', borderRadius: '8px', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
+                                            <strong style={{ color: '#fff', fontSize: '0.82rem' }}>📺 {srv.nombreServicio}</strong>
+                                            <div style={{ color: '#cbd5e1', fontSize: '0.75rem', marginTop: '2px' }}>{srv.detallesCredenciales}</div>
+                                            <small style={{ color: '#10b981', fontSize: '0.68rem', fontWeight: 700 }}>Vence: {formatearFecha(srv.fechaVencimiento)}</small>
                                         </div>
                                     ))}
 
-                                    {(((historialData?.serviciosVencidos?.tallerEquiposEntregados?.length ?? 0) > 0) || 
-                                      ((historialData?.serviciosVencidos?.suscripcionesExpiradas?.length ?? 0) > 0)) && (
-                                        <div className={styles.sectionSubTitle}>HISTORIAL / VENCIDOS</div>
-                                    )}
-
-                                    {historialData?.serviciosVencidos?.tallerEquiposEntregados?.map((srv) => (
-                                        <div key={`taller-ven-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceTallerHist}`}>
-                                            <div className={styles.serviceTallerHistTitle}>{srv.dispositivo} (Entregado)</div>
-                                            <div className={styles.serviceTallerHistDesc}>{srv.notas || 'Sin notas adicionadas'}</div>
-                                            <small className={styles.serviceDateMeta}>
-                                                Entregado: {formatearFecha(srv.fechaEntrega)}
-                                            </small>
-                                        </div>
-                                    ))}
+                                    {/* Vencidos */}
+                                    <strong style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '8px' }}>HISTORIAL Y VENCIDOS</strong>
 
                                     {historialData?.serviciosVencidos?.suscripcionesExpiradas?.map((srv) => (
-                                        <div key={`susc-ven-${srv.id}`} className={`${styles.serviceCard} ${styles.serviceSuscripExp}`}>
-                                            <strong className={styles.serviceSuscripExpTitle}>{srv.nombreServicio}</strong>
-                                            <div className={styles.serviceSuscripExpSub}>Estado: {srv.estado || 'Expirado'}</div>
-                                            <small className={styles.serviceDateMeta}>
-                                                Expiró: {formatearFecha(srv.fechaVencimiento)}
-                                            </small>
+                                        <div key={`susc-ven-${srv.id}`} style={{ background: '#1e293b', borderLeft: '4px solid #ef4444', padding: '10px', borderRadius: '8px', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155' }}>
+                                            <strong style={{ color: '#fff', fontSize: '0.82rem' }}>{srv.nombreServicio}</strong>
+                                            <div style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>Estado: {srv.estado || 'Expirado'}</div>
+                                            <small style={{ color: '#ef4444', fontSize: '0.68rem' }}>Expiró: {formatearFecha(srv.fechaVencimiento)}</small>
                                         </div>
                                     ))}
-
-                                    <div className={styles.deudaSection}>
-                                        <h4 className={styles.deudaTitle}>Estado de Cuenta (Deudas)</h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {historialData?.historialDeudas?.filter(d => d.saldoPendiente > 0).map((deuda) => (
-                                                <div key={deuda.id} className={styles.deudaCard}>
-                                                    <div>
-                                                        <span className={styles.deudaCode}>Deuda #{deuda.id} ({deuda.estado})</span>
-                                                        <small className={styles.deudaDate}>
-                                                            Vence el: {formatearFecha(deuda.fechaVencimiento)}
-                                                        </small>
-                                                    </div>
-                                                    <span className={styles.deudaMonto}>{formatearCordobas(deuda.saldoPendiente)}</span>
-                                                </div>
-                                            ))}
-                                            {(!historialData?.historialDeudas || historialData.historialDeudas.filter(d => d.saldoPendiente > 0).length === 0) && (
-                                                <small className={styles.noDeudaText}>El cliente no tiene saldos pendientes.</small>
-                                            )}
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+                            )}
+
+                            {/* PESTAÑA 3: HISTORIAL DE COMPRAS */}
+                            {seccionExpediente === 'compras' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {(!historialData?.historialCompras || historialData.historialCompras.length === 0) ? (
+                                        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', background: '#1e293b', borderRadius: '10px', fontSize: '0.8rem' }}>
+                                            El cliente no registra compras.
+                                        </div>
+                                    ) : (
+                                        historialData.historialCompras.map((compra) => (
+                                            <div key={compra.id} style={{ background: '#1e293b', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <strong style={{ color: '#fff', fontSize: '0.82rem', display: 'block' }}>Factura #{compra.id}</strong>
+                                                    <small style={{ color: '#64748b', fontSize: '0.7rem' }}>{formatearFecha(compra.fecha)}</small>
+                                                </div>
+                                                <strong style={{ color: '#38bdf8', fontSize: '0.9rem' }}>{formatearCordobas(compra.total)}</strong>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+
+                            {/* PESTAÑA 4: DEUDAS Y SALDOS */}
+                            {seccionExpediente === 'deudas' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {(!historialData?.historialDeudas || historialData.historialDeudas.filter(d => d.saldoPendiente > 0).length === 0) ? (
+                                        <div style={{ textAlign: 'center', padding: '20px', color: '#10b981', background: '#1e293b', borderRadius: '10px', fontSize: '0.8rem' }}>
+                                            El cliente no tiene saldos pendientes.
+                                        </div>
+                                    ) : (
+                                        historialData.historialDeudas.filter(d => d.saldoPendiente > 0).map((deuda) => (
+                                            <div key={deuda.id} style={{ background: '#1e293b', borderLeft: '4px solid #ef4444', padding: '10px', borderRadius: '8px', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <strong style={{ color: '#f87171', fontSize: '0.82rem', display: 'block' }}>Deuda #{deuda.id} ({deuda.estado})</strong>
+                                                    <small style={{ color: '#64748b', fontSize: '0.7rem' }}>Vence el: {formatearFecha(deuda.fechaVencimiento)}</small>
+                                                </div>
+                                                <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>{formatearCordobas(deuda.saldoPendiente)}</strong>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* MODAL CREACIÓN / EDICIÓN DE CLIENTE */}
             {mostrarModalCliente && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}> 
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>
-                                {editandoClienteId ? <><FaEdit /> Modificar Cliente</> : <><FaUserPlus /> Registrar Cliente</>}
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1rem', fontWeight: 700 }}>
+                                {editandoClienteId ? 'Modificar Cliente' : 'Registrar Cliente'}
                             </h3>
-                            <button onClick={() => setMostrarModalCliente(false)} className={styles.modalCloseBtn}>
-                                <FaTimes />
-                            </button>
+                            <button onClick={() => setMostrarModalCliente(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
                         </div>
                         
-                        <form onSubmit={guardarCliente} className={styles.modalForm}>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="cliNombre">Nombre Completo</label>
-                                <input id="cliNombre" type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} required />
+                        <form onSubmit={guardarCliente} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Nombre Completo</label>
+                                <input type="text" value={cliNombre} onChange={e => setCliNombre(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
                             </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="cliTelefono">Teléfono Móvil</label>
-                                <input id="cliTelefono" type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} required />
+
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Teléfono Móvil</label>
+                                <input type="text" value={cliTelefono} onChange={e => setCliTelefono(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
                             </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="cliEmail">Email</label>
-                                <input id="cliEmail" type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} />
+
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Email</label>
+                                <input type="email" value={cliEmail} onChange={e => setCliEmail(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
                             </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="cliEtiquetas">Etiquetas (Separadas por comas)</label>
-                                <input id="cliEtiquetas" type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller" />
+
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Etiquetas (Separadas por comas)</label>
+                                <input type="text" value={cliEtiquetas} onChange={e => setCliEtiquetas(e.target.value)} placeholder="Ej: Frecuente, Taller" style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
                             </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="cliObservaciones">Observaciones Internas</label>
-                                <textarea id="cliObservaciones" value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={3} placeholder="Notas de comportamiento del cliente..." />
+
+                            <div>
+                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Observaciones Internas</label>
+                                <textarea value={cliObservaciones} onChange={e => setCliObservaciones(e.target.value)} rows={2} placeholder="Notas del cliente..." style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} />
                             </div>
 
                             {editandoClienteId && (
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="cliPuntos">Puntos Club</label>
-                                    <input id="cliPuntos" type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} min={0} />
+                                <div>
+                                    <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Puntos Club</label>
+                                    <input type="number" value={cliPuntos} onChange={e => setCliPuntos(Number(e.target.value))} min={0} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
                                 </div>
                             )}
-                            
-                            <div className={styles.modalActions}>
-                                <button type="submit" className={styles.btnGuardar}>
-                                    <FaSave /> Guardar Cliente
-                                </button>
-                                <button type="button" onClick={() => setMostrarModalCliente(false)} className={styles.btnCancelar}>
-                                    Cancelar
-                                </button>
-                            </div>
+
+                            <button type="submit" style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
+                                <FaSave /> Guardar Cliente
+                            </button>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* MODAL DE ADVERTENCIA: ERROR DE INTEGRIDAD */}
+            {/* MODAL ERROR DE INTEGRIDAD AL ELIMINAR */}
             {errorEliminacion && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent} style={{ maxWidth: '460px', borderTop: '4px solid #ef4444' }}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <FaExclamationTriangle /> No se puede eliminar
-                            </h3>
-                            <button onClick={() => setErrorEliminacion(null)} className={styles.modalCloseBtn}>
-                                <FaTimes />
-                            </button>
-                        </div>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
+                        <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '2rem', margin: '0 auto' }} />
+                        <h4 style={{ color: '#f87171', margin: 0 }}>No se puede eliminar</h4>
+                        <p style={{ color: '#e2e8f0', fontSize: '0.82rem', margin: 0 }}>{errorEliminacion.mensajePrincipal}</p>
 
-                        <div style={{ padding: '16px 0', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.5' }}>
-                            <p style={{ margin: '0 0 14px 0' }}>{errorEliminacion.mensajePrincipal}</p>
-
-                            {errorEliminacion.detalles && (
-                                <div style={{ background: '#0f172a', padding: '12px 14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                                        Motivos detectados en el sistema:
+                        {errorEliminacion.detalles && (
+                            <div style={{ background: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left', fontSize: '0.75rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {errorEliminacion.detalles.tieneVentas ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
+                                    <span style={{ color: errorEliminacion.detalles.tieneVentas ? '#f87171' : '#94a3b8' }}>
+                                        {errorEliminacion.detalles.tieneVentas ? "Tiene ventas o facturas" : "Sin ventas"}
                                     </span>
-                                    
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {errorEliminacion.detalles.tieneVentas ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
-                                        <span style={{ color: errorEliminacion.detalles.tieneVentas ? '#f87171' : '#94a3b8' }}>
-                                            {errorEliminacion.detalles.tieneVentas ? "Tiene ventas o facturas registradas" : "Sin historial de ventas"}
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {errorEliminacion.detalles.tieneTaller ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
-                                        <span style={{ color: errorEliminacion.detalles.tieneTaller ? '#f87171' : '#94a3b8' }}>
-                                            {errorEliminacion.detalles.tieneTaller ? "Tiene órdenes o equipos en taller" : "Sin servicios de taller"}
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {errorEliminacion.detalles.tieneDeudas ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
-                                        <span style={{ color: errorEliminacion.detalles.tieneDeudas ? '#f87171' : '#94a3b8' }}>
-                                            {errorEliminacion.detalles.tieneDeudas ? "Mantiene saldos o deudas pendientes" : "Sin cuentas por cobrar"}
-                                        </span>
-                                    </div>
                                 </div>
-                            )}
-                        </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {errorEliminacion.detalles.tieneTaller ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
+                                    <span style={{ color: errorEliminacion.detalles.tieneTaller ? '#f87171' : '#94a3b8' }}>
+                                        {errorEliminacion.detalles.tieneTaller ? "Tiene equipos en taller" : "Sin taller"}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {errorEliminacion.detalles.tieneDeudas ? <FaBan color="#ef4444" /> : <FaCheckCircle color="#10b981" />}
+                                    <span style={{ color: errorEliminacion.detalles.tieneDeudas ? '#f87171' : '#94a3b8' }}>
+                                        {errorEliminacion.detalles.tieneDeudas ? "Tiene saldos o deudas" : "Sin deudas"}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px' }}>
-                            <button 
-                                onClick={() => setErrorEliminacion(null)} 
-                                style={{ padding: '8px 18px', background: '#334155', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-                            >
-                                Entendido
-                            </button>
-                        </div>
+                        <button onClick={() => setErrorEliminacion(null)} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', marginTop: '6px', fontSize: '0.85rem' }}>
+                            Entendido
+                        </button>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };
