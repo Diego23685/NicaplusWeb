@@ -110,11 +110,11 @@ export const Renovaciones: React.FC = () => {
                 `Hola, *${clienteNombre}*. 👋\n\n` +
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
                 `Te recordamos que tu suscripción de *${plataformaPlan}*\n\n` +
-                `(${credenciales})\n\n` + 
-                `- *vence el día de hoy* (${fechaVencimiento}).\n\n` +
+                `- (${credenciales})\n\n` + 
+                `- *Vence el día de hoy* (${fechaVencimiento}).\n\n` +
                 `- 💳 *Costo de renovación:* C$ ${monto}\n\n` +
                 `Para evitar la suspensión de tu servicio, realiza tu pago y envíanos el comprobante por este mismo chat.\n\n` +
-                `¡Gracias por elegir NICAPLUS STREAM! 💙`;
+                `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
 
         } else if (item.diasRestantes < 0) {
             // Plantilla: Suscripción vencida
@@ -122,12 +122,12 @@ export const Renovaciones: React.FC = () => {
                 `Hola, *${clienteNombre}*. 👋\n\n` +
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
                 `Te notificamos que tu suscripción de *${plataformaPlan}* \n\n` +
-                `(${credenciales})\n\n` + 
-                `- *se encuentra vencida desde el* ${fechaVencimiento}.\n\n` +
+                `- (${credenciales})\n\n` + 
+                `- *Se encuentra vencida desde el* ${fechaVencimiento}.\n\n` +
                 `- 💳 *Costo de renovación:* C$ ${monto}\n\n` +
                 `Para renovar tu servicio, realiza tu depósito o transferencia y envíanos el comprobante por este mismo chat.\n\n` +
                 `- ⚠️ *Importante:* Si la renovación no se realiza a tiempo, el perfil podrá ser suspendido o reasignado de acuerdo con la disponibilidad del servicio.\n\n` +
-                `¡Gracias por elegir NICAPLUS STREAM! 💙`;
+                `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
 
         } else {
             // Plantilla: Vence en N días
@@ -135,11 +135,12 @@ export const Renovaciones: React.FC = () => {
             mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
                 `Hola, *${clienteNombre}*. 👋\n\n` +
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
-                `Te informamos que tu suscripción de *${plataformaPlan}* (${credenciales}) vence en ${diasTexto}, el ${fechaVencimiento}.\n\n` +
+                `Te informamos que tu suscripción de *${plataformaPlan}* (${credenciales})\n\n` +
+                `- *Vence en* ${diasTexto}, el ${fechaVencimiento}.\n\n` +
                 `- 💳 *Costo de renovación:* C$ ${monto}\n\n` +
                 `Te recomendamos estar atento a la fecha de vencimiento para evitar interrupciones en tu servicio.\n\n` +
-                `- 📎 *Comprobante:* Una vez realizado el pago, envíanos tu comprobante por este mismo chat para procesar tu renovación.\n\n` +
-                `¡Gracias por elegir NICAPLUS STREAM! 💙`;
+                `- 📎 Una vez realizado el pago, envíanos tu comprobante por este mismo chat para procesar tu renovación.\n\n` +
+                `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
         }
 
         window.open(`https://api.whatsapp.com/send/?phone=505${telefonoLimpio}&text=${encodeURIComponent(mensaje)}`, '_blank');
