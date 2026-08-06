@@ -9,35 +9,36 @@ import {
     FaPrint, 
     FaWhatsapp, 
     FaChevronLeft, 
-    FaChevronRight 
+    FaChevronRight,
+    FaShoppingCart,
+    FaExchangeAlt,
+    FaLock
 } from 'react-icons/fa';
 import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
 import '../assets/styles/Reportes.css';
 
 export const Reportes: React.FC = () => {
-    // Estados del Generador de Reportes Original
     const [desde, setDesde] = useState('');
     const [hasta, setHasta] = useState('');
     const [datosReporte, setDatosReporte] = useState<any>(null);
     const [cargandoReporte, setCargandoReporte] = useState(false);
 
-    // Estado para la navegación dinámica entre meses con flechas
     const [fechaReferenciaMes, setFechaReferenciaMes] = useState<Date>(new Date());
 
     const [clientes, setClientes] = useState<any[]>([]);
     const [productos, setProductos] = useState<any[]>([]);
 
-    // Estados de la Tabla de Auditoría de Ventas
     const [ventasHistorial, setVentasHistorial] = useState<any[]>([]);
     const [busquedaFactura, setBusquedaFactura] = useState('');
     const [cargandoTabla, setCargandoTabla] = useState(true);
 
-    // Estados del Modal de Edición Reversiva
+    // Estado para conmutar las vistas de auditoría
+    const [tabAuditoria, setTabAuditoria] = useState<'ventas' | 'compras' | 'caja'>('ventas');
+
     const [ventaAEditar, setVentaAEditar] = useState<any | null>(null);
     const [nuevoMetodoPago, setMetodoPago] = useState('');
     const [detallesEditados, setDetallesEditados] = useState<any[]>([]);
 
-    // Cargar historial de ventas de la tabla de auditoría
     const cargarHistorialVentas = async () => {
         try {
             const res = await api.get('/ventas');
@@ -69,11 +70,11 @@ export const Reportes: React.FC = () => {
             fInicio.setDate(fInicio.getDate() - (diaSemana - 1));
         } else if (tipo === 'mes') {
             fInicio = new Date(Number(year), Number(month) - 1, 1);
-            fFin = new Date(Number(year), Number(month), 0); // Último día del mes actual
+            fFin = new Date(Number(year), Number(month), 0);
             setFechaReferenciaMes(new Date(Number(year), Number(month) - 1, 1));
         } else if (tipo === 'mesPasado') {
             fInicio = new Date(Number(year), Number(month) - 2, 1);
-            fFin = new Date(Number(year), Number(month) - 1, 0); // Último día del mes anterior
+            fFin = new Date(Number(year), Number(month) - 1, 0);
             setFechaReferenciaMes(new Date(Number(year), Number(month) - 2, 1));
         } else if (tipo === 'ano') {
             fInicio = new Date(Number(year), 0, 1);
@@ -279,11 +280,13 @@ export const Reportes: React.FC = () => {
 
         const rangoPeriodo = datosReporte?.rango || 'Periodo no especificado';
         const transacciones = datosReporte?.transacciones || [];
+        const comprasProveedores = datosReporte?.comprasProveedores || [];
+        const movimientosCaja = datosReporte?.movimientosCaja || [];
 
-        const utilidadBruta = datosReporte?.finanzas?.utilidadBruta ?? 0;
         const utilidadNeta = datosReporte?.finanzas?.utilidadNeta ?? 0;
         const costoMercancia = datosReporte?.finanzas?.costoMercancia ?? 0;
         const gastosOperativos = datosReporte?.finanzas?.gastosOperativos ?? 0;
+        const inversionCompras = datosReporte?.finanzas?.inversionCompras ?? 0;
         
         const formatearFechaSegura = (t: any) => {
             const fechaRaw = t?.fechaVenta || t?.fecha || t?.Fecha || t?.fecha_venta || t?.createdAt || t?.created_at;
@@ -326,9 +329,7 @@ export const Reportes: React.FC = () => {
             return 'Mostrador General';
         };
 
-        const totalTransacciones = transacciones.length;
         const totalNeto = transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0);
-        const ticketPromedio = totalTransacciones > 0 ? (totalNeto / totalTransacciones) : 0;
 
         const efectivo = transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
         const transferencia = transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
@@ -467,18 +468,12 @@ export const Reportes: React.FC = () => {
 
                 <div class="grid-cards" style="grid-template-columns: repeat(4, 1fr);">
                     <div class="card"><small>Costo Mercancía (CMV)</small><h3>C$ ${Number(costoMercancia).toLocaleString()}</h3></div>
-                    <div class="card"><small>Utilidad Bruta</small><h3>C$ ${Number(utilidadBruta).toLocaleString()}</h3></div>
+                    <div class="card"><small>Inversión en Compras</small><h3 style="color: #a855f7;">C$ ${Number(inversionCompras).toLocaleString()}</h3></div>
                     <div class="card"><small>Gastos Operativos</small><h3>C$ ${Number(gastosOperativos).toLocaleString()}</h3></div>
                     <div class="card card-total" style="border-color: #3b82f6; background: #eff6ff;">
                         <small style="color: #1d4ed8;">Utilidad Neta Real</small>
                         <h3 style="color: #1e40af;">C$ ${Number(utilidadNeta).toLocaleString()}</h3>
                     </div>
-                </div>
-
-                <div class="grid-cards" style="grid-template-columns: repeat(3, 1fr);">
-                    <div class="card"><small>Transacciones Totales</small><h3>${totalTransacciones} Ventas</h3></div>
-                    <div class="card"><small>Ticket Promedio</small><h3>C$ ${Number(ticketPromedio.toFixed(2)).toLocaleString()}</h3></div>
-                    <div class="card"><small>Estado de Arqueo</small><h3 style="color: #10b981;">Cuadrado ✔</h3></div>
                 </div>
 
                 <div class="seccion-titulo">II. Rendimiento de Productos / Servicios (Top)</div>
@@ -549,6 +544,73 @@ export const Reportes: React.FC = () => {
                     </tbody>
                 </table>
 
+                <div class="seccion-titulo">IV. Compras y Reabastecimiento a Proveedores</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">N° Orden</th>
+                            <th style="width: 100px;">Fecha</th>
+                            <th>Proveedor</th>
+                            <th>Detalle de Productos</th>
+                            <th>Notas / Correos</th>
+                            <th style="width: 120px; text-align: right;">Monto Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${comprasProveedores.length === 0 
+                            ? `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No se registraron compras a proveedores en este período.</td></tr>`
+                            : comprasProveedores.map((c: any) => `
+                                <tr>
+                                    <td><strong>#${c.id}</strong></td>
+                                    <td>${c.fecha}</td>
+                                    <td>${c.proveedor}</td>
+                                    <td>
+                                        <div style="font-size: 9px; color: #475569;">
+                                            ${(c.items || []).map((item: any) => `<div>• ${item.cantidad}x ${item.producto} (a C$ ${item.costoUnitario})</div>`).join('')}
+                                        </div>
+                                    </td>
+                                    <td style="font-size: 10px; color: #64748b;">${c.observaciones || 'Sin notas'}</td>
+                                    <td style="text-align: right; font-weight: 600; color: #dc2626;">C$ ${Number(c.totalCompra).toLocaleString()}</td>
+                                </tr>
+                            `).join('')
+                        }
+                    </tbody>
+                </table>
+
+                <div class="seccion-titulo">V. Arqueos y Flujos de Caja (Libro Diario)</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th style="width: 100px;">Fecha</th>
+                            <th style="width: 100px;">Tipo</th>
+                            <th>Concepto / Categoría</th>
+                            <th>Descripción / Detalle</th>
+                            <th style="width: 120px; text-align: right;">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${movimientosCaja.length === 0 
+                            ? `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No hay movimientos de caja en este rango.</td></tr>`
+                            : movimientosCaja.map((m: any) => {
+                                const esIngreso = m.tipo === 'Ingreso';
+                                return `
+                                    <tr>
+                                        <td><strong>#${m.id}</strong></td>
+                                        <td>${m.fecha}</td>
+                                        <td><span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: ${esIngreso ? '#dcfce7' : '#fee2e2'}; color: ${esIngreso ? '#15803d' : '#b91c1c'};">${m.tipo}</span></td>
+                                        <td><strong>${m.concepto}</strong></td>
+                                        <td style="font-size: 10px; color: #475569;">${m.detalle || 'N/A'}</td>
+                                        <td style="text-align: right; font-weight: 600; color: ${esIngreso ? '#16a34a' : '#dc2626'};">
+                                            ${esIngreso ? '+' : '-'} C$ ${Number(m.monto).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')
+                        }
+                    </tbody>
+                </table>
+
                 <div class="firmas-container">
                     <div class="firma-box">
                         <br><br><br>
@@ -592,7 +654,6 @@ export const Reportes: React.FC = () => {
                     <button onClick={() => aplicarRangoRapido('mesPasado')} className="btnRango">Mes Pasado</button>
                     <button onClick={() => aplicarRangoRapido('ano')} className="btnRango">Año</button>
 
-                    {/* Controles de Navegación por Meses con Flechas */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px', background: 'rgba(255, 255, 255, 0.05)', padding: '2px 8px', borderRadius: '6px' }}>
                         <button 
                             onClick={() => cambiarMesRelativo(-1)} 
@@ -633,135 +694,256 @@ export const Reportes: React.FC = () => {
             </div>
 
             {datosReporte && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div className="visualizacionHeader">
-                    <h4 className="txtPeriodo">Visualización del período: <strong>{datosReporte.rango}</strong></h4>
-                    <button onClick={exportarAPDF} className="btnExportar">
-                        <FaFilePdf /> Imprimir / Guardar PDF
-                    </button>
-                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div className="visualizacionHeader">
+                        <h4 className="txtPeriodo">Visualización del período: <strong>{datosReporte.rango}</strong></h4>
+                        <button onClick={exportarAPDF} className="btnExportar">
+                            <FaFilePdf /> Imprimir / Guardar PDF
+                        </button>
+                    </div>
 
-                <div className="kpiGrid">
-                    <div className="kpiCard cajaReal">
-                        <small className="kpiLabel">BALANCE NETO (CAJA REAL)</small>
-                        <h3 className="kpiValue cajaReal">
-                            C$ {datosReporte.transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
-                        </h3>
-                    </div>
-                    <div className="kpiCard efectivo">
-                        <small className="kpiLabel">EFECTIVO</small>
-                        <h3 className="kpiValue">
-                            C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
-                        </h3>
-                    </div>
-                    <div className="kpiCard transferencia">
-                        <small className="kpiLabel">TRANSFERENCIA</small>
-                        <h3 className="kpiValue">
-                            C$ {datosReporte.transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0).toLocaleString()}
-                        </h3>
-                    </div>
-                    <div className="kpiCard tarjeta">
-                        <small className="kpiLabel">UTILIDAD NETA ESTIMADA</small>
-                        <h3 className="kpiValue" style={{ color: '#10b981' }}>
-                            C$ {(datosReporte?.finanzas?.utilidadNeta ?? 0).toLocaleString()}
-                        </h3>
-                    </div>
-                    <div className="kpiCard tarjeta">
-                        <small className="kpiLabel">TARJETA</small>
-                        <h3 className="kpiValue">C$ {(datosReporte?.finanzas?.tarjeta ?? 0).toLocaleString()}</h3>
+                    {/* TARJETAS KPI CON COMPRAS Y GASTOS INCLUIDOS */}
+                    <div className="kpiGrid">
+                        <div className="kpiCard cajaReal">
+                            <small className="kpiLabel">BALANCE NETO (CAJA REAL)</small>
+                            <h3 className="kpiValue cajaReal">
+                                C$ {(datosReporte?.finanzas?.balanceCajaReal ?? 0).toLocaleString()}
+                            </h3>
+                        </div>
+                        <div className="kpiCard efectivo">
+                            <small className="kpiLabel">TOTAL FACTURADO</small>
+                            <h3 className="kpiValue">
+                                C$ {(datosReporte?.finanzas?.totalFacturado ?? 0).toLocaleString()}
+                            </h3>
+                        </div>
+                        <div className="kpiCard transferencia" style={{ borderLeft: '4px solid #a855f7' }}>
+                            <small className="kpiLabel">INVERSIÓN EN COMPRAS</small>
+                            <h3 className="kpiValue" style={{ color: '#a855f7' }}>
+                                C$ {(datosReporte?.finanzas?.inversionCompras ?? 0).toLocaleString()}
+                            </h3>
+                        </div>
+                        <div className="kpiCard tarjeta" style={{ borderLeft: '4px solid #ef4444' }}>
+                            <small className="kpiLabel">GASTOS OPERATIVOS</small>
+                            <h3 className="kpiValue" style={{ color: '#ef4444' }}>
+                                C$ {(datosReporte?.finanzas?.gastosOperativos ?? 0).toLocaleString()}
+                            </h3>
+                        </div>
+                        <div className="kpiCard tarjeta">
+                            <small className="kpiLabel">UTILIDAD NETA ESTIMADA</small>
+                            <h3 className="kpiValue" style={{ color: '#10b981' }}>
+                                C$ {(datosReporte?.finanzas?.utilidadNeta ?? 0).toLocaleString()}
+                            </h3>
+                        </div>
                     </div>
                 </div>
-            </div>
-        )}
+            )}
 
-            <div style={{ marginTop: '10px' }}>
-                <div className="subPanelHeader">
-                    <h4 className="subPanelTitle"><FaCalendarAlt /> Libro de Modificaciones e Historial POS</h4>
-                    <div className="searchWrapper">
-                        <FaSearch className="searchIcon" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar por factura o cliente..." 
-                            value={busquedaFactura} 
-                            onChange={e => setBusquedaFactura(e.target.value)} 
-                            className="inputControlado searchInput" 
-                        />
+            <div style={{ marginTop: '20px' }}>
+                <div className="subPanelHeader" style={{ flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                            onClick={() => setTabAuditoria('ventas')} 
+                            className={`btnRango ${tabAuditoria === 'ventas' ? 'btnRangoActive' : ''}`}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <FaCalendarAlt /> Ventas POS
+                        </button>
+                        <button 
+                            onClick={() => setTabAuditoria('compras')} 
+                            className={`btnRango ${tabAuditoria === 'compras' ? 'btnRangoActive' : ''}`}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <FaShoppingCart /> Compras Proveedores
+                        </button>
+                        <button 
+                            onClick={() => setTabAuditoria('caja')} 
+                            className={`btnRango ${tabAuditoria === 'caja' ? 'btnRangoActive' : ''}`}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <FaExchangeAlt /> Libro Diario / Arqueo
+                        </button>
                     </div>
+
+                    {tabAuditoria === 'ventas' && (
+                        <div className="searchWrapper">
+                            <FaSearch className="searchIcon" />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar por factura o cliente..." 
+                                value={busquedaFactura} 
+                                onChange={e => setBusquedaFactura(e.target.value)} 
+                                className="inputControlado searchInput" 
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="tablaWrapper">
-                    {cargandoTabla ? (
-                        <div style={{ color: '#38bdf8', textAlign: 'center', padding: '15px' }}>Sincronizando transacciones...</div>
-                    ) : (
+                    {/* VISTA 1: TABLA DE VENTAS */}
+                    {tabAuditoria === 'ventas' && (
+                        cargandoTabla ? (
+                            <div style={{ color: '#38bdf8', textAlign: 'center', padding: '15px' }}>Sincronizando transacciones...</div>
+                        ) : (
+                            <div className="innerTableScroll">
+                                <table className="tablaAuditoria">
+                                    <thead>
+                                        <tr>
+                                            <th>Factura</th>
+                                            <th>Fecha</th>
+                                            <th>Cliente</th>
+                                            <th>Método</th>
+                                            <th>Desglose Items</th>
+                                            <th style={{ textAlign: 'right' }}>Monto</th>
+                                            <th style={{ textAlign: 'center' }}>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {ventasFiltradas.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No se encontraron transacciones registradas.</td>
+                                            </tr>
+                                        ) : (
+                                            ventasFiltradas.map((v) => (
+                                                <tr key={v.id}>
+                                                    <td className="facturaId">#000{v.id}</td>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                                        {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
+                                                    </td>
+                                                    <td>
+                                                        {(() => {
+                                                            if (v.cliente?.nombre || v.cliente?.Nombre) {
+                                                                return v.cliente.nombre || v.cliente.Nombre;
+                                                            }
+                                                            const idCli = v.idCliente || v.IdCliente;
+                                                            if (idCli) {
+                                                                const cli = clientes.find(c => (c.id ?? c.Id) === idCli);
+                                                                if (cli) return cli.nombre || cli.Nombre;
+                                                            }
+                                                            return 'Mostrador General';
+                                                        })()}
+                                                    </td>
+                                                    <td>
+                                                        <span className="badgeMetodo">{v.metodoPago}</span>
+                                                    </td>
+                                                    <td style={{ color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'normal' }}>
+                                                        {v.detalles?.map((d: any, idx: number) => {
+                                                            const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                                                            return (
+                                                                <div key={idx}>
+                                                                    {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </td>
+                                                    <td style={{ textAlign: 'right' }} className="montoTotal">
+                                                        C$ {(v.total ?? 0).toLocaleString()}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                            <button onClick={() => abrirEditorVenta(v)} className="btnCorregir" title="Editar Venta">
+                                                                <FaEdit />
+                                                            </button>
+                                                            <button onClick={() => reimprimirTicket(v)} className="btnCorregir" style={{ background: '#3b82f6' }} title="Reimprimir Ticket">
+                                                                <FaPrint />
+                                                            </button>
+                                                            <button onClick={() => reordenarEnviarWhatsApp(v)} className="btnCorregir" style={{ background: '#22c55e' }} title="Reenviar por WhatsApp">
+                                                                <FaWhatsapp />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
+                    )}
+
+                    {/* VISTA 2: TABLA DE COMPRAS A PROVEEDORES */}
+                    {tabAuditoria === 'compras' && (
                         <div className="innerTableScroll">
                             <table className="tablaAuditoria">
                                 <thead>
                                     <tr>
-                                        <th>Factura</th>
+                                        <th>N° Orden</th>
                                         <th>Fecha</th>
-                                        <th>Cliente</th>
-                                        <th>Método</th>
-                                        <th>Desglose Items</th>
-                                        <th style={{ textAlign: 'right' }}>Monto</th>
-                                        <th style={{ textAlign: 'center' }}>Acciones</th>
+                                        <th>Proveedor</th>
+                                        <th>Detalle Items</th>
+                                        <th>Notas / Correos</th>
+                                        <th style={{ textAlign: 'right' }}>Monto Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {ventasFiltradas.length === 0 ? (
+                                    {!datosReporte?.comprasProveedores || datosReporte.comprasProveedores.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No se encontraron transacciones registradas.</td>
+                                            <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No se encontraron compras a proveedores en este rango. Genera un reporte para consultar.</td>
                                         </tr>
                                     ) : (
-                                        ventasFiltradas.map((v) => (
-                                            <tr key={v.id}>
-                                                <td className="facturaId">#000{v.id}</td>
-                                                <td style={{ whiteSpace: 'nowrap' }}>
-                                                    {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
+                                        datosReporte.comprasProveedores.map((c: any) => (
+                                            <tr key={c.id}>
+                                                <td className="facturaId">#{c.id}</td>
+                                                <td style={{ whiteSpace: 'nowrap' }}>{c.fecha}</td>
+                                                <td><strong>{c.proveedor}</strong></td>
+                                                <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                                    {(c.items || []).map((item: any, idx: number) => (
+                                                        <div key={idx}>• {item.cantidad}x {item.producto} (a C$ {item.costoUnitario})</div>
+                                                    ))}
                                                 </td>
-                                                <td>
-                                                    {(() => {
-                                                        if (v.cliente?.nombre || v.cliente?.Nombre) {
-                                                            return v.cliente.nombre || v.cliente.Nombre;
-                                                        }
-                                                        const idCli = v.idCliente || v.IdCliente;
-                                                        if (idCli) {
-                                                            const cli = clientes.find(c => (c.id ?? c.Id) === idCli);
-                                                            if (cli) return cli.nombre || cli.Nombre;
-                                                        }
-                                                        return 'Mostrador General';
-                                                    })()}
-                                                </td>
-                                                <td>
-                                                    <span className="badgeMetodo">{v.metodoPago}</span>
-                                                </td>
-                                                <td style={{ color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'normal' }}>
-                                                    {v.detalles?.map((d: any, idx: number) => {
-                                                        const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
-                                                        return (
-                                                            <div key={idx}>
-                                                                {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </td>
-                                                <td style={{ textAlign: 'right' }} className="montoTotal">
-                                                    C$ {(v.total ?? 0).toLocaleString()}
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                                        <button onClick={() => abrirEditorVenta(v)} className="btnCorregir" title="Editar Venta">
-                                                            <FaEdit />
-                                                        </button>
-                                                        <button onClick={() => reimprimirTicket(v)} className="btnCorregir" style={{ background: '#3b82f6' }} title="Reimprimir Ticket">
-                                                            <FaPrint />
-                                                        </button>
-                                                        <button onClick={() => reordenarEnviarWhatsApp(v)} className="btnCorregir" style={{ background: '#22c55e' }} title="Reenviar por WhatsApp">
-                                                            <FaWhatsapp />
-                                                        </button>
-                                                    </div>
+                                                <td style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>{c.observaciones || 'Sin notas'}</td>
+                                                <td style={{ textAlign: 'right', color: '#f87171', fontWeight: 'bold' }}>
+                                                    C$ {Number(c.totalCompra).toLocaleString()}
                                                 </td>
                                             </tr>
                                         ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* VISTA 3: TABLA DE ARQUEOS Y MOVIMIENTOS DE CAJA */}
+                    {tabAuditoria === 'caja' && (
+                        <div className="innerTableScroll">
+                            <table className="tablaAuditoria">
+                                <thead>
+                                    <tr>
+                                        <th>ID Mov.</th>
+                                        <th>Fecha</th>
+                                        <th>Tipo</th>
+                                        <th>Concepto</th>
+                                        <th>Detalle / Justificación</th>
+                                        <th style={{ textAlign: 'right' }}>Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {!datosReporte?.movimientosCaja || datosReporte.movimientosCaja.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No hay movimientos de caja registrados en este período. Genera un reporte para consultar.</td>
+                                        </tr>
+                                    ) : (
+                                        datosReporte.movimientosCaja.map((m: any) => {
+                                            const esIngreso = m.tipo === 'Ingreso';
+                                            return (
+                                                <tr key={m.id}>
+                                                    <td className="facturaId">#{m.id}</td>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>{m.fecha}</td>
+                                                    <td>
+                                                        <span className="badgeMetodo" style={{ background: esIngreso ? '#15803d' : '#b91c1c' }}>
+                                                            {m.tipo}
+                                                        </span>
+                                                    </td>
+                                                    <td><strong>{m.concepto}</strong></td>
+                                                    <td style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>
+                                                        {(m.idVenta || m.idCompraProveedor) && <FaLock size={10} style={{ color: '#f59e0b', marginRight: '4px' }} title="Movimiento automático de sistema" />}
+                                                        {m.detalle || 'N/A'}
+                                                    </td>
+                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: esIngreso ? '#4ade80' : '#f87171' }}>
+                                                        {esIngreso ? '+' : '-'} C$ {Number(m.monto).toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>
@@ -822,7 +1004,6 @@ export const Reportes: React.FC = () => {
 
                                         return (
                                             <div key={idx} className="itemRow" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                                {/* Selección de Producto */}
                                                 <div>
                                                     <small style={{ fontSize: '9px', color: '#94a3b8' }}>Producto / Servicio</small>
                                                     <select 
@@ -843,7 +1024,6 @@ export const Reportes: React.FC = () => {
                                                     </select>
                                                 </div>
 
-                                                {/* Cantidad */}
                                                 <div>
                                                     <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cant.</small>
                                                     <input 
@@ -856,7 +1036,6 @@ export const Reportes: React.FC = () => {
                                                     />
                                                 </div>
 
-                                                {/* Precio Unitario */}
                                                 <div>
                                                     <small style={{ fontSize: '9px', color: '#94a3b8' }}>Precio</small>
                                                     <input 
@@ -868,7 +1047,6 @@ export const Reportes: React.FC = () => {
                                                     />
                                                 </div>
 
-                                                {/* Descuento */}
                                                 <div>
                                                     <small style={{ fontSize: '9px', color: '#f87171' }}>Desc. (C$)</small>
                                                     <input 
@@ -881,7 +1059,6 @@ export const Reportes: React.FC = () => {
                                                     />
                                                 </div>
 
-                                                {/* Días de Suscripción */}
                                                 <div>
                                                     <small style={{ fontSize: '9px', color: '#38bdf8' }}>Días Susc.</small>
                                                     <input 
@@ -895,7 +1072,6 @@ export const Reportes: React.FC = () => {
                                                     />
                                                 </div>
 
-                                                {/* Subtotal */}
                                                 <div style={{ textAlign: 'right' }}>
                                                     <small style={{ fontSize: '9px', color: '#94a3b8' }}>Subtotal</small>
                                                     <div className="txtSubtotalItem" style={{ fontWeight: 'bold' }}>
