@@ -111,7 +111,7 @@ export const Renovaciones: React.FC = () => {
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
                 `Te recordamos que tu suscripción de *${plataformaPlan}*\n\n` +
                 `(${credenciales})\n\n` + 
-                `vence el día de hoy (${fechaVencimiento}).\n\n` +
+                `- *vence el día de hoy* (${fechaVencimiento}).\n\n` +
                 `💳 Costo de renovación: C$ ${monto}\n\n` +
                 `Para evitar la suspensión de tu servicio, realiza tu pago y envíanos el comprobante por este mismo chat.\n\n` +
                 `¡Gracias por elegir NICAPLUS STREAM! 💙`;
