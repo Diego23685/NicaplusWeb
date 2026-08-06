@@ -329,6 +329,7 @@ export const Reportes: React.FC = () => {
             return 'Mostrador General';
         };
 
+
         const totalNeto = transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0);
 
         const efectivo = transacciones.filter((t: any) => t.metodoPago === 'Efectivo').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
@@ -702,8 +703,8 @@ export const Reportes: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* TARJETAS KPI CON COMPRAS Y GASTOS INCLUIDOS */}
-                    <div className="kpiGrid">
+                    {/* TARJETAS KPI AMPLIADAS CON CRÉDITO */}
+                    <div className="kpiGrid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                         <div className="kpiCard cajaReal">
                             <small className="kpiLabel">BALANCE NETO (CAJA REAL)</small>
                             <h3 className="kpiValue cajaReal">
@@ -714,6 +715,12 @@ export const Reportes: React.FC = () => {
                             <small className="kpiLabel">TOTAL FACTURADO</small>
                             <h3 className="kpiValue">
                                 C$ {(datosReporte?.finanzas?.totalFacturado ?? 0).toLocaleString()}
+                            </h3>
+                        </div>
+                        <div className="kpiCard" style={{ borderLeft: '4px solid #f59e0b', background: '#fffbeb' }}>
+                            <small className="kpiLabel" style={{ color: '#b45309' }}>VENTAS AL CRÉDITO</small>
+                            <h3 className="kpiValue" style={{ color: '#d97706' }}>
+                                C$ {(datosReporte?.finanzas?.credito ?? 0).toLocaleString()}
                             </h3>
                         </div>
                         <div className="kpiCard transferencia" style={{ borderLeft: '4px solid #a855f7' }}>
