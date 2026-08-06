@@ -10,16 +10,18 @@ import {
   FaBoxes,
   FaEdit,
   FaTrash,
-  FaTimes
+  FaTimes,
+  FaHistory
 } from 'react-icons/fa';
 import styles from '../assets/styles/Proveedores.module.css';
 
 export const Proveedores: React.FC = () => {
-  const [subTab, setSubTab] = useState<'registro' | 'analisis'>('registro');
+  const [subTab, setSubTab] = useState<'registro' | 'historial' | 'analisis'>('registro');
 
   const [proveedores, setProveedores] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
   const [metricas, setMetricas] = useState<any[]>([]);
+  const [historialCompras, setHistorialCompras] = useState<any[]>([]);
 
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<number | null>(null);
@@ -35,8 +37,9 @@ export const Proveedores: React.FC = () => {
   const [idProdSeleccionado, setIdProdSeleccionado] = useState('');
   const [cantidadCompra, setCantidadCompra] = useState(1);
   const [costoUnitarioCompra, setCostoUnitarioCompra] = useState(0);
+  const [nuevoPrecioVenta, setNuevoPrecioVenta] = useState<number | ''>('');
   const [garantiaCompra, setGarantiaCompra] = useState(30);
-  const [tiempoEntregaDias, setTiempoEntregaRealDias] = useState(1);
+  const [tiempoEntregaRealDias, setTiempoEntregaRealDias] = useState(1);
 
   const [modalConflicto, setModalConflicto] = useState<{
     visible: boolean;
@@ -54,15 +57,17 @@ export const Proveedores: React.FC = () => {
 
   const cargarDatos = async () => {
     try {
-      const [resProv, resProd, resMet] = await Promise.all([
+      const [resProv, resProd, resMet, resComp] = await Promise.all([
         api.get('/proveedores'),
         api.get('/products'),
-        api.get('/proveedores/analisis-rendimiento')
+        api.get('/proveedores/analisis-rendimiento'),
+        api.get('/proveedores/compras')
       ]);
 
       setProveedores(resProv.data);
       setProductos(resProd.data);
       setMetricas(resMet.data);
+      setHistorialCompras(resComp.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -73,6 +78,15 @@ export const Proveedores: React.FC = () => {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  const seleccionarProductoCompra = (idProdStr: string) => {
+    setIdProdSeleccionado(idProdStr);
+    const prod = productos.find(p => (p.id ?? p.Id) === Number(idProdStr));
+    if (prod) {
+      setCostoUnitarioCompra(prod.precioCosto ?? prod.PrecioCosto ?? 0);
+      setNuevoPrecioVenta(prod.precioVenta ?? prod.PrecioVenta ?? 0);
+    }
+  };
 
   const editarProveedor = (proveedor: any) => {
     setEditando(proveedor.id);
@@ -106,6 +120,18 @@ export const Proveedores: React.FC = () => {
     }
   };
 
+  const anularCompra = async (idCompra: number) => {
+    if (!window.confirm(`¿Está seguro de ANULAR la Orden de Compra #${idCompra}? Se restará el stock ingresado y se revertirá el egreso en caja.`)) return;
+
+    try {
+      await api.delete(`/proveedores/compras/${idCompra}`);
+      alert("Compra anulada exitosamente.");
+      await cargarDatos();
+    } catch (err: any) {
+      alert(err.response?.data?.mensaje || "Error al anular la compra.");
+    }
+  };
+
   const guardarProveedor = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { razonSocial, ruc, telephone: telefono, email };
@@ -133,12 +159,13 @@ export const Proveedores: React.FC = () => {
     const payload = {
       idProveedor: Number(idProvSeleccionado),
       totalCompra: cantidadCompra * costoUnitarioCompra,
-      tiempoEntregaRealDias: Number(tiempoEntregaDias),
+      tiempoEntregaRealDias: Number(tiempoEntregaRealDias),
       detalles: [
         {
           idProducto: Number(idProdSeleccionado),
           cantidad: Number(cantidadCompra),
           costoUnitario: Number(costoUnitarioCompra),
+          nuevoPrecioVenta: nuevoPrecioVenta !== '' ? Number(nuevoPrecioVenta) : null,
           garantiaDiasPactada: Number(garantiaCompra)
         }
       ]
@@ -150,6 +177,7 @@ export const Proveedores: React.FC = () => {
       setIdProdSeleccionado('');
       setCantidadCompra(1);
       setCostoUnitarioCompra(0);
+      setNuevoPrecioVenta('');
       await cargarDatos();
     } catch {
       alert("No fue posible registrar la compra.");
@@ -157,7 +185,7 @@ export const Proveedores: React.FC = () => {
   };
 
   if (cargando) {
-    return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Analizando rentabilidad...</div>;
+    return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Analizando abastecimiento...</div>;
   }
 
   return (
@@ -177,6 +205,12 @@ export const Proveedores: React.FC = () => {
             📦 Abastecimiento
           </button>
           <button
+            onClick={() => setSubTab('historial')}
+            className={`${styles.tabBtn} ${subTab === 'historial' ? styles.tabBtnActive : ''}`}
+          >
+            📜 Historial Compras
+          </button>
+          <button
             onClick={() => setSubTab('analisis')}
             className={`${styles.tabBtn} ${subTab === 'analisis' ? styles.tabBtnActive : ''}`}
           >
@@ -185,7 +219,7 @@ export const Proveedores: React.FC = () => {
         </div>
       </div>
 
-      {subTab === "registro" ? (
+      {subTab === "registro" && (
         <>
           <div className={styles.flexLayout}>
             {/* FORMULARIO PROVEEDOR */}
@@ -242,7 +276,7 @@ export const Proveedores: React.FC = () => {
                 <div className={styles.gridSpan2}>
                   <div className={styles.formGroup}>
                     <label>Producto</label>
-                    <select value={idProdSeleccionado} onChange={e => setIdProdSeleccionado(e.target.value)} className={styles.input} required>
+                    <select value={idProdSeleccionado} onChange={e => seleccionarProductoCompra(e.target.value)} className={styles.input} required>
                       <option value="">Seleccionar producto</option>
                       {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stockActual})</option>)}
                     </select>
@@ -254,26 +288,43 @@ export const Proveedores: React.FC = () => {
                   <input type="number" min={1} value={cantidadCompra} onChange={e => setCantidadCompra(Number(e.target.value))} className={styles.input} />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Costo Unitario</label>
+                  <label>Costo Unit. (Compra)</label>
                   <input type="number" min={0} value={costoUnitarioCompra} onChange={e => setCostoUnitarioCompra(Number(e.target.value))} className={styles.input} />
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Días de entrega</label>
-                  <input type="number" min={0} value={tiempoEntregaDias} onChange={e => setTiempoEntregaRealDias(Number(e.target.value))} className={styles.input} />
+                  <label>Precio Venta (Catálogo)</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    placeholder="Opcional"
+                    value={nuevoPrecioVenta} 
+                    onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} 
+                    className={styles.input} 
+                  />
                 </div>
                 <div className={styles.formGroup}>
+                  <label>Días de entrega</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={tiempoEntregaRealDias} 
+                    onChange={e => setTiempoEntregaRealDias(Number(e.target.value))} 
+                    className={styles.input} 
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
                   <label>Garantía (días)</label>
                   <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} className={styles.input} />
                 </div>
 
-                <button type="submit" className={styles.btnRegistrarCompra}>
-                  <FaPlus /> Registrar compra
+                <button type="submit" className={styles.btnRegistrarCompra} style={{ gridColumn: 'span 2' }}>
+                  <FaPlus /> Registrar compra e ingresar stock
                 </button>
               </form>
             </div>
           </div>
 
-          {/* TABLA DE PROVEEDORES REGISTRADOS CON SCROLL */}
+          {/* TABLA DE PROVEEDORES REGISTRADOS */}
           <div className={styles.tablePanel}>
             <h4>Proveedores registrados</h4>
             <div className={styles.tableWrapper}>
@@ -312,8 +363,60 @@ export const Proveedores: React.FC = () => {
             </div>
           </div>
         </>
-      ) : (
-        /* TABLA DE RENDIMIENTO / RENTABILIDAD CON SCROLL */
+      )}
+
+      {subTab === "historial" && (
+        <div className={styles.tablePanel}>
+          <h4><FaHistory /> Historial de Compras y Lotes Abastecidos</h4>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>N° Orden</th>
+                  <th>Fecha</th>
+                  <th>Proveedor</th>
+                  <th>Detalle Items</th>
+                  <th style={{ textAlign: "right" }}>Total</th>
+                  <th style={{ textAlign: "center" }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historialCompras.map(c => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>#{c.id}</td>
+                    <td>{new Date(c.fechaCompra).toLocaleDateString()}</td>
+                    <td>{c.proveedorNombre}</td>
+                    <td>
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                        {c.detalles?.map((d: any, idx: number) => (
+                          <div key={idx}>• {d.cantidad}x {d.productoNombre} (a C$ {d.costoUnitario})</div>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#ef4444" }}>
+                      C$ {c.totalCompra.toLocaleString()}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular Compra">
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {historialCompras.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
+                      No hay compras registradas en el historial.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {subTab === "analisis" && (
         <div className={styles.tablePanel}>
           <h4><FaChartLine /> Ranking Estratégico de Proveedores</h4>
           <div className={styles.tableWrapper}>
