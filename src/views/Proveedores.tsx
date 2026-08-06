@@ -41,6 +41,9 @@ export const Proveedores: React.FC = () => {
   const [garantiaCompra, setGarantiaCompra] = useState(30);
   const [tiempoEntregaRealDias, setTiempoEntregaRealDias] = useState(1);
 
+  // ESTADO PARA MODAL DE EDICIÓN DE COMPRA
+  const [compraAEditar, setCompraAEditar] = useState<any | null>(null);
+
   const [modalConflicto, setModalConflicto] = useState<{
     visible: boolean;
     mensaje: string;
@@ -117,6 +120,49 @@ export const Proveedores: React.FC = () => {
       } else {
         alert("No fue posible eliminar el proveedor.");
       }
+    }
+  };
+
+  const abrirModalEditarCompra = (compra: any) => {
+    const detallesFormateados = compra.detalles?.map((d: any) => {
+      const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+      return {
+        ...d,
+        nuevoPrecioVenta: prod ? (prod.precioVenta ?? prod.PrecioVenta ?? 0) : 0
+      };
+    }) || [];
+
+    setCompraAEditar({
+      ...compra,
+      detalles: detallesFormateados
+    });
+  };
+
+  const guardarEdicionCompra = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!compraAEditar) return;
+
+    const totalCalculado = compraAEditar.detalles.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0);
+
+    const payload = {
+      idProveedor: Number(compraAEditar.idProveedor),
+      totalCompra: totalCalculado,
+      detalles: compraAEditar.detalles.map((d: any) => ({
+        idProducto: Number(d.idProducto),
+        cantidad: Number(d.cantidad),
+        costoUnitario: Number(d.costoUnitario),
+        nuevoPrecioVenta: d.nuevoPrecioVenta ? Number(d.nuevoPrecioVenta) : null,
+        garantiaDiasPactada: Number(d.garantiaDiasPactada || 0)
+      }))
+    };
+
+    try {
+      await api.put(`/proveedores/compras/${compraAEditar.id}`, payload);
+      alert("Compra modificada con éxito. El inventario y dinero en caja han sido recalculados.");
+      setCompraAEditar(null);
+      await cargarDatos();
+    } catch (err: any) {
+      alert(err.response?.data?.mensaje || "Error al actualizar la compra.");
     }
   };
 
@@ -397,9 +443,14 @@ export const Proveedores: React.FC = () => {
                       C$ {c.totalCompra.toLocaleString()}
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular Compra">
-                        <FaTrash />
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        <button onClick={() => abrirModalEditarCompra(c)} className={styles.btnEdit} title="Editar Compra">
+                          <FaEdit />
+                        </button>
+                        <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular Compra">
+                          <FaTrash />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -469,6 +520,123 @@ export const Proveedores: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDICIÓN DE COMPRA */}
+      {compraAEditar && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '650px', width: '90%' }}>
+            <div className={styles.modalHeader}>
+              <h4>🛠️ Auditoría de Compra #{compraAEditar.id}</h4>
+              <button onClick={() => setCompraAEditar(null)} className={styles.btnCancelar}>
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={guardarEdicionCompra} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+              <div className={styles.formGroup}>
+                <label>Proveedor</label>
+                <select 
+                  value={compraAEditar.idProveedor} 
+                  onChange={e => setCompraAEditar({ ...compraAEditar, idProveedor: Number(e.target.value) })}
+                  className={styles.input}
+                  required
+                >
+                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>Detalle de Lote e Ítems</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                  {compraAEditar.detalles?.map((det: any, idx: number) => (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '6px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '6px' }}>
+                      <div>
+                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Producto</small>
+                        <select 
+                          value={det.idProducto} 
+                          onChange={e => {
+                            const copia = [...compraAEditar.detalles];
+                            copia[idx].idProducto = Number(e.target.value);
+                            setCompraAEditar({ ...compraAEditar, detalles: copia });
+                          }}
+                          className={styles.input}
+                          style={{ fontSize: '0.75rem', padding: '4px' }}
+                        >
+                          {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cantidad</small>
+                        <input 
+                          type="number" 
+                          min={1} 
+                          value={det.cantidad} 
+                          onChange={e => {
+                            const copia = [...compraAEditar.detalles];
+                            copia[idx].cantidad = Number(e.target.value);
+                            setCompraAEditar({ ...compraAEditar, detalles: copia });
+                          }}
+                          className={styles.input}
+                          style={{ padding: '4px', textAlign: 'center' }}
+                        />
+                      </div>
+
+                      <div>
+                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Costo Unit.</small>
+                        <input 
+                          type="number" 
+                          min={0} 
+                          value={det.costoUnitario} 
+                          onChange={e => {
+                            const copia = [...compraAEditar.detalles];
+                            copia[idx].costoUnitario = Number(e.target.value);
+                            setCompraAEditar({ ...compraAEditar, detalles: copia });
+                          }}
+                          className={styles.input}
+                          style={{ padding: '4px', textAlign: 'center' }}
+                        />
+                      </div>
+
+                      <div>
+                        <small style={{ fontSize: '9px', color: '#38bdf8' }}>Precio Venta</small>
+                        <input 
+                          type="number" 
+                          min={0} 
+                          value={det.nuevoPrecioVenta || ''} 
+                          onChange={e => {
+                            const copia = [...compraAEditar.detalles];
+                            copia[idx].nuevoPrecioVenta = e.target.value === '' ? '' : Number(e.target.value);
+                            setCompraAEditar({ ...compraAEditar, detalles: copia });
+                          }}
+                          className={styles.input}
+                          style={{ padding: '4px', textAlign: 'center' }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                <span style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>Nuevo Total Recalculado:</span>
+                <strong style={{ fontSize: '1.1rem', color: '#ef4444' }}>
+                  C$ {compraAEditar.detalles?.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0).toLocaleString()}
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button type="button" onClick={() => setCompraAEditar(null)} className={styles.btnCancelar}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.btnGuardar}>
+                  Guardar y Recalcular
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
