@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { FaEdit, FaTimes, FaCalendarAlt, FaFilePdf, FaSearch, FaPrint, FaWhatsapp } from 'react-icons/fa';
-import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja'; // Importar si están en el mismo directorio
+import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
 import '../assets/styles/Reportes.css';
 
 export const Reportes: React.FC = () => {
@@ -149,6 +149,31 @@ export const Reportes: React.FC = () => {
         const copia = [...detallesEditados];
         copia[index].cantidad = nuevaCantidad;
         copia[index].subTotal = (nuevaCantidad * copia[index].precioUnitario) - (copia[index].descuento || 0);
+        setDetallesEditados(copia);
+    };
+
+    const actualizarDescuentoDetalle = (index: number, nuevoDescuento: number) => {
+        const copia = [...detallesEditados];
+        copia[index].descuento = nuevoDescuento < 0 ? 0 : nuevoDescuento;
+        copia[index].subTotal = (copia[index].cantidad * copia[index].precioUnitario) - copia[index].descuento;
+        setDetallesEditados(copia);
+    };
+
+    const actualizarDiasSuscripcion = (index: number, nuevosDias: number) => {
+        const copia = [...detallesEditados];
+        const diasValidos = nuevosDias > 0 ? nuevosDias : 30;
+        let metaActual = copia[index].metadataDigital || '';
+        
+        if (metaActual.startsWith("DIAS:")) {
+            const partes = metaActual.split('|');
+            partes[0] = `DIAS:${diasValidos}`;
+            copia[index].metadataDigital = partes.join('|');
+        } else {
+            copia[index].metadataDigital = metaActual 
+                ? `DIAS:${diasValidos}|${metaActual}` 
+                : `DIAS:${diasValidos}`;
+        }
+        
         setDetallesEditados(copia);
     };
 
@@ -691,7 +716,7 @@ export const Reportes: React.FC = () => {
             {/* MODAL DE AJUSTE CONTABLE REVERSIVO */}
             {ventaAEditar && (
                 <div className="modalOverlay">
-                    <div className="modalContent">
+                    <div className="modalContent" style={{ maxWidth: '850px', width: '90%' }}>
                         <div className="modalHeader">
                             <h3 className="modalTitle">🛠️ Auditoría Absoluta: Factura #000{ventaAEditar.id}</h3>
                             <button onClick={() => setVentaAEditar(null)} className="btnCloseModal"><FaTimes /></button>
@@ -726,49 +751,103 @@ export const Reportes: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="inputLabel">Artículos, Precios y Cantidades</label>
+                                <label className="inputLabel">Artículos, Precios, Descuentos y Duración</label>
                                 <div className="itemsContainer">
-                                    {detallesEditados.map((det, idx) => (
-                                        <div key={idx} className="itemRow">
-                                            <select 
-                                                value={Number(det.idProducto)} 
-                                                onChange={e => cambiarProductoDetalle(idx, Number(e.target.value))}
-                                                className="inputControlado inputItem"
-                                                style={{ fontSize: '0.75rem', padding: '4px' }}
-                                            >
-                                                {productos.length === 0 ? (
-                                                    <option value={det.idProducto}>{det.nombre}</option>
-                                                ) : (
-                                                    productos.map(p => {
-                                                        const pId = p.id ?? p.Id;
-                                                        const pNombre = p.nombre ?? p.Nombre;
-                                                        return <option key={pId} value={Number(pId)}>{pNombre}</option>;
-                                                    })
-                                                )}
-                                            </select>
+                                    {detallesEditados.map((det, idx) => {
+                                        const prodAsociado = productos.find(p => (p.id ?? p.Id) === det.idProducto);
+                                        const esSuscripcion = prodAsociado?.esSuscripcion || prodAsociado?.EsSuscripcion;
+                                        
+                                        let diasActuales = prodAsociado?.diasDuracion || 30;
+                                        if (det.metadataDigital && det.metadataDigital.startsWith("DIAS:")) {
+                                            const extraidos = parseInt(det.metadataDigital.split('|')[0].replace("DIAS:", ""));
+                                            if (!isNaN(extraidos)) diasActuales = extraidos;
+                                        }
 
-                                            <input 
-                                                type="number" 
-                                                value={det.cantidad} 
-                                                min={1} 
-                                                onChange={e => actualizarCantidadDetalle(idx, Number(e.target.value))} 
-                                                className="inputControlado inputItem"
-                                                style={{ padding: '4px', textAlign: 'center' }}
-                                            />
+                                        return (
+                                            <div key={idx} className="itemRow" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                                {/* Selección de Producto */}
+                                                <div>
+                                                    <small style={{ fontSize: '9px', color: '#94a3b8' }}>Producto / Servicio</small>
+                                                    <select 
+                                                        value={Number(det.idProducto)} 
+                                                        onChange={e => cambiarProductoDetalle(idx, Number(e.target.value))}
+                                                        className="inputControlado inputItem"
+                                                        style={{ fontSize: '0.75rem', padding: '4px', width: '100%' }}
+                                                    >
+                                                        {productos.length === 0 ? (
+                                                            <option value={det.idProducto}>{det.nombre}</option>
+                                                        ) : (
+                                                            productos.map(p => {
+                                                                const pId = p.id ?? p.Id;
+                                                                const pNombre = p.nombre ?? p.Nombre;
+                                                                return <option key={pId} value={Number(pId)}>{pNombre}</option>;
+                                                            })
+                                                        )}
+                                                    </select>
+                                                </div>
 
-                                            <input 
-                                                type="number" 
-                                                value={det.precioUnitario} 
-                                                onChange={e => actualizarPrecioDetalle(idx, Number(e.target.value))} 
-                                                className="inputControlado inputItem"
-                                                style={{ padding: '4px', textAlign: 'center' }}
-                                            />
+                                                {/* Cantidad */}
+                                                <div>
+                                                    <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cant.</small>
+                                                    <input 
+                                                        type="number" 
+                                                        value={det.cantidad} 
+                                                        min={1} 
+                                                        onChange={e => actualizarCantidadDetalle(idx, Number(e.target.value))} 
+                                                        className="inputControlado inputItem"
+                                                        style={{ padding: '4px', textAlign: 'center', width: '100%' }}
+                                                    />
+                                                </div>
 
-                                            <span className="txtSubtotalItem">
-                                                C$ {(det.subTotal ?? 0).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    ))}
+                                                {/* Precio Unitario */}
+                                                <div>
+                                                    <small style={{ fontSize: '9px', color: '#94a3b8' }}>Precio</small>
+                                                    <input 
+                                                        type="number" 
+                                                        value={det.precioUnitario} 
+                                                        onChange={e => actualizarPrecioDetalle(idx, Number(e.target.value))} 
+                                                        className="inputControlado inputItem"
+                                                        style={{ padding: '4px', textAlign: 'center', width: '100%' }}
+                                                    />
+                                                </div>
+
+                                                {/* Descuento */}
+                                                <div>
+                                                    <small style={{ fontSize: '9px', color: '#f87171' }}>Desc. (C$)</small>
+                                                    <input 
+                                                        type="number" 
+                                                        value={det.descuento || 0} 
+                                                        min={0}
+                                                        onChange={e => actualizarDescuentoDetalle(idx, Number(e.target.value))} 
+                                                        className="inputControlado inputItem"
+                                                        style={{ padding: '4px', textAlign: 'center', borderColor: '#f87171', width: '100%' }}
+                                                    />
+                                                </div>
+
+                                                {/* Días de Suscripción */}
+                                                <div>
+                                                    <small style={{ fontSize: '9px', color: '#38bdf8' }}>Días Susc.</small>
+                                                    <input 
+                                                        type="number" 
+                                                        value={diasActuales} 
+                                                        min={1}
+                                                        disabled={!esSuscripcion}
+                                                        onChange={e => actualizarDiasSuscripcion(idx, Number(e.target.value))} 
+                                                        className="inputControlado inputItem"
+                                                        style={{ padding: '4px', textAlign: 'center', opacity: esSuscripcion ? 1 : 0.4, width: '100%' }}
+                                                    />
+                                                </div>
+
+                                                {/* Subtotal */}
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <small style={{ fontSize: '9px', color: '#94a3b8' }}>Subtotal</small>
+                                                    <div className="txtSubtotalItem" style={{ fontWeight: 'bold' }}>
+                                                        C$ {(det.subTotal ?? 0).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
