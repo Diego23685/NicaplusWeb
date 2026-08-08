@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, 
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -354,7 +354,7 @@ export const CatalogosAdmin: React.FC = () => {
         }
     };
 
-    const guardarProducto = async (e: FormEvent) => {
+    const guardarProducto = async (e: FormEvent, mantenerParaDuplicar: boolean = false) => {
         e.preventDefault();
         const payload = {
             ...(editandoProductoId ? { id: editandoProductoId } : {}), 
@@ -374,8 +374,20 @@ export const CatalogosAdmin: React.FC = () => {
             } else {
                 await api.post('/products', payload);
             }
-            limpiarFormularioProducto();
-            setMostrarFormularioProducto(false);
+
+            if (mantenerParaDuplicar) {
+                // Mantenemos proveedor, categoría, garantía, etc. pero liberamos el ID y nombre para el siguiente
+                setEditandoProductoId(null);
+                setFormProducto(prev => ({
+                    ...prev,
+                    nombre: `${prev.nombre} (Siguiente)`,
+                    stockActual: prev.controlaStock ? prev.stockActual : 0
+                }));
+            } else {
+                limpiarFormularioProducto();
+                setMostrarFormularioProducto(false);
+            }
+
             cargarSincronizacionMaster();
         } catch (err: any) { 
             dispararErrorVisual("Fallo de Procesamiento", err.response?.data?.message || "Error crítico al guardar la ficha técnica."); 
@@ -395,6 +407,30 @@ export const CatalogosAdmin: React.FC = () => {
             precioVenta: producto.precioVenta,
             precioCosto: producto.precioCosto,
             stockActual: producto.stockActual,
+            imagenUrl: producto.imagenUrl || '',
+            esDigital: producto.esDigital,
+            esSuscripcion: producto.esSuscripcion || false,
+            controlaStock: producto.controlaStock ?? true,
+            categoriaId: producto.categoriaId?.toString() || '',
+            juegoId: producto.juegoId?.toString() || '',
+            diasDuracion: producto.diasDuracion || 30,
+            garantiaDias: producto.garantiaDias || 0,
+            proveedor: producto.proveedor || '',
+            estado: producto.estado || 'Activo'
+        });
+        setMostrarFormularioProducto(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // FUNCIÓN CLONAR: Copia la estructura y datos manteniendo editandoProductoId = null (POST)
+    const clonarProducto = (producto: Producto) => {
+        setEditandoProductoId(null);
+        setFormProducto({
+            nombre: `${producto.nombre} (Copia)`,
+            descripcion: producto.descripcion || '',
+            precioVenta: producto.precioVenta,
+            precioCosto: producto.precioCosto,
+            stockActual: producto.controlaStock ? producto.stockActual : 0,
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
             esSuscripcion: producto.esSuscripcion || false,
@@ -552,11 +588,13 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             )}
 
-            {/* FORMULARIO ÚNICO CENTRALIZADO */}
+            {/* FORMULARIO ÚNICO CENTRALIZADO CON OPCIÓN "GUARDAR Y DUPLICAR" */}
             {mostrarFormularioProducto && (
                 <div className={styles.panel} style={{ borderColor: '#38bdf8' }}>
-                    <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}><FaBoxOpen /> {editandoProductoId ? 'Modificando Ficha Técnica' : 'Ficha de Asignación de Inventario'}</h4>
-                    <form onSubmit={guardarProducto} className={styles.formGrid}>
+                    <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}>
+                        <FaBoxOpen /> {editandoProductoId ? 'Modificando Ficha Técnica' : 'Ficha de Asignación de Inventario'}
+                    </h4>
+                    <form onSubmit={(e) => guardarProducto(e, false)} className={styles.formGrid}>
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Nombre Comercial</label>
                             <input type="text" name="nombre" value={formProducto.nombre} onChange={handleProductoInputChange} className={styles.input} required />
@@ -664,10 +702,24 @@ export const CatalogosAdmin: React.FC = () => {
                                 <input type="text" name="imagenUrl" placeholder="https://..." value={formProducto.imagenUrl} onChange={handleProductoInputChange} className={styles.input} />
                                 <input type="file" accept="image/*" onChange={procesarSubidaImagen} className={styles.input} style={{ marginTop: '6px' }} />
                             </div>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                            
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
                                 <button type="submit" className={`${styles.btn} ${editandoProductoId ? styles.btnWarning : styles.btnPrimary}`} style={{ flex: 1, justifyContent: 'center' }}>
                                     {editandoProductoId ? 'Actualizar Ficha' : 'Insertar'}
                                 </button>
+                                
+                                {!editandoProductoId && (
+                                    <button 
+                                        type="button" 
+                                        onClick={(e) => guardarProducto(e, true)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#6366f1', color: '#fff', justifyContent: 'center' }} 
+                                        title="Guarda e inicia otro producto conservando la categoría y proveedor"
+                                    >
+                                        <FaCopy /> Guardar y Crear Otro
+                                    </button>
+                                )}
+
                                 <button type="button" onClick={() => { limpiarFormularioProducto(); setMostrarFormularioProducto(false); }} className={`${styles.btn} ${styles.btnSecondary}`}><FaTimes /></button>
                             </div>
                         </div>
@@ -783,8 +835,18 @@ export const CatalogosAdmin: React.FC = () => {
                                                         <FaTv /> Perfiles
                                                     </button>
                                                 )}
-                                                <button onClick={() => editarProducto(p)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '6px 10px', borderRadius: '4px' }}>Editar</button>
-                                                <button onClick={() => eliminarProducto(p.id)} className={`${styles.btn} ${styles.btnDanger}`} style={{ padding: '6px 10px', borderRadius: '4px' }}>Eliminar</button>
+                                                <button onClick={() => editarProducto(p)} className={`${styles.btn} ${styles.btnWarning}`} style={{ padding: '6px 10px', borderRadius: '4px' }} title="Editar este registro">
+                                                    <FaEdit />
+                                                </button>
+                                                
+                                                {/* NUEVO BOTÓN: CLONAR */}
+                                                <button onClick={() => clonarProducto(p)} className={styles.btn} style={{ background: '#6366f1', color: '#fff', padding: '6px 10px', borderRadius: '4px' }} title="Duplicar ficha técnica">
+                                                    <FaCopy /> Clonar
+                                                </button>
+
+                                                <button onClick={() => eliminarProducto(p.id)} className={`${styles.btn} ${styles.btnDanger}`} style={{ padding: '6px 10px', borderRadius: '4px' }} title="Eliminar del catálogo">
+                                                    <FaTrash />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
