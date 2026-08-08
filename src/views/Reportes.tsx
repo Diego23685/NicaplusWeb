@@ -23,6 +23,9 @@ export const Reportes: React.FC = () => {
     const [datosReporte, setDatosReporte] = useState<any>(null);
     const [cargandoReporte, setCargandoReporte] = useState(false);
 
+    const [clienteFiltro, setClienteFiltro] = useState<string>('');
+    const [rubroFiltro, setRubroFiltro] = useState<string>('Todos');
+
     const [fechaReferenciaMes, setFechaReferenciaMes] = useState<Date>(new Date());
 
     const [clientes, setClientes] = useState<any[]>([]);
@@ -55,6 +58,24 @@ export const Reportes: React.FC = () => {
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const dia = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${dia}`;
+    };
+
+    const perteneceAlRubro = (prod: any, rubro: string) => {
+        if (!prod) return false;
+        const esJuego = (prod.juegoId ?? prod.JuegoId) != null;
+        const esSuscripcion = prod.esSuscripcion ?? prod.EsSuscripcion ?? false;
+        const esDigital = prod.esDigital ?? prod.EsDigital ?? false;
+
+        switch (rubro.toLowerCase()) {
+            case 'videojuegos':
+                return esJuego;
+            case 'streaming':
+                return (esSuscripcion || esDigital) && !esJuego;
+            case 'tienda':
+                return !esSuscripcion && !esDigital && !esJuego;
+            default:
+                return true;
+        }
     };
 
     const aplicarRangoRapido = (tipo: 'hoy' | 'semana' | 'mes' | 'mesPasado' | 'ano') => {
@@ -103,7 +124,11 @@ export const Reportes: React.FC = () => {
         }
         setCargandoReporte(true);
         try {
-            const res = await api.get(`/reportes/personalizado?desde=${desde}&hasta=${hasta}`);
+            let url = `/reportes/personalizado?desde=${desde}&hasta=${hasta}`;
+            if (clienteFiltro) url += `&idCliente=${clienteFiltro}`;
+            if (rubroFiltro && rubroFiltro !== 'Todos') url += `&rubro=${rubroFiltro}`;
+
+            const res = await api.get(url);
             setDatosReporte(res.data);
         } catch (err) {
             alert("Error al generar el reporte.");
@@ -122,10 +147,30 @@ export const Reportes: React.FC = () => {
         api.get('/products').then(res => setProductos(res.data)).catch(() => {});
     }, []);
 
-    const ventasFiltradas = ventasHistorial.filter(v => 
-        v.id.toString().includes(busquedaFactura) || 
-        (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase())
-    );
+    const ventasFiltradas = ventasHistorial.filter(v => {
+        // 1. Filtro por Búsqueda rápida (Factura / Nombre de cliente)
+        const coincideTexto = v.id.toString().includes(busquedaFactura) || 
+            (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase());
+
+        if (!coincideTexto) return false;
+
+        // 2. Filtro por Cliente seleccionado
+        if (clienteFiltro) {
+            const idCliVenta = v.idCliente ?? v.IdCliente;
+            if (idCliVenta !== Number(clienteFiltro)) return false;
+        }
+
+        // 3. Filtro por Rubro seleccionado
+        if (rubroFiltro && rubroFiltro !== 'Todos') {
+            const contieneProductoDelRubro = v.detalles?.some((d: any) => {
+                const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                return perteneceAlRubro(prod, rubroFiltro);
+            });
+            if (!contieneProductoDelRubro) return false;
+        }
+
+        return true;
+    });
 
     const abrirEditorVenta = (venta: any) => {
         setVentaAEditar(venta);
@@ -647,6 +692,7 @@ export const Reportes: React.FC = () => {
                 <p className="headerSubtitle">Análisis financiero del periodo y corrección de libros de IVA/Inventario.</p>
             </div>
             
+            {/* Reemplaza la sección del JSX dentro de <div className="filtrosContainer"> */}
             <div className="filtrosContainer">
                 <div className="rangoBotones" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button onClick={() => aplicarRangoRapido('hoy')} className="btnRango">Hoy</button>
@@ -680,12 +726,44 @@ export const Reportes: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="fechasInputs">
+                <div className="fechasInputs" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <label className="labelFecha">Desde: 
                         <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="inputControlado" />
                     </label>
                     <label className="labelFecha">Hasta: 
                         <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="inputControlado" />
+                    </label>
+
+                    {/* NUEVO: Selector de Rubro */}
+                    <label className="labelFecha">Rubro:
+                        <select 
+                            value={rubroFiltro} 
+                            onChange={e => setRubroFiltro(e.target.value)} 
+                            className="inputControlado"
+                            style={{ background: '#1e293b', color: '#fff', borderColor: '#334155' }}
+                        >
+                            <option value="Todos">🌐 Todos los Rubros</option>
+                            <option value="Tienda">🛍️ Tienda (Físico / Servicios)</option>
+                            <option value="Streaming">📺 Streaming / Licencias</option>
+                            <option value="Videojuegos">🎮 Videojuegos</option>
+                        </select>
+                    </label>
+
+                    {/* NUEVO: Selector de Cliente */}
+                    <label className="labelFecha">Cliente:
+                        <select 
+                            value={clienteFiltro} 
+                            onChange={e => setClienteFiltro(e.target.value)} 
+                            className="inputControlado"
+                            style={{ background: '#1e293b', color: '#fff', borderColor: '#334155' }}
+                        >
+                            <option value="">👤 Todos los Clientes</option>
+                            {clientes.map(c => (
+                                <option key={c.id ?? c.Id} value={c.id ?? c.Id}>
+                                    {c.nombre ?? c.Nombre}
+                                </option>
+                            ))}
+                        </select>
                     </label>
                 </div>
 
