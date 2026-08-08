@@ -137,10 +137,18 @@ export const Reportes: React.FC = () => {
         }
     };
 
+    // 1. Carga inicial de datos base y asignación de rango "Hoy"
     useEffect(() => {
         aplicarRangoRapido('hoy');
         cargarHistorialVentas();
     }, []);
+
+    // 2. Consulta automática de reportes/arqueos cuando las fechas ya están establecidas
+    useEffect(() => {
+        if (desde && hasta) {
+            ConsultarReporte();
+        }
+    }, [desde, hasta]);
 
     useEffect(() => {
         api.get('/clientes').then(res => setClientes(res.data)).catch(() => {});
