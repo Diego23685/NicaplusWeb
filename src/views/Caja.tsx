@@ -3,9 +3,21 @@ import api from '../services/api';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
   FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
-  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup 
+  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup,
 } from 'react-icons/fa';
 import styles from '../assets/styles/Caja.module.css';
+
+export interface VariacionProducto {
+    id: number;
+    productoPadreId?: number;
+    sku?: string;
+    nombreVariacion: string;
+    precioVenta: number;
+    precioCosto: number;
+    stockActual: number;
+    color?: string;
+    almacenamiento?: string;
+}
 
 interface Producto {
     id: number;
@@ -21,6 +33,8 @@ interface Producto {
     metadataDigital?: string;
     primerPerfilId?: number;
     diasDuracion?: number;
+    tieneVariaciones?: boolean;
+    variaciones?: VariacionProducto[];
 }
 
 interface Categoria {
@@ -30,6 +44,7 @@ interface Categoria {
 
 interface ItemCarrito {
     idProducto: number;
+    idVariacion?: number | null;
     nombre: string;
     cantidad: number;
     precioUnitario: number;
@@ -58,7 +73,6 @@ const obtenerFechaLocalISO = (offsetDias = 0, fechaBaseStr?: string): string => 
     return formateador.format(d);
 };
 
-// Utilidad para calcular meses exactos considerando 28, 29, 30 o 31 días según el calendario real
 const sumarMesesExactos = (fechaBaseISO: string, meses: number): string => {
     const [year, month, day] = fechaBaseISO.split('-').map(Number);
     const fecha = new Date(year, month - 1, day);
@@ -76,7 +90,6 @@ const sumarMesesExactos = (fechaBaseISO: string, meses: number): string => {
     return `${yyyy}-${mm}-${dd}`;
 };
 
-// Utilidad para calcular días reales transcurridos entre dos fechas
 const calcularDiasRealesEntreFechas = (fechaInicioStr: string, fechaFinStr: string): number => {
     const inicio = new Date(fechaInicioStr + "T00:00:00");
     const fin = new Date(fechaFinStr + "T00:00:00");
@@ -118,7 +131,7 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
         "",
         separador,
         "",
-        "🔒 *CREDENCIALES DE ACCESO*",
+        "🔒 *CREDENCIALES DE ACCESO / PRODUCTOS*",
         ""
     ];
 
@@ -186,8 +199,6 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
             } else {
                 procesarBloqueCredencial(meta);
             }
-        } else {
-            lineas.push(`   ⚠️ _Sin credenciales asignadas_`);
         }
         lineas.push("");
     });
@@ -286,7 +297,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                         
                         return `
                             <tr>
-                                <td>${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 15))}</td>
+                                <td>${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 18))}</td>
                                 <td align="right">C$ ${item.subTotal}</td>
                             </tr>
                             ${item.descuento && item.descuento > 0 ? `
@@ -375,6 +386,9 @@ export const Caja: React.FC = () => {
 
     const [mensajeErrorModal, setMensajeErrorModal] = useState<string | null>(null);
 
+    // MODAL DE SELECCIÓN DE VARIANTE
+    const [productoParaSeleccionarVariante, setProductoParaSeleccionarVariante] = useState<Producto | null>(null);
+
     const mostrarError = (mensaje: string) => {
         setMensajeErrorModal(mensaje);
     };
@@ -422,8 +436,59 @@ export const Caja: React.FC = () => {
     const totalCostoVenta = useMemo(() => carrito.reduce((sum, item) => sum + (item.precioCostoUnitario * item.cantidad), 0), [carrito]);
     const margenGananciaTotal = useMemo(() => totalVenta - totalCostoVenta, [totalVenta, totalCostoVenta]);
 
+    const alHacerClicProducto = (producto: Producto) => {
+        if (producto.tieneVariaciones && producto.variaciones && producto.variaciones.length > 0) {
+            setProductoParaSeleccionarVariante(producto);
+        } else {
+            agregarAlCarrito(producto);
+        }
+    };
+
+    const agregarVarianteAlCarrito = (productoPadre: Producto, variante: VariacionProducto) => {
+        if (variante.stockActual < 1) {
+            mostrarError(`La variante "${variante.nombreVariacion}" no cuenta con existencias disponibles.`);
+            return;
+        }
+
+        const existe = carrito.find(item => item.idProducto === productoPadre.id && item.idVariacion === variante.id);
+
+        if (existe) {
+            if (variante.stockActual <= existe.cantidad) {
+                mostrarError(`No hay suficiente stock disponible de "${productoPadre.nombre} (${variante.nombreVariacion})".`);
+                return;
+            }
+
+            setCarrito(carrito.map(item => {
+                if (item.idProducto === productoPadre.id && item.idVariacion === variante.id) {
+                    const nuevaCant = item.cantidad + 1;
+                    return {
+                        ...item,
+                        cantidad: nuevaCant,
+                        subTotal: Math.round((item.precioUnitario - item.descuento) * nuevaCant)
+                    };
+                }
+                return item;
+            }));
+        } else {
+            setCarrito(prev => [...prev, {
+                idProducto: productoPadre.id,
+                idVariacion: variante.id,
+                nombre: `${productoPadre.nombre} (${variante.nombreVariacion})`,
+                cantidad: 1,
+                precioUnitario: variante.precioVenta,
+                precioCostoUnitario: variante.precioCosto,
+                subTotal: variante.precioVenta,
+                metadataDigital: '',
+                diasSuscripcion: 30,
+                descuento: 0
+            }]);
+        }
+
+        setProductoParaSeleccionarVariante(null);
+    };
+
     const agregarAlCarrito = async (producto: Producto) => {
-        const existe = carrito.find(item => item.idProducto === producto.id);
+        const existe = carrito.find(item => item.idProducto === producto.id && !item.idVariacion);
 
         if (existe) {
             if (!producto.esDigital && !producto.requiereServicio && producto.stockActual <= existe.cantidad) {
@@ -463,7 +528,7 @@ export const Caja: React.FC = () => {
             }
 
             setCarrito(carrito.map(item => {
-                if (item.idProducto === producto.id) {
+                if (item.idProducto === producto.id && !item.idVariacion) {
                     const nuevaCant = item.cantidad + 1;
                     return { 
                         ...item, 
@@ -487,6 +552,7 @@ export const Caja: React.FC = () => {
 
             setCarrito(prevCarrito => [...prevCarrito, {
                 idProducto: producto.id,
+                idVariacion: null,
                 nombre: producto.nombre,
                 cantidad: 1,
                 precioUnitario: producto.precioVenta,
@@ -500,10 +566,10 @@ export const Caja: React.FC = () => {
         }
     };
 
-    const cambiarPrecioUnitarioManual = (idProducto: number, nuevoPrecio: number) => {
+    const cambiarPrecioUnitarioManual = (idProducto: number, idVariacion: number | null | undefined, nuevoPrecio: number) => {
         const precioValidado = Math.max(0, nuevoPrecio);
         setCarrito(prev => prev.map(item => {
-            if (item.idProducto === idProducto) {
+            if (item.idProducto === idProducto && item.idVariacion === idVariacion) {
                 return { 
                     ...item, 
                     precioUnitario: precioValidado, 
@@ -514,10 +580,10 @@ export const Caja: React.FC = () => {
         }));
     };
 
-    const cambiarDescuentoManual = (idProducto: number, descuento: number) => {
+    const cambiarDescuentoManual = (idProducto: number, idVariacion: number | null | undefined, descuento: number) => {
         const descValidado = Math.max(0, descuento);
         setCarrito(prev => prev.map(item => {
-            if (item.idProducto === idProducto) {
+            if (item.idProducto === idProducto && item.idVariacion === idVariacion) {
                 const descFinal = descValidado > item.precioUnitario ? item.precioUnitario : descValidado;
                 return { 
                     ...item, 
@@ -529,17 +595,23 @@ export const Caja: React.FC = () => {
         }));
     };
 
-    const cambiarCantidadManual = (idProducto: number, cantidad: number) => {
+    const cambiarCantidadManual = (idProducto: number, idVariacion: number | null | undefined, cantidad: number) => {
         const cantValida = Math.max(1, cantidad);
         const productoBase = productos.find(p => p.id === idProducto);
 
-        if (productoBase && !productoBase.esDigital && !productoBase.requiereServicio && cantValida > productoBase.stockActual) {
+        if (idVariacion && productoBase?.variaciones) {
+            const varObj = productoBase.variaciones.find(v => v.id === idVariacion);
+            if (varObj && cantValida > varObj.stockActual) {
+                mostrarError(`Stock insuficiente para "${itemNombreFormateado(productoBase.nombre, varObj.nombreVariacion)}". Disponibles: ${varObj.stockActual}.`);
+                return;
+            }
+        } else if (productoBase && !productoBase.esDigital && !productoBase.requiereServicio && cantValida > productoBase.stockActual) {
             mostrarError(`Stock insuficiente para "${productoBase.nombre}". Existencias: ${productoBase.stockActual}.`);
             return;
         }
 
         setCarrito(prev => prev.map(item => {
-            if (item.idProducto === idProducto) {
+            if (item.idProducto === idProducto && item.idVariacion === idVariacion) {
                 return { 
                     ...item, 
                     cantidad: cantValida, 
@@ -550,14 +622,15 @@ export const Caja: React.FC = () => {
         }));
     };
 
-    const actualizarDiasItemCarrito = (idProducto: number, dias: number) => {
+    const itemNombreFormateado = (nombrePadre: string, nombreVariacion: string) => `${nombrePadre} (${nombreVariacion})`;
+
+    const actualizarDiasItemCarrito = (idProducto: number, idVariacion: number | null | undefined, dias: number) => {
         if (dias < 1) return;
         setCarrito(prev => prev.map(item => {
-            if (item.idProducto === idProducto) {
+            if (item.idProducto === idProducto && item.idVariacion === idVariacion) {
                 const pBase = productos.find(p => p.id === idProducto);
                 const diasBase = pBase?.diasDuracion || 30;
                 
-                // Prorrateo automático de tarifa basado en días contratados
                 const tarifaDiaria = pBase ? (pBase.precioVenta / diasBase) : (item.precioUnitario / 30);
                 const nuevoPrecioProporcional = Math.round(tarifaDiaria * dias);
 
@@ -572,19 +645,19 @@ export const Caja: React.FC = () => {
         }));
     };
 
-    const aplicarMesesExactosCarrito = (idProducto: number, meses: number) => {
+    const aplicarMesesExactosCarrito = (idProducto: number, idVariacion: number | null | undefined, meses: number) => {
         if (meses < 1) return;
         const fechaFinCalculada = sumarMesesExactos(fechaVenta, meses);
         const diasReales = calcularDiasRealesEntreFechas(fechaVenta, fechaFinCalculada);
-        actualizarDiasItemCarrito(idProducto, diasReales);
+        actualizarDiasItemCarrito(idProducto, idVariacion, diasReales);
     };
 
-    const eliminarDelCarrito = (idProducto: number) => {
-        setCarrito(carrito.filter(item => item.idProducto !== idProducto));
+    const eliminarDelCarrito = (idProducto: number, idVariacion: number | null | undefined) => {
+        setCarrito(carrito.filter(item => !(item.idProducto === idProducto && item.idVariacion === idVariacion)));
     };
 
-    const actualizarMetadata = (idProducto: number, valor: string) => {
-        setCarrito(carrito.map(item => item.idProducto === idProducto ? { ...item, metadataDigital: valor } : item));
+    const actualizarMetadata = (idProducto: number, idVariacion: number | null | undefined, valor: string) => {
+        setCarrito(carrito.map(item => (item.idProducto === idProducto && item.idVariacion === idVariacion) ? { ...item, metadataDigital: valor } : item));
     };
 
     const limpiarCarrito = useCallback(() => setCarrito([]), []);
@@ -618,6 +691,7 @@ export const Caja: React.FC = () => {
 
             return {
                 idProducto: item.idProducto,
+                idVariacion: item.idVariacion || null,
                 cantidad: item.cantidad,
                 precioUnitario: item.precioUnitario,
                 subTotal: Math.round((item.precioUnitario - (item.descuento || 0)) * item.cantidad),
@@ -633,32 +707,18 @@ export const Caja: React.FC = () => {
             fechaVencimientoCreditoManual: metodoPago === "Crédito" 
                 ? new Date(fechaVencimientoCredito + "T12:00:00").toISOString() 
                 : null,
-            detalles: carrito.map(item => {
-                const p = productos.find(prod => prod.id === item.idProducto);
-                const metaFinal = p?.esSuscripcion 
-                    ? `DIAS:${item.diasSuscripcion}|${item.metadataDigital}` 
-                    : item.metadataDigital;
-
-                return {
-                    idProducto: item.idProducto,
-                    cantidad: item.cantidad,
-                    precioUnitario: item.precioUnitario,
-                    descuento: item.descuento || 0,
-                    metadataDigital: metaFinal || ''
-                };
-            })
+            detalles: detallesMapeados
         };
 
         try {
             const res = await api.post('/ventas', payload);
 
             const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
-                const prodOriginal = productos.find(p => p.id === item.idProducto);
-                const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto);
+                const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto && c.idVariacion === item.idVariacion);
                 
                 return {
                     ...item,
-                    nombre: prodOriginal ? prodOriginal.nombre : "Producto General",
+                    nombre: itemCarritoOriginal ? itemCarritoOriginal.nombre : "Producto General",
                     diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30,
                     metadataDigital: item.metadataDigital || itemCarritoOriginal?.metadataDigital || ''
                 };
@@ -805,7 +865,7 @@ export const Caja: React.FC = () => {
                                 {productosFiltrados.map(p => (
                                     <div 
                                         key={p.id} 
-                                        onClick={() => agregarAlCarrito(p)} 
+                                        onClick={() => alHacerClicProducto(p)} 
                                         className={styles.productCard}
                                     >
                                         <div className={styles.productImgContainer}>
@@ -821,18 +881,24 @@ export const Caja: React.FC = () => {
                                                 {p.nombre}
                                             </div>
                                             <div className={styles.productMetaRow}>
-                                                <span className={styles.productPrice}>C$ {p.precioVenta}</span>
-                                                <small className={styles.productProfit}>+C$ {p.precioVenta - p.precioCosto}</small>
+                                                <span className={styles.productPrice}>
+                                                    {p.tieneVariaciones ? "Varía" : `C$ ${p.precioVenta}`}
+                                                </span>
+                                                {!p.tieneVariaciones && (
+                                                    <small className={styles.productProfit}>+C$ {p.precioVenta - p.precioCosto}</small>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div className={styles.productBadges}>
-                                            <span className={`${styles.badge} ${p.esDigital ? (p.esSuscripcion ? styles.badgeRecurrente : styles.badgeDigital) : p.requiereServicio ? styles.badgeServicio : styles.badgeFisico}`}>
-                                                {p.esSuscripcion ? "Streaming" : p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
+                                            <span className={`${styles.badge} ${p.tieneVariaciones ? styles.badgeVariantes : p.esDigital ? (p.esSuscripcion ? styles.badgeRecurrente : styles.badgeDigital) : p.requiereServicio ? styles.badgeServicio : styles.badgeFisico}`}>
+                                                {p.tieneVariaciones ? "🎨 Variantes" : p.esSuscripcion ? "Streaming" : p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
                                             </span>
                                             {!p.esDigital && !p.requiereServicio && (
-                                                <small className={`${styles.stockText} ${p.stockActual <= 3 ? styles.stockCritical : ''}`}>
-                                                    Cant: {p.stockActual}
+                                                <small className={`${styles.stockText} ${!p.tieneVariaciones && p.stockActual <= 3 ? styles.stockCritical : ''}`}>
+                                                    {p.tieneVariaciones 
+                                                        ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.`
+                                                        : `Cant: ${p.stockActual}`}
                                                 </small>
                                             )}
                                         </div>
@@ -844,7 +910,7 @@ export const Caja: React.FC = () => {
                                 {productosFiltrados.map(p => (
                                     <div 
                                         key={p.id} 
-                                        onClick={() => agregarAlCarrito(p)} 
+                                        onClick={() => alHacerClicProducto(p)} 
                                         className={styles.productRow}
                                     >
                                         <div className={styles.productRowLeft}>
@@ -860,11 +926,15 @@ export const Caja: React.FC = () => {
                                                     {p.nombre}
                                                 </strong>
                                                 <small className={styles.productRowSub}>
-                                                    {p.esSuscripcion ? "📺 Streaming" : p.esDigital ? "🎮 Recarga Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
+                                                    {p.tieneVariaciones 
+                                                        ? `🎨 Variantes (${p.variaciones?.length || 0} opciones)`
+                                                        : p.esSuscripcion ? "📺 Streaming" : p.esDigital ? "🎮 Recarga Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
                                                 </small>
                                             </div>
                                         </div>
-                                        <span className={styles.productPrice}>C$ {p.precioVenta}</span>
+                                        <span className={styles.productPrice}>
+                                            {p.tieneVariaciones ? "Varía" : `C$ ${p.precioVenta}`}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -896,10 +966,10 @@ export const Caja: React.FC = () => {
                             {carrito.map(item => {
                                 const pBase = productos.find(p => p.id === item.idProducto);
                                 return (
-                                    <div key={item.idProducto} className={styles.cartItem}>
+                                    <div key={`${item.idProducto}-${item.idVariacion || 'base'}`} className={styles.cartItem}>
                                         <div className={styles.cartItemMain}>
                                             <div className={styles.cartItemLeft}>
-                                                <button onClick={() => eliminarDelCarrito(item.idProducto)} className={styles.eliminarItem} title="Eliminar artículo">
+                                                <button onClick={() => eliminarDelCarrito(item.idProducto, item.idVariacion)} className={styles.eliminarItem} title="Eliminar artículo">
                                                     <FaTimes size={14} />
                                                 </button>
                                                 <span className={styles.cartItemName}>
@@ -916,7 +986,7 @@ export const Caja: React.FC = () => {
                                                     type="number" 
                                                     value={item.cantidad} 
                                                     min={1} 
-                                                    onChange={(e) => cambiarCantidadManual(item.idProducto, Number(e.target.value))} 
+                                                    onChange={(e) => cambiarCantidadManual(item.idProducto, item.idVariacion, Number(e.target.value))} 
                                                     className={styles.cantInput} 
                                                 />
                                             </div>
@@ -927,7 +997,7 @@ export const Caja: React.FC = () => {
                                                     type="number" 
                                                     min={0} 
                                                     value={item.precioUnitario} 
-                                                    onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, Number(e.target.value))} 
+                                                    onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, item.idVariacion, Number(e.target.value))} 
                                                     className={styles.smallInput} 
                                                 />
                                             </div>
@@ -939,7 +1009,7 @@ export const Caja: React.FC = () => {
                                                     min={0} 
                                                     max={item.precioUnitario} 
                                                     value={item.descuento || 0} 
-                                                    onChange={(e) => cambiarDescuentoManual(item.idProducto, Number(e.target.value))} 
+                                                    onChange={(e) => cambiarDescuentoManual(item.idProducto, item.idVariacion, Number(e.target.value))} 
                                                     className={styles.smallInput} 
                                                 />
                                             </div>
@@ -953,7 +1023,7 @@ export const Caja: React.FC = () => {
                                                         type="number" 
                                                         min={1} 
                                                         value={item.diasSuscripcion} 
-                                                        onChange={(e) => actualizarDiasItemCarrito(item.idProducto, Number(e.target.value))} 
+                                                        onChange={(e) => actualizarDiasItemCarrito(item.idProducto, item.idVariacion, Number(e.target.value))} 
                                                         className={styles.smallInput} 
                                                     />
                                                 </div>
@@ -963,7 +1033,7 @@ export const Caja: React.FC = () => {
                                                     <select 
                                                         onChange={(e) => {
                                                             const m = Number(e.target.value);
-                                                            if (m > 0) aplicarMesesExactosCarrito(item.idProducto, m);
+                                                            if (m > 0) aplicarMesesExactosCarrito(item.idProducto, item.idVariacion, m);
                                                         }}
                                                         className={styles.selectControl}
                                                         style={{ padding: '2px 4px', fontSize: '0.75rem' }}
@@ -989,7 +1059,7 @@ export const Caja: React.FC = () => {
                                                     rows={2}
                                                     placeholder="No hay credenciales registradas en el inventario..."
                                                     value={item.metadataDigital} 
-                                                    onChange={(e) => actualizarMetadata(item.idProducto, e.target.value)} 
+                                                    onChange={(e) => actualizarMetadata(item.idProducto, item.idVariacion, e.target.value)} 
                                                     className={styles.metaInput} 
                                                     style={{ width: '100%', marginTop: '2px', fontSize: '0.8rem', resize: 'vertical' }}
                                                 />
@@ -1110,6 +1180,57 @@ export const Caja: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL SELECCIONADOR DE VARIANTE PARA VENTA */}
+            {productoParaSeleccionarVariante && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent} style={{ maxWidth: '450px', borderTop: '4px solid #f59e0b' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                            <h3 style={{ margin: 0, color: '#f8fafc', fontSize: '1.1rem' }}>
+                                Selecciona una opción: <span style={{ color: '#38bdf8' }}>{productoParaSeleccionarVariante.nombre}</span>
+                            </h3>
+                            <button 
+                                onClick={() => setProductoParaSeleccionarVariante(null)}
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                            >
+                                <FaTimes size={16} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                            {productoParaSeleccionarVariante.variaciones?.map((v) => (
+                                <button
+                                    key={v.id}
+                                    disabled={v.stockActual <= 0}
+                                    onClick={() => agregarVarianteAlCarrito(productoParaSeleccionarVariante, v)}
+                                    className={styles.modalBtn}
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        background: v.stockActual <= 0 ? '#1e293b' : '#0f172a',
+                                        border: '1px solid #334155',
+                                        opacity: v.stockActual <= 0 ? 0.5 : 1,
+                                        cursor: v.stockActual <= 0 ? 'not-allowed' : 'pointer',
+                                        padding: '12px',
+                                        textAlign: 'left'
+                                    }}
+                                >
+                                    <div>
+                                        <strong style={{ color: '#ffffff', display: 'block', fontSize: '0.9rem' }}>{v.nombreVariacion}</strong>
+                                        <small style={{ color: v.stockActual <= 0 ? '#ef4444' : '#4ade80' }}>
+                                            {v.stockActual > 0 ? `Stock: ${v.stockActual} u.` : 'Agotado'}
+                                        </small>
+                                    </div>
+                                    <span style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                        C$ {v.precioVenta.toLocaleString()}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODAL FLOTANTE DE ERROR */}
             {mensajeErrorModal && (
