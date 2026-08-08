@@ -218,7 +218,7 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     lineas.push("¡Muchas gracias por su preferencia! 🤝");
 
     const mensajeFinal = lineas.join("\n");
-    const urlWhatsApp = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeFinal)}`;
+    const urlWhatsApp = `https://api.whatsapp.com/send?phone=505${telefonoLimpio}&text=${encodeURIComponent(mensajeFinal)}`;
     
     window.open(urlWhatsApp, '_blank');
 };
