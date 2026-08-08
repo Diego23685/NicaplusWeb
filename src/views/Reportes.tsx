@@ -35,7 +35,6 @@ export const Reportes: React.FC = () => {
     const [busquedaFactura, setBusquedaFactura] = useState('');
     const [cargandoTabla, setCargandoTabla] = useState(true);
 
-    // Estado para conmutar las vistas de auditoría
     const [tabAuditoria, setTabAuditoria] = useState<'ventas' | 'compras' | 'caja'>('ventas');
 
     const [ventaAEditar, setVentaAEditar] = useState<any | null>(null);
@@ -137,13 +136,11 @@ export const Reportes: React.FC = () => {
         }
     };
 
-    // 1. Carga inicial de datos base y asignación de rango "Hoy"
     useEffect(() => {
         aplicarRangoRapido('hoy');
         cargarHistorialVentas();
     }, []);
 
-    // 2. Consulta automática de reportes/arqueos cuando las fechas ya están establecidas
     useEffect(() => {
         if (desde && hasta) {
             ConsultarReporte();
@@ -156,19 +153,16 @@ export const Reportes: React.FC = () => {
     }, []);
 
     const ventasFiltradas = ventasHistorial.filter(v => {
-        // 1. Filtro por Búsqueda rápida (Factura / Nombre de cliente)
         const coincideTexto = v.id.toString().includes(busquedaFactura) || 
             (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase());
 
         if (!coincideTexto) return false;
 
-        // 2. Filtro por Cliente seleccionado
         if (clienteFiltro) {
             const idCliVenta = v.idCliente ?? v.IdCliente;
             if (idCliVenta !== Number(clienteFiltro)) return false;
         }
 
-        // 3. Filtro por Rubro seleccionado
         if (rubroFiltro && rubroFiltro !== 'Todos') {
             const contieneProductoDelRubro = v.detalles?.some((d: any) => {
                 const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
@@ -342,6 +336,13 @@ export const Reportes: React.FC = () => {
         const gastosOperativos = datosReporte?.finanzas?.gastosOperativos ?? 0;
         const inversionCompras = datosReporte?.finanzas?.inversionCompras ?? 0;
         
+        // Mapeo dinámico de filtros activos para la cabecera del PDF
+        const clienteNombreFiltro = clienteFiltro 
+            ? (clientes.find(c => (c.id ?? c.Id) === Number(clienteFiltro))?.nombre || 'Cliente Específico')
+            : 'Todos los Clientes';
+
+        const rubroNombreFiltro = rubroFiltro === 'Todos' ? 'Todos los Rubros' : rubroFiltro;
+
         const formatearFechaSegura = (t: any) => {
             const fechaRaw = t?.fechaVenta || t?.fecha || t?.Fecha || t?.fecha_venta || t?.createdAt || t?.created_at;
             if (!fechaRaw) return 'N/A';
@@ -382,7 +383,6 @@ export const Reportes: React.FC = () => {
 
             return 'Mostrador General';
         };
-
 
         const totalNeto = transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0);
 
@@ -432,7 +432,7 @@ export const Reportes: React.FC = () => {
                         margin-top: 2px;
                     }
                     
-                    .titulo-reporte { text-align: right; font-size: 12px; color: #64748b; line-height: 1.6; }
+                    .titulo-reporte { text-align: right; font-size: 11px; color: #64748b; line-height: 1.5; }
                     
                     .grid-cards { 
                         display: grid; 
@@ -505,6 +505,7 @@ export const Reportes: React.FC = () => {
                         <td class="titulo-reporte">
                             <strong>REPORTE DE AUDITORÍA INTERNA POS</strong><br>
                             <strong>Período:</strong> ${rangoPeriodo}<br>
+                            <strong>Rubro:</strong> <span style="color: #8b00d0; font-weight: bold;">${rubroNombreFiltro}</span> | <strong>Cliente:</strong> ${clienteNombreFiltro}<br>
                             <strong>Generado:</strong> ${new Date().toLocaleString()}
                         </td>
                     </tr>
@@ -701,7 +702,6 @@ export const Reportes: React.FC = () => {
                 <p className="headerSubtitle">Análisis financiero del periodo y corrección de libros de IVA/Inventario.</p>
             </div>
             
-            {/* Reemplaza la sección del JSX dentro de <div className="filtrosContainer"> */}
             <div className="filtrosContainer">
                 <div className="rangoBotones" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button onClick={() => aplicarRangoRapido('hoy')} className="btnRango">Hoy</button>
@@ -743,7 +743,6 @@ export const Reportes: React.FC = () => {
                         <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="inputControlado" />
                     </label>
 
-                    {/* NUEVO: Selector de Rubro */}
                     <label className="labelFecha">Rubro:
                         <select 
                             value={rubroFiltro} 
@@ -758,7 +757,6 @@ export const Reportes: React.FC = () => {
                         </select>
                     </label>
 
-                    {/* NUEVO: Selector de Cliente */}
                     <label className="labelFecha">Cliente:
                         <select 
                             value={clienteFiltro} 
@@ -790,7 +788,6 @@ export const Reportes: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* TARJETAS KPI AMPLIADAS CON CRÉDITO */}
                     <div className="kpiGrid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                         <div className="kpiCard cajaReal">
                             <small className="kpiLabel">BALANCE NETO (CAJA REAL)</small>
@@ -873,7 +870,6 @@ export const Reportes: React.FC = () => {
                 </div>
 
                 <div className="tablaWrapper">
-                    {/* VISTA 1: TABLA DE VENTAS */}
                     {tabAuditoria === 'ventas' && (
                         cargandoTabla ? (
                             <div style={{ color: '#38bdf8', textAlign: 'center', padding: '15px' }}>Sincronizando transacciones...</div>
@@ -954,7 +950,6 @@ export const Reportes: React.FC = () => {
                         )
                     )}
 
-                    {/* VISTA 2: TABLA DE COMPRAS A PROVEEDORES */}
                     {tabAuditoria === 'compras' && (
                         <div className="innerTableScroll">
                             <table className="tablaAuditoria">
@@ -996,7 +991,6 @@ export const Reportes: React.FC = () => {
                         </div>
                     )}
 
-                    {/* VISTA 3: TABLA DE ARQUEOS Y MOVIMIENTOS DE CAJA */}
                     {tabAuditoria === 'caja' && (
                         <div className="innerTableScroll">
                             <table className="tablaAuditoria">
@@ -1046,7 +1040,6 @@ export const Reportes: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL DE AJUSTE CONTABLE REVERSIVO */}
             {ventaAEditar && (
                 <div className="modalOverlay">
                     <div className="modalContent" style={{ maxWidth: '850px', width: '90%' }}>
