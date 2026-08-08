@@ -3,9 +3,26 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
+
+export interface VariacionProducto {
+    id?: number;
+    productoPadreId?: number;
+    sku?: string;
+    color?: string;
+    almacenamiento?: string;
+    ram?: string;
+    talla?: string;
+    nombreVariacion: string;
+    precioVenta: number;
+    precioCosto: number;
+    stockActual: number;
+    stockMinimo?: number;
+    imagenUrl?: string;
+    estado?: string;
+}
 
 interface Producto {
     id: number;
@@ -25,6 +42,8 @@ interface Producto {
     proveedor: string;
     estado: string;
     perfilesCount?: number;
+    tieneVariaciones?: boolean;
+    variaciones?: VariacionProducto[];
 }
 
 interface PerfilCuenta {
@@ -59,7 +78,9 @@ const productoFormInicial = {
     diasDuracion: 30,
     garantiaDias: 30,
     proveedor: '',
-    estado: 'Activo'
+    estado: 'Activo',
+    tieneVariaciones: false,
+    variaciones: [] as VariacionProducto[]
 };
 
 export const CatalogosAdmin: React.FC = () => {
@@ -76,6 +97,11 @@ export const CatalogosAdmin: React.FC = () => {
     // FORMULARIO UNIFICADO DE PRODUCTOS
     const [editandoProductoId, setEditandoProductoId] = useState<number | null>(null);
     const [formProducto, setFormProducto] = useState(productoFormInicial);
+
+    // VENTANA RÁPIDA DE VARIACIONES (MODAL TIPO APP)
+    const [productoVariacionAbierto, setProductoVariacionAbierto] = useState<Producto | null>(null);
+    const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
+    const [filtroColorVariacion, setFiltroColorVariacion] = useState<string>('Todos');
 
     // GESTIÓN DE PERFILES Y CUENTAS BATCH
     const [productoIdPerfilAbierto, setProductoIdPerfilAbierto] = useState<number | null>(null);
@@ -139,7 +165,6 @@ export const CatalogosAdmin: React.FC = () => {
 
     useEffect(() => { cargarSincronizacionMaster(); }, [cargarSincronizacionMaster]);
 
-    // FILTRADO DE PRODUCTOS MEMOIZADO POR RUBROS, CATEGORÍAS Y JUEGOS
     const prodsFiltrados = useMemo(() => {
         return productos.filter(p => {
             const coincideTexto = p.nombre.toLowerCase().includes(filtroProd.toLowerCase());
@@ -155,7 +180,6 @@ export const CatalogosAdmin: React.FC = () => {
         });
     }, [productos, filtroProd, juegoFiltroActivo, categoriaFiltroActiva, rubroAdmin]);
 
-    // FILTRADO Y ORDENAMIENTO DE PERFILES MEMOIZADO
     const perfilesFiltradosYOrdenados = useMemo(() => {
         return perfilesActuales
             .filter((perfil) => {
@@ -376,7 +400,6 @@ export const CatalogosAdmin: React.FC = () => {
             }
 
             if (mantenerParaDuplicar) {
-                // Mantenemos proveedor, categoría, garantía, etc. pero liberamos el ID y nombre para el siguiente
                 setEditandoProductoId(null);
                 setFormProducto(prev => ({
                     ...prev,
@@ -416,13 +439,14 @@ export const CatalogosAdmin: React.FC = () => {
             diasDuracion: producto.diasDuracion || 30,
             garantiaDias: producto.garantiaDias || 0,
             proveedor: producto.proveedor || '',
-            estado: producto.estado || 'Activo'
+            estado: producto.estado || 'Activo',
+            tieneVariaciones: producto.tieneVariaciones || false,
+            variaciones: producto.variaciones || []
         });
         setMostrarFormularioProducto(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // FUNCIÓN CLONAR: Copia la estructura y datos manteniendo editandoProductoId = null (POST)
     const clonarProducto = (producto: Producto) => {
         setEditandoProductoId(null);
         setFormProducto({
@@ -440,7 +464,9 @@ export const CatalogosAdmin: React.FC = () => {
             diasDuracion: producto.diasDuracion || 30,
             garantiaDias: producto.garantiaDias || 0,
             proveedor: producto.proveedor || '',
-            estado: producto.estado || 'Activo'
+            estado: producto.estado || 'Activo',
+            tieneVariaciones: producto.tieneVariaciones || false,
+            variaciones: producto.variaciones || []
         });
         setMostrarFormularioProducto(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -588,7 +614,7 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             )}
 
-            {/* FORMULARIO ÚNICO CENTRALIZADO CON OPCIÓN "GUARDAR Y DUPLICAR" */}
+            {/* FORMULARIO ÚNICO CENTRALIZADO CON VARIACIONES FLEXIBLES */}
             {mostrarFormularioProducto && (
                 <div className={styles.panel} style={{ borderColor: '#38bdf8' }}>
                     <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}>
@@ -604,16 +630,18 @@ export const CatalogosAdmin: React.FC = () => {
                                 <textarea name="descripcion" value={formProducto.descripcion} onChange={handleProductoInputChange} placeholder="Especificaciones físicas..." className={styles.textarea} />
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <div style={{ flex: 1 }}>
-                                    <label className={styles.label}>Precio Compra (C$)</label>
-                                    <input type="number" name="precioCosto" value={formProducto.precioCosto || ''} onChange={handleProductoInputChange} className={styles.input} required />
+                            {!formProducto.tieneVariaciones && (
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.label}>Precio Compra (C$)</label>
+                                        <input type="number" name="precioCosto" value={formProducto.precioCosto || ''} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.label}>Precio Venta (C$)</label>
+                                        <input type="number" name="precioVenta" value={formProducto.precioVenta || ''} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                    </div>
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <label className={styles.label}>Precio Venta (C$)</label>
-                                    <input type="number" name="precioVenta" value={formProducto.precioVenta || ''} onChange={handleProductoInputChange} className={styles.input} required />
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className={styles.formGroup}>
@@ -682,20 +710,22 @@ export const CatalogosAdmin: React.FC = () => {
                                         </select>
                                     </>
                                 )}
-                                <div style={{ marginTop: '10px' }}>
-                                    <label className={styles.label}>
-                                        {formProducto.controlaStock ? 'Existencias Físicas o Lote' : 'Stock (Inhabilitado)'}
-                                    </label>
-                                    <input 
-                                        type="number" 
-                                        name="stockActual" 
-                                        value={formProducto.controlaStock ? (formProducto.stockActual || '') : 0} 
-                                        onChange={handleProductoInputChange} 
-                                        className={styles.input} 
-                                        disabled={!formProducto.controlaStock} 
-                                        required={formProducto.controlaStock} 
-                                    />
-                                </div>
+                                {!formProducto.tieneVariaciones && (
+                                    <div style={{ marginTop: '10px' }}>
+                                        <label className={styles.label}>
+                                            {formProducto.controlaStock ? 'Existencias Físicas o Lote' : 'Stock (Inhabilitado)'}
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            name="stockActual" 
+                                            value={formProducto.controlaStock ? (formProducto.stockActual || '') : 0} 
+                                            onChange={handleProductoInputChange} 
+                                            className={styles.input} 
+                                            disabled={!formProducto.controlaStock} 
+                                            required={formProducto.controlaStock && !formProducto.tieneVariaciones} 
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div style={{ marginTop: '6px' }}>
                                 <label className={styles.label}>URL Imagen o Archivo</label>
@@ -723,6 +753,99 @@ export const CatalogosAdmin: React.FC = () => {
                                 <button type="button" onClick={() => { limpiarFormularioProducto(); setMostrarFormularioProducto(false); }} className={`${styles.btn} ${styles.btnSecondary}`}><FaTimes /></button>
                             </div>
                         </div>
+
+                        {/* SECCIÓN DE VARIACIONES DINÁMICAS (CLEAN Y UNIVERSAL) */}
+                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                            <label className={styles.checkboxLabel} style={{ color: '#38bdf8', fontWeight: 'bold' }}>
+                                <input 
+                                    type="checkbox" 
+                                    name="tieneVariaciones" 
+                                    checked={formProducto.tieneVariaciones} 
+                                    onChange={e => setFormProducto(prev => ({ ...prev, tieneVariaciones: e.target.checked }))} 
+                                /> 
+                                🎨 ¿Este producto tiene variaciones (colores, tamaños, modelos, etc.)?
+                            </label>
+
+                            {formProducto.tieneVariaciones && (
+                                <div style={{ background: '#0f172a', padding: '14px', borderRadius: '8px', marginTop: '10px', border: '1px solid #334155' }}>
+                                    <h5 style={{ color: '#38bdf8', margin: '0 0 10px 0', fontSize: '0.95rem' }}>Añadir Opciones de Variación</h5>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginBottom: '10px' }}>
+                                        <input type="text" id="vNombre" placeholder="Nombre (Ej: Negro, 256GB, Rosa Azul)" className={styles.input} style={{ gridColumn: 'span 2' }} />
+                                        <input type="number" id="vPrecioCosto" placeholder="P. Costo (C$)" className={styles.input} />
+                                        <input type="number" id="vPrecioVenta" placeholder="P. Venta (C$)" className={styles.input} />
+                                        <input type="number" id="vStock" placeholder="Stock Inicial" className={styles.input} />
+                                        
+                                        <button 
+                                            type="button" 
+                                            className={styles.btn} 
+                                            style={{ background: '#10b981', color: '#fff', justifyContent: 'center' }}
+                                            onClick={() => {
+                                                const nom = (document.getElementById('vNombre') as HTMLInputElement).value;
+                                                const pc = Number((document.getElementById('vPrecioCosto') as HTMLInputElement).value) || formProducto.precioCosto;
+                                                const pv = Number((document.getElementById('vPrecioVenta') as HTMLInputElement).value) || formProducto.precioVenta;
+                                                const stk = Number((document.getElementById('vStock') as HTMLInputElement).value) || 0;
+
+                                                if (!nom) { alert('Escriba un nombre para la opción'); return; }
+
+                                                setFormProducto(prev => ({
+                                                    ...prev,
+                                                    variaciones: [...prev.variaciones, {
+                                                        nombreVariacion: nom,
+                                                        color: nom, // Asigna el nombre como etiqueta principal
+                                                        precioCosto: pc,
+                                                        precioVenta: pv,
+                                                        stockActual: stk,
+                                                        estado: 'Activo'
+                                                    }]
+                                                }));
+
+                                                (document.getElementById('vNombre') as HTMLInputElement).value = '';
+                                            }}
+                                        >
+                                            <FaPlus /> Añadir Opción
+                                        </button>
+                                    </div>
+
+                                    {/* LISTA DE VARIACIONES SIN BANDERAS INNECESARIAS */}
+                                    {formProducto.variaciones.length > 0 && (
+                                        <table className={styles.table} style={{ fontSize: '0.85rem', marginTop: '10px' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th>Opción / Presentación</th>
+                                                    <th>P. Compra</th>
+                                                    <th>P. Venta</th>
+                                                    <th>Stock Inicial</th>
+                                                    <th style={{ textAlign: 'center' }}>Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {formProducto.variaciones.map((v, idx) => (
+                                                    <tr key={idx}>
+                                                        <td><strong>{v.nombreVariacion}</strong></td>
+                                                        <td>C$ {v.precioCosto}</td>
+                                                        <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {v.precioVenta}</td>
+                                                        <td>{v.stockActual} u.</td>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <button 
+                                                                type="button" 
+                                                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                                                                onClick={() => setFormProducto(prev => ({
+                                                                    ...prev,
+                                                                    variaciones: prev.variaciones.filter((_, i) => i !== idx)
+                                                                }))}
+                                                            >
+                                                                <FaTrash />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </form>
                 </div>
             )}
@@ -730,7 +853,6 @@ export const CatalogosAdmin: React.FC = () => {
             {/* SELECCIÓN DE RUBRO PRINCIPAL Y FILTROS SECUNDARIOS */}
             <div className={styles.filterCard} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 
-                {/* PESTAÑAS DE RUBROS SUPERIORES */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
                     <button 
                         onClick={() => setRubroAdmin('todos')} 
@@ -762,7 +884,6 @@ export const CatalogosAdmin: React.FC = () => {
                     </button>
                 </div>
 
-                {/* FILTROS SECUNDARIOS POR CATEGORÍA Y JUEGO */}
                 <div className={styles.scrollRow}>
                     <div onClick={() => setCategoriaFiltroActiva(null)} className={`${styles.pill} ${categoriaFiltroActiva === null ? styles.pillActivePurple : ''}`}><FaThList /> Todas las Categorías</div>
                     {categorias.map(c => <div key={c.id} onClick={() => setCategoriaFiltroActiva(c.id)} className={`${styles.pill} ${categoriaFiltroActiva === c.id ? styles.pillActivePurple : ''}`}>{c.nombre}</div>)}
@@ -809,13 +930,14 @@ export const CatalogosAdmin: React.FC = () => {
                                                 {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
                                                 <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
                                                 {p.esSuscripcion && <span style={{ color: '#f43f5e', marginLeft: '6px', fontWeight: 'bold' }}>[📺 Streaming / Recurrente]</span>}
+                                                {p.tieneVariaciones && <span style={{ color: '#f59e0b', marginLeft: '6px', fontWeight: 'bold' }}>[🎨 Variantes]</span>}
                                                 <span style={{ color: p.controlaStock ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
                                                     {p.controlaStock ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
                                                 </span>
                                             </small>
                                         </td>
-                                        <td style={{ color: '#94a3b8' }}>C$ {p.precioCosto}</td>
-                                        <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {p.precioVenta}</td>
+                                        <td style={{ color: '#94a3b8' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</td>
+                                        <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</td>
                                         <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
                                         <td style={{ color: '#fb923c' }}>{p.garantiaDias} días</td>
                                         <td style={{ color: '#cbd5e1' }}>{p.proveedor || 'N/A'}</td>
@@ -826,10 +948,27 @@ export const CatalogosAdmin: React.FC = () => {
                                             }}>{p.estado || 'Activo'}</span>
                                         </td>
                                         <td style={{ color: !p.controlaStock ? '#a855f7' : p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>
-                                            {p.controlaStock ? `${p.stockActual} u.` : 'N/A'}
+                                            {p.tieneVariaciones 
+                                                ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u. (Total)`
+                                                : (p.controlaStock ? `${p.stockActual} u.` : 'N/A')}
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                {p.tieneVariaciones && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            setProductoVariacionAbierto(p);
+                                                            setVariacionesModal(p.variaciones || []);
+                                                            setFiltroColorVariacion('Todos');
+                                                        }} 
+                                                        className={styles.btn} 
+                                                        style={{ background: '#f59e0b', color: '#000', padding: '6px 10px', borderRadius: '4px' }}
+                                                        title="Gestionar Stock de Variantes"
+                                                    >
+                                                        <FaPalette /> Variantes ({p.variaciones?.length || 0})
+                                                    </button>
+                                                )}
+
                                                 {p.esSuscripcion && (
                                                     <button onClick={() => abrirGestionPerfiles(p)} className={styles.btn} style={{ background: productoIdPerfilAbierto === p.id ? '#475569' : '#047688', color: '#fff', padding: '6px 10px', borderRadius: '4px' }}>
                                                         <FaTv /> Perfiles
@@ -839,7 +978,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                     <FaEdit />
                                                 </button>
                                                 
-                                                {/* NUEVO BOTÓN: CLONAR */}
                                                 <button onClick={() => clonarProducto(p)} className={styles.btn} style={{ background: '#6366f1', color: '#fff', padding: '6px 10px', borderRadius: '4px' }} title="Duplicar ficha técnica">
                                                     <FaCopy /> Clonar
                                                 </button>
@@ -885,7 +1023,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                         )}
                                                     </div>
 
-                                                    {/* BARRA DE BÚSQUEDA Y ORDENAMIENTO DE PERFILES */}
                                                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '14px', background: '#1e293b', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155' }}>
                                                         <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                             <FaSearch style={{ color: '#38bdf8' }} />
@@ -931,7 +1068,6 @@ export const CatalogosAdmin: React.FC = () => {
                                                         </span>
                                                     </div>
 
-                                                    {/* GRID DE PERFILES FILTRADOS */}
                                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
                                                         {perfilesFiltradosYOrdenados.length === 0 ? (
                                                             <div style={{ gridColumn: '1 / -1', padding: '20px', textAlign: 'center', color: '#94a3b8', background: '#1e293b', borderRadius: '8px' }}>
@@ -1057,6 +1193,168 @@ export const CatalogosAdmin: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* MODAL DE GESTIÓN RÁPIDA DE VARIACIONES E INVENTARIO (CON LA PALETA DEL ERP) */}
+            {productoVariacionAbierto && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent} style={{ maxWidth: '520px', borderColor: '#38bdf8' }}>
+                        
+                        {/* Header del Modal */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>
+                                    {productoVariacionAbierto.nombre}
+                                </h3>
+                                <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '2px' }}>
+                                    Precio Base: <strong style={{ color: '#4ade80' }}>C$ {productoVariacionAbierto.precioVenta.toLocaleString()}</strong>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setProductoVariacionAbierto(null)} 
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem' }}
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        {/* Pestañas de Filtros Rápidos con Colores del ERP */}
+                        <div style={{ display: 'flex', gap: '8px', margin: '16px 0', overflowX: 'auto', paddingBottom: '4px' }}>
+                            <button 
+                                onClick={() => setFiltroColorVariacion('Todos')} 
+                                className={styles.btn}
+                                style={{
+                                    padding: '6px 14px',
+                                    fontSize: '0.8rem',
+                                    background: filtroColorVariacion === 'Todos' ? '#3b82f6' : '#1e293b',
+                                    color: '#fff',
+                                    borderColor: '#334155'
+                                }}
+                            >
+                                🌐 Todas las opciones
+                            </button>
+                            
+                            {Array.from(new Set(variacionesModal.map(v => v.nombreVariacion).filter(Boolean))).map((opt, i) => (
+                                <button 
+                                    key={i}
+                                    onClick={() => setFiltroColorVariacion(opt)}
+                                    className={styles.btn}
+                                    style={{
+                                        padding: '6px 14px',
+                                        fontSize: '0.8rem',
+                                        background: filtroColorVariacion === opt ? '#f59e0b' : '#1e293b',
+                                        color: filtroColorVariacion === opt ? '#000' : '#fff',
+                                        borderColor: '#334155'
+                                    }}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Lista de Variaciones con Control +/- */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '320px', overflowY: 'auto' }}>
+                            {variacionesModal
+                                .filter(v => filtroColorVariacion === 'Todos' || v.nombreVariacion === filtroColorVariacion)
+                                .map((varItem, idx) => (
+                                    <div 
+                                        key={varItem.id || idx} 
+                                        style={{ 
+                                            border: '1px solid',
+                                            borderColor: varItem.stockActual === 0 ? '#ef4444' : '#334155', 
+                                            borderRadius: '8px', 
+                                            padding: '10px 14px', 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center',
+                                            background: varItem.stockActual === 0 ? 'rgba(239, 68, 68, 0.1)' : '#0f172a'
+                                        }}
+                                    >
+                                        <div>
+                                            <strong style={{ fontSize: '0.9rem', color: varItem.stockActual === 0 ? '#fca5a5' : '#f8fafc', display: 'block' }}>
+                                                {varItem.stockActual === 0 && '⚠️ '}{varItem.nombreVariacion}
+                                            </strong>
+                                            <span style={{ fontSize: '0.8rem', color: '#38bdf8' }}>
+                                                C$ {varItem.precioVenta.toLocaleString()}
+                                            </span>
+                                        </div>
+
+                                        {/* Control Incremental con la Estética Oscura */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', padding: '4px 10px', borderRadius: '20px', border: '1px solid #334155' }}>
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    const copia = [...variacionesModal];
+                                                    const indexReal = copia.findIndex(x => x === varItem);
+                                                    if (indexReal !== -1 && copia[indexReal].stockActual > 0) {
+                                                        copia[indexReal].stockActual -= 1;
+                                                        setVariacionesModal(copia);
+                                                    }
+                                                }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: varItem.stockActual === 0 ? '#64748b' : '#ef4444', fontSize: '1rem', fontWeight: 'bold' }}
+                                            >
+                                                ➖
+                                            </button>
+                                            
+                                            <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#fff', minWidth: '24px', textAlign: 'center' }}>
+                                                {varItem.stockActual}
+                                            </span>
+
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    const copia = [...variacionesModal];
+                                                    const indexReal = copia.findIndex(x => x === varItem);
+                                                    if (indexReal !== -1) {
+                                                        copia[indexReal].stockActual += 1;
+                                                        setVariacionesModal(copia);
+                                                    }
+                                                }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', fontSize: '1rem', fontWeight: 'bold' }}
+                                            >
+                                                ➕
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
+
+                        {/* Acciones Inferiores con los Botones del Sistema */}
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                            <button 
+                                type="button"
+                                className={`${styles.btn} ${styles.btnPrimary}`}
+                                style={{ flex: 1, justifyContent: 'center', padding: '10px' }}
+                                onClick={async () => {
+                                    try {
+                                        await api.put(`/products/${productoVariacionAbierto.id}/variaciones-stock`, variacionesModal);
+                                        alert("Stock de variaciones actualizado correctamente.");
+                                        setProductoVariacionAbierto(null);
+                                        cargarSincronizacionMaster();
+                                    } catch (err) {
+                                        alert("Error al actualizar unidades.");
+                                    }
+                                }}
+                            >
+                                Actualizar unidades
+                            </button>
+
+                            <button 
+                                type="button"
+                                className={`${styles.btn} ${styles.btnSecondary}`}
+                                style={{ padding: '10px' }}
+                                onClick={() => {
+                                    const prod = productoVariacionAbierto;
+                                    setProductoVariacionAbierto(null);
+                                    editarProducto(prod);
+                                }}
+                            >
+                                Editar producto
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
             {/* MODAL INTEGRADO DE ERRORES/EXCEPCIONES */}
             {errorModal.visible && (
