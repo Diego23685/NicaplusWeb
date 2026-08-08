@@ -199,14 +199,15 @@ export const Reportes: React.FC = () => {
         if (!window.confirm(`¿Está completamente seguro de ELIMINAR la factura #000${id}? Esta acción revertirá inventarios y eliminará el ingreso de caja de forma permanente.`)) return;
         
         try {
-            await api.delete(`/ventas/${id}`);
-            alert("Venta eliminada e inventarios restaurados.");
+            const res = await api.delete(`/ventas/${id}`);
+            alert(res.data?.mensaje || "Venta eliminada e inventarios restaurados.");
             setVentaAEditar(null);
             setCargandoTabla(true);
             cargarHistorialVentas();
+            api.get('/products').then(resProd => setProductos(resProd.data)).catch(() => {});
             if (desde && hasta) ConsultarReporte();
         } catch (err: any) {
-            alert(err.response?.data || "Error al eliminar la venta.");
+            alert(err.response?.data?.mensaje || err.response?.data || "Error al eliminar la venta.");
         }
     };
 
