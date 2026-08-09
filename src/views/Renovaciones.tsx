@@ -27,6 +27,7 @@ interface HistorialRenovacion {
     fechaPago: string;
     nuevaFechaVencimiento: string;
     observacion: string;
+    idVenta?: number; // 🟢 ID DE LA FACTURA ASOCIADA
 }
 
 export const Renovaciones: React.FC = () => {
@@ -94,7 +95,6 @@ export const Renovaciones: React.FC = () => {
         const credenciales = item.detallesCredenciales || 'No especificada';
         const monto = item.costoRenovacion ?? 0;
 
-        // Formatear la fecha a: "DD de [Mes en letras] del YYYY"
         const fechaObj = new Date(item.fechaVencimiento);
         const fechaVencimiento = new Intl.DateTimeFormat('es-ES', {
             day: 'numeric',
@@ -105,7 +105,6 @@ export const Renovaciones: React.FC = () => {
         let mensaje = '';
 
         if (item.diasRestantes === 0) {
-            // Plantilla: Vence hoy
             mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
                 `Hola, *${clienteNombre}*. 👋\n\n` +
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
@@ -117,7 +116,6 @@ export const Renovaciones: React.FC = () => {
                 `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
 
         } else if (item.diasRestantes < 0) {
-            // Plantilla: Suscripción vencida
             mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
                 `Hola, *${clienteNombre}*. 👋\n\n` +
                 `Te saludamos de *NICAPLUS STREAM.*\n\n` +
@@ -130,7 +128,6 @@ export const Renovaciones: React.FC = () => {
                 `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
 
         } else {
-            // Plantilla: Vence en N días
             const diasTexto = item.diasRestantes === 1 ? '1 día' : `${item.diasRestantes} días`;
             mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
                 `Hola, *${clienteNombre}*. 👋\n\n` +
@@ -384,7 +381,21 @@ export const Renovaciones: React.FC = () => {
                     ) : (
                         historialRenovaciones.map((r) => (
                             <div key={r.id} className={styles.historialCard}>
-                                <strong>💰 ${r.monto}</strong>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <strong>💰 C${r.monto}</strong>
+                                    {r.idVenta && (
+                                        <span style={{ 
+                                            background: '#334155', 
+                                            color: '#38bdf8', 
+                                            padding: '2px 8px', 
+                                            borderRadius: '4px', 
+                                            fontSize: '0.75rem', 
+                                            fontWeight: 'bold' 
+                                        }}>
+                                            Factura #{r.idVenta}
+                                        </span>
+                                    )}
+                                </div>
                                 <small>Método: {r.metodoPago}</small>
                                 <small>Fecha pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
                                 <small className={styles.vencimientoFuturo}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
