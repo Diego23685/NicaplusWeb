@@ -198,7 +198,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                         <FaMoneyBillWave className={styles.actionIcon} />
                         <span>Cobrar</span>
                     </button>
-                    <button onClick={() => setVistaActiva('clientes')} className={styles.actionBtnSecondary}>
+                    <button onClick={() => setVistaActiva('crm')} className={styles.actionBtnSecondary}>
                         <FaUsers className={styles.actionIcon} />
                         <span>Clientes</span>
                     </button>
