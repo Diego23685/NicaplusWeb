@@ -670,3 +670,219 @@
   border-radius: 6px;
   font-weight: 700;
 }
+
+/* ==================== ESTILOS MÓVIL TIPO APP ==================== */
+.mobileContainer {
+    padding: 12px;
+    padding-bottom: 80px;
+    background-color: #0f172a;
+    color: #f8fafc;
+    min-height: 100vh;
+}
+
+.topSummaryCard {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.summaryHeader {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.liveDot {
+    color: #10b981;
+}
+
+.totalAmount {
+    font-size: 1.8rem;
+    margin: 8px 0;
+    color: #38bdf8;
+    font-weight: 700;
+}
+
+.quickMetricsRow {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.miniMetric, .miniMetricUrgent {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+.miniMetricUrgent {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.quickActionsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.actionBtnPrimary, .actionBtnWarning, .actionBtnSecondary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.actionBtnPrimary { background: #0284c7; color: #fff; }
+.actionBtnWarning { background: #d97706; color: #fff; }
+.actionBtnSecondary { background: #334155; color: #f8fafc; }
+
+/* Corrección para el buscador móvil */
+.searchBoxWrapper {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+}
+
+.searchBoxInput {
+    width: 100%;
+    box-sizing: border-box; /* Previene que el padding expanda el ancho total */
+    padding: 12px 40px 12px 40px; /* Espacio para icono izquierdo e icono derecho */
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.searchBoxIcon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%); /* Centra verticalmente el icono */
+    color: #64748b;
+    pointer-events: none;
+}
+
+.clearIcon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%); /* Centra verticalmente el botón de limpiar */
+    color: #64748b;
+    cursor: pointer;
+}
+
+.mobileSearchResults, .urgentFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mobileResultCard, .alertCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.bottomNav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #1e293b;
+    border-top: 1px solid #334155;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+}
+
+.navItem, .navItemActive {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.navItemActive {
+    color: #38bdf8;
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   11. REFINAMIENTOS Y CLASES FALTANTES PARA VISTA MÓVIL
+   ========================================================================== */
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.cryptoText {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  margin: 4px 0 0 0;
+  word-break: break-all;
+}
+
+.statusRed {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.statusGreen {
+  border-left: 4px solid #10b981 !important;
+}
+
+.feedTitle {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.emptyAlerts {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.badge {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+}

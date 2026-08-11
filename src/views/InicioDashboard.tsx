@@ -4,11 +4,12 @@ import {
     FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
     FaChartLine, FaPercentage, FaExclamationTriangle, 
     FaCalendarDay, FaCalendarTimes, FaClipboardList,
-    FaSearch, FaUser, FaTv, FaLock, FaTimes
+    FaSearch, FaUser, FaTv, FaLock, FaTimes,
+    FaReceipt, FaUsers, FaTools
 } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
-import styles from '../assets/styles/InicioDashboard.module.css'; // ◄ NUEVOS ESTILOS PREMIUM
+import styles from '../assets/styles/InicioDashboard.module.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -17,6 +18,9 @@ interface InicioDashboardProps {
 }
 
 export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva }) => {
+    // Detectar pantalla móvil
+    const [esMobile, setEsMobile] = useState<boolean>(window.innerWidth <= 768);
+
     const [resumen, setResumen] = useState<any>({
         ventasDia: 0,
         ventasSemana: 0,
@@ -35,10 +39,16 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     const [cargando, setCargando] = useState(true);
     const [indicadores, setIndicadores] = useState<any>(null);
 
-    // NUEVOS ESTADOS: Buscador Universal Integrado
+    // Estados para Búsqueda Universal
     const [query, setQuery] = useState('');
     const [resultados, setResultados] = useState<any>(null);
     const [buscando, setBuscando] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => setEsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const cargarDatosDashboard = async () => {
@@ -153,6 +163,116 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
         );
     }
 
+    /* =========================================================
+       1. VISTA MÓVIL TOTALMENTE DISTINTA (ESTILO ERP MÓVIL / TREINTA)
+       ========================================================= */
+    if (esMobile) {
+        return (
+            <div className={styles.mobileContainer}>
+                {/* SALDO PRINCIPAL DE HOY Y ACCIONES URGENTES */}
+                <div className={styles.topSummaryCard}>
+                    <div className={styles.summaryHeader}>
+                        <span>VENTAS DE HOY</span>
+                        <span className={styles.liveDot}>● SISTEMA ACTIVO</span>
+                    </div>
+                    <h2 className={styles.totalAmount}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h2>
+                    <div className={styles.quickMetricsRow}>
+                        <div onClick={() => setVistaActiva('renovaciones')} className={styles.miniMetricUrgent}>
+                            <FaCalendarTimes />
+                            <span>{resumen.renovacionesVencidas} Vencidas</span>
+                        </div>
+                        <div onClick={() => setVistaActiva('taller')} className={styles.miniMetric}>
+                            <FaTools />
+                            <span>{resumen.ticketsAbiertos} Taller</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ACCIONES RÁPIDAS OPERATIVAS (TIPO TREINTA) */}
+                <div className={styles.quickActionsGrid}>
+                    <button onClick={() => setVistaActiva('caja')} className={styles.actionBtnPrimary}>
+                        <FaReceipt className={styles.actionIcon} />
+                        <span>Nueva Venta</span>
+                    </button>
+                    <button onClick={() => setVistaActiva('renovaciones')} className={styles.actionBtnWarning}>
+                        <FaMoneyBillWave className={styles.actionIcon} />
+                        <span>Cobrar</span>
+                    </button>
+                    <button onClick={() => setVistaActiva('clientes')} className={styles.actionBtnSecondary}>
+                        <FaUsers className={styles.actionIcon} />
+                        <span>Clientes</span>
+                    </button>
+                    <button onClick={() => setVistaActiva('taller')} className={styles.actionBtnSecondary}>
+                        <FaTools className={styles.actionIcon} />
+                        <span>Taller</span>
+                    </button>
+                </div>
+
+                {/* BUSCADOR UNIVERSAL MÓVIL */}
+                <div className={styles.searchBoxWrapper}>
+                    <FaSearch className={styles.searchBoxIcon} />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar cliente, correo o cuenta..." 
+                        value={query}
+                        onChange={(e) => ejecutarBusqueda(e.target.value)}
+                        className={styles.searchBoxInput}
+                    />
+                    {query && <FaTimes onClick={limpiarBuscador} className={styles.clearIcon} />}
+                </div>
+
+                {/* CONTENIDO DINÁMICO: BÚSQUEDA O ATENCIÓN URGENTE */}
+                {buscando ? (
+                    <div className={styles.mobileSearchResults}>
+                        {resultados?.clientes?.map((c: any, i: number) => (
+                            <div key={i} className={styles.mobileResultCard}>
+                                <strong>{c.nombre}</strong>
+                                <p>📱 {c.telefono || 'Sin teléfono'}</p>
+                                <small>Servicios Activos: {c.serviciosActivos?.length || 0}</small>
+                            </div>
+                        ))}
+                        {resultados?.cuentas?.map((cu: any, i: number) => (
+                            <div key={i} className={`${styles.mobileResultCard} ${cu.ocupado ? styles.statusRed : styles.statusGreen}`}>
+                                <div className={styles.cardRow}>
+                                    <strong>{cu.servicio} - {cu.nombrePerfil}</strong>
+                                    <span className={styles.badge}>{cu.ocupado ? 'Ocupado' : 'LIBRE'}</span>
+                                </div>
+                                <p className={styles.cryptoText}>PIN: {cu.pin} | Pass: {cu.clave}</p>
+                            </div>
+                        ))}
+                        {resultados?.clientes?.length === 0 && resultados?.cuentas?.length === 0 && (
+                            <div className={styles.noResultsCard}>No se encontraron registros.</div>
+                        )}
+                    </div>
+                ) : (
+                    <div className={styles.urgentFeed}>
+                        <h4 className={styles.feedTitle}><FaExclamationTriangle /> Alertas del Sistema</h4>
+                        {resumen.alertas.length > 0 ? (
+                            resumen.alertas.map((alerta: string, idx: number) => (
+                                <div key={idx} className={styles.alertCard}>
+                                    {alerta}
+                                </div>
+                            ))
+                        ) : (
+                            <div className={styles.emptyAlerts}>Sistema operando con normalidad.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* BARRA NAVEGACIÓN INFERIOR PINADA AL NAVEGAR */}
+                <nav className={styles.bottomNav}>
+                    <button onClick={() => setVistaActiva('inicio')} className={styles.navItemActive}>Inicio</button>
+                    <button onClick={() => setVistaActiva('caja')} className={styles.navItem}>Caja</button>
+                    <button onClick={() => setVistaActiva('renovaciones')} className={styles.navItem}>Cobros</button>
+                    <button onClick={() => setVistaActiva('taller')} className={styles.navItem}>Taller</button>
+                </nav>
+            </div>
+        );
+    }
+
+    /* =========================================================
+       2. VISTA ESCRITORIO (PANEL ANALÍTICO COMPLETO)
+       ========================================================= */
     return (
         <div className={styles.dashboardContainer}>
             
