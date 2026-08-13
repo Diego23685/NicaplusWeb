@@ -11,7 +11,8 @@ import {
   FaEdit,
   FaTrash,
   FaTimes,
-  FaHistory
+  FaHistory,
+  FaSearch
 } from 'react-icons/fa';
 import styles from '../assets/styles/Proveedores.module.css';
 
@@ -26,6 +27,12 @@ export const Proveedores: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<number | null>(null);
 
+  // BUSCADORES DE TABLAS Y FORMULARIOS
+  const [busquedaProducto, setBusquedaProducto] = useState('');
+  const [mostrarDropdownProd, setMostrarDropdownProd] = useState(false);
+  const [filtroTablaProveedores, setFiltroTablaProveedores] = useState('');
+  const [filtroTablaHistorial, setFiltroTablaHistorial] = useState('');
+
   // FORMULARIO PROVEEDOR
   const [razonSocial, setRazonSocial] = useState('');
   const [ruc, setRuc] = useState('');
@@ -35,8 +42,8 @@ export const Proveedores: React.FC = () => {
   // FORMULARIO COMPRA
   const [idProvSeleccionado, setIdProvSeleccionado] = useState('');
   const [idProdSeleccionado, setIdProdSeleccionado] = useState('');
-  const [idVariacionSeleccionada, setIdVariacionSeleccionada] = useState(''); // <--- NUEVO
-  const [variacionesDisponibles, setVariacionesDisponibles] = useState<any[]>([]); // <--- NUEVO
+  const [idVariacionSeleccionada, setIdVariacionSeleccionada] = useState('');
+  const [variacionesDisponibles, setVariacionesDisponibles] = useState<any[]>([]);
 
   const [cantidadCompra, setCantidadCompra] = useState(1);
   const [costoUnitarioCompra, setCostoUnitarioCompra] = useState(0);
@@ -86,29 +93,25 @@ export const Proveedores: React.FC = () => {
     cargarDatos();
   }, []);
 
-  // SELECCIÓN DE PRODUCTO CON MANEJO DE VARIANTES
-  const seleccionarProductoCompra = (idProdStr: string) => {
-    setIdProdSeleccionado(idProdStr);
+  // SELECCIÓN DE PRODUCTO DESDE EL BUSCADOR
+  const seleccionarProductoDesdeBuscador = (prod: any) => {
+    const idProd = prod.id ?? prod.Id;
+    setIdProdSeleccionado(String(idProd));
+    setBusquedaProducto(prod.nombre ?? prod.Nombre);
+    setMostrarDropdownProd(false);
     setIdVariacionSeleccionada('');
-    
-    const prod = productos.find(p => (p.id ?? p.Id) === Number(idProdStr));
-    
-    if (prod) {
-      // Normalizar la lectura de variaciones (soporta camelCase y PascalCase)
-      const tieneVars = prod.tieneVariaciones ?? prod.TieneVariaciones ?? false;
-      const vars = prod.variaciones ?? prod.Variaciones ?? [];
 
-      if (tieneVars && vars.length > 0) {
-        setVariacionesDisponibles(vars);
-        setCostoUnitarioCompra(0);
-        setNuevoPrecioVenta('');
-      } else {
-        setVariacionesDisponibles([]);
-        setCostoUnitarioCompra(prod.precioCosto ?? prod.PrecioCosto ?? 0);
-        setNuevoPrecioVenta(prod.precioVenta ?? prod.PrecioVenta ?? 0);
-      }
+    const tieneVars = prod.tieneVariaciones ?? prod.TieneVariaciones ?? false;
+    const vars = prod.variaciones ?? prod.Variaciones ?? [];
+
+    if (tieneVars && vars.length > 0) {
+      setVariacionesDisponibles(vars);
+      setCostoUnitarioCompra(0);
+      setNuevoPrecioVenta('');
     } else {
       setVariacionesDisponibles([]);
+      setCostoUnitarioCompra(prod.precioCosto ?? prod.PrecioCosto ?? 0);
+      setNuevoPrecioVenta(prod.precioVenta ?? prod.PrecioVenta ?? 0);
     }
   };
 
@@ -245,7 +248,10 @@ export const Proveedores: React.FC = () => {
 
   const registrarIngresoInventario = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!idProvSeleccionado || !idProdSeleccionado) return;
+    if (!idProvSeleccionado || !idProdSeleccionado) {
+      alert("Debe seleccionar un proveedor y un producto válido.");
+      return;
+    }
 
     if (variacionesDisponibles.length > 0 && !idVariacionSeleccionada) {
       alert("Este producto requiere seleccionar una variante específica.");
@@ -273,6 +279,7 @@ export const Proveedores: React.FC = () => {
       await api.post('/proveedores/compras', payload);
       alert("Compra registrada correctamente.");
       setIdProdSeleccionado('');
+      setBusquedaProducto('');
       setIdVariacionSeleccionada('');
       setVariacionesDisponibles([]);
       setCantidadCompra(1);
@@ -284,6 +291,32 @@ export const Proveedores: React.FC = () => {
       alert(err.response?.data?.mensaje || "No fue posible registrar la compra.");
     }
   };
+
+  // FILTRADO DE DATOS
+  const productosFiltradosBusqueda = productos.filter(p => {
+    const query = busquedaProducto.toLowerCase().trim();
+    if (!query) return true;
+    const nombre = (p.nombre ?? p.Nombre ?? '').toLowerCase();
+    return nombre.includes(query);
+  });
+
+  const proveedoresFiltradosTabla = proveedores.filter(p => {
+    const q = filtroTablaProveedores.toLowerCase().trim();
+    if (!q) return true;
+    return (p.razonSocial || '').toLowerCase().includes(q) ||
+           (p.ruc || '').toLowerCase().includes(q) ||
+           (p.telefono || '').toLowerCase().includes(q);
+  });
+
+  const historialFiltradoTabla = historialCompras.filter(c => {
+    const q = filtroTablaHistorial.toLowerCase().trim();
+    if (!q) return true;
+    const prov = (c.proveedorNombre || '').toLowerCase();
+    const obs = (c.observaciones || '').toLowerCase();
+    const idStr = String(c.id);
+    const prodNames = c.detalles?.map((d: any) => (d.productoNombre || '').toLowerCase()).join(' ') || '';
+    return prov.includes(q) || obs.includes(q) || idStr.includes(q) || prodNames.includes(q);
+  });
 
   if (cargando) {
     return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Analizando abastecimiento...</div>;
@@ -374,17 +407,83 @@ export const Proveedores: React.FC = () => {
                   </div>
                 </div>
 
-                <div className={styles.gridSpan2}>
+                {/* BUSCADOR DE PRODUCTOS AUTOCOMPLETE */}
+                <div className={styles.gridSpan2} style={{ position: 'relative' }}>
                   <div className={styles.formGroup}>
-                    <label>Producto</label>
-                    <select value={idProdSeleccionado} onChange={e => seleccionarProductoCompra(e.target.value)} className={styles.input} required>
-                      <option value="">Seleccionar producto</option>
-                      {productos.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.nombre} {p.tieneVariaciones ? '(Tiene Variantes)' : `(Stock: ${p.stockActual})`}
-                        </option>
-                      ))}
-                    </select>
+                    <label>Buscar Producto</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Escribe el nombre del producto..."
+                        value={busquedaProducto}
+                        onChange={e => {
+                          setBusquedaProducto(e.target.value);
+                          setIdProdSeleccionado('');
+                          setVariacionesDisponibles([]);
+                          setMostrarDropdownProd(true);
+                        }}
+                        onFocus={() => setMostrarDropdownProd(true)}
+                        className={styles.input}
+                        style={{ paddingRight: '30px' }}
+                        required
+                      />
+                      <FaSearch style={{ position: 'absolute', right: '10px', color: '#94a3b8' }} />
+                    </div>
+
+                    {/* DROPDOWN DE RESULTADOS EN TIEMPO REAL */}
+                    {mostrarDropdownProd && (
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 99,
+                          background: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)'
+                        }}
+                      >
+                        {productosFiltradosBusqueda.length > 0 ? (
+                          productosFiltradosBusqueda.map(p => {
+                            const idProd = p.id ?? p.Id;
+                            const tieneVars = p.tieneVariaciones ?? p.TieneVariaciones;
+                            const stock = p.stockActual ?? p.StockActual;
+
+                            return (
+                              <div
+                                key={idProd}
+                                onClick={() => seleccionarProductoDesdeBuscador(p)}
+                                style={{
+                                  padding: '10px 12px',
+                                  cursor: 'pointer',
+                                  borderBottom: '1px solid #334155',
+                                  fontSize: '0.85rem',
+                                  color: '#f8fafc',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#334155')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                              >
+                                <span>{p.nombre}</span>
+                                <small style={{ color: tieneVars ? '#38bdf8' : '#94a3b8', fontSize: '0.75rem' }}>
+                                  {tieneVars ? 'Tiene Variantes' : `Stock: ${stock}`}
+                                </small>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div style={{ padding: '10px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>
+                            No se encontraron productos
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -397,7 +496,7 @@ export const Proveedores: React.FC = () => {
                         value={idVariacionSeleccionada} 
                         onChange={e => seleccionarVariacionCompra(e.target.value)} 
                         className={styles.input} 
-                        style={{ border: '1px solid #38bdf8' }}
+                        style={{ border: '1px solid #38bdf8', background: 'rgba(56, 189, 248, 0.05)' }}
                         required
                       >
                         <option value="">Seleccionar variante (Color/Capacidad/RAM)</option>
@@ -471,9 +570,23 @@ export const Proveedores: React.FC = () => {
             </div>
           </div>
 
-          {/* TABLA DE PROVEEDORES REGISTRADOS */}
+          {/* TABLA DE PROVEEDORES REGISTRADOS CON BUSCADOR */}
           <div className={styles.tablePanel}>
-            <h4>Proveedores registrados</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ margin: 0 }}>Proveedores registrados</h4>
+              <div style={{ position: 'relative', width: '250px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Filtrar proveedores..."
+                  value={filtroTablaProveedores}
+                  onChange={e => setFiltroTablaProveedores(e.target.value)}
+                  className={styles.input}
+                  style={{ paddingRight: '30px', fontSize: '0.85rem' }}
+                />
+                <FaSearch style={{ position: 'absolute', right: '10px', top: '30%', color: '#94a3b8' }} />
+              </div>
+            </div>
+
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
@@ -486,7 +599,7 @@ export const Proveedores: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {proveedores.map(p => (
+                  {proveedoresFiltradosTabla.map(p => (
                     <tr key={p.id}>
                       <td>{p.razonSocial}</td>
                       <td>{p.ruc}</td>
@@ -498,10 +611,10 @@ export const Proveedores: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {proveedores.length === 0 && (
+                  {proveedoresFiltradosTabla.length === 0 && (
                     <tr>
                       <td colSpan={5} style={{ padding: 25, textAlign: "center", color: "#94a3b8" }}>
-                        No existen proveedores registrados.
+                        No existen proveedores que coincidan con la búsqueda.
                       </td>
                     </tr>
                   )}
@@ -514,7 +627,21 @@ export const Proveedores: React.FC = () => {
 
       {subTab === "historial" && (
         <div className={styles.tablePanel}>
-          <h4><FaHistory /> Historial de Compras y Lotes Abastecidos</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h4 style={{ margin: 0 }}><FaHistory /> Historial de Compras y Lotes Abastecidos</h4>
+            <div style={{ position: 'relative', width: '300px' }}>
+              <input 
+                type="text" 
+                placeholder="Buscar por N° Orden, producto o nota..."
+                value={filtroTablaHistorial}
+                onChange={e => setFiltroTablaHistorial(e.target.value)}
+                className={styles.input}
+                style={{ paddingRight: '30px', fontSize: '0.85rem' }}
+              />
+              <FaSearch style={{ position: 'absolute', right: '10px', top: '30%', color: '#94a3b8' }} />
+            </div>
+          </div>
+
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
@@ -529,7 +656,7 @@ export const Proveedores: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {historialCompras.map(c => (
+                {historialFiltradoTabla.map(c => (
                   <tr key={c.id}>
                     <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>#{c.id}</td>
                     <td>{new Date(c.fechaCompra).toLocaleDateString()}</td>
@@ -565,10 +692,10 @@ export const Proveedores: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {historialCompras.length === 0 && (
+                {historialFiltradoTabla.length === 0 && (
                   <tr>
                     <td colSpan={7} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
-                      No hay compras registradas en el historial.
+                      No hay compras que coincidan con la búsqueda.
                     </td>
                   </tr>
                 )}
