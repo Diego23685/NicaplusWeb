@@ -35,6 +35,9 @@ export const Proveedores: React.FC = () => {
   // FORMULARIO COMPRA
   const [idProvSeleccionado, setIdProvSeleccionado] = useState('');
   const [idProdSeleccionado, setIdProdSeleccionado] = useState('');
+  const [idVariacionSeleccionada, setIdVariacionSeleccionada] = useState(''); // <--- NUEVO
+  const [variacionesDisponibles, setVariacionesDisponibles] = useState<any[]>([]); // <--- NUEVO
+
   const [cantidadCompra, setCantidadCompra] = useState(1);
   const [costoUnitarioCompra, setCostoUnitarioCompra] = useState(0);
   const [nuevoPrecioVenta, setNuevoPrecioVenta] = useState<number | ''>('');
@@ -83,12 +86,39 @@ export const Proveedores: React.FC = () => {
     cargarDatos();
   }, []);
 
+  // SELECCIÓN DE PRODUCTO CON MANEJO DE VARIANTES
   const seleccionarProductoCompra = (idProdStr: string) => {
     setIdProdSeleccionado(idProdStr);
+    setIdVariacionSeleccionada('');
+    
     const prod = productos.find(p => (p.id ?? p.Id) === Number(idProdStr));
+    
     if (prod) {
-      setCostoUnitarioCompra(prod.precioCosto ?? prod.PrecioCosto ?? 0);
-      setNuevoPrecioVenta(prod.precioVenta ?? prod.PrecioVenta ?? 0);
+      // Normalizar la lectura de variaciones (soporta camelCase y PascalCase)
+      const tieneVars = prod.tieneVariaciones ?? prod.TieneVariaciones ?? false;
+      const vars = prod.variaciones ?? prod.Variaciones ?? [];
+
+      if (tieneVars && vars.length > 0) {
+        setVariacionesDisponibles(vars);
+        setCostoUnitarioCompra(0);
+        setNuevoPrecioVenta('');
+      } else {
+        setVariacionesDisponibles([]);
+        setCostoUnitarioCompra(prod.precioCosto ?? prod.PrecioCosto ?? 0);
+        setNuevoPrecioVenta(prod.precioVenta ?? prod.PrecioVenta ?? 0);
+      }
+    } else {
+      setVariacionesDisponibles([]);
+    }
+  };
+
+  // SELECCIÓN DE VARIANTE
+  const seleccionarVariacionCompra = (idVarStr: string) => {
+    setIdVariacionSeleccionada(idVarStr);
+    const variacion = variacionesDisponibles.find(v => (v.id ?? v.Id) === Number(idVarStr));
+    if (variacion) {
+      setCostoUnitarioCompra(variacion.precioCosto ?? variacion.PrecioCosto ?? 0);
+      setNuevoPrecioVenta(variacion.precioVenta ?? variacion.PrecioVenta ?? 0);
     }
   };
 
@@ -127,9 +157,21 @@ export const Proveedores: React.FC = () => {
   const abrirModalEditarCompra = (compra: any) => {
     const detallesFormateados = compra.detalles?.map((d: any) => {
       const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+      let precioActual = 0;
+      
+      if (prod) {
+        if (d.idVariacion && prod.variaciones) {
+          const varEncontrada = prod.variaciones.find((v: any) => (v.id ?? v.Id) === d.idVariacion);
+          precioActual = varEncontrada ? (varEncontrada.precioVenta ?? varEncontrada.PrecioVenta ?? 0) : 0;
+        } else {
+          precioActual = prod.precioVenta ?? prod.PrecioVenta ?? 0;
+        }
+      }
+
       return {
         ...d,
-        nuevoPrecioVenta: prod ? (prod.precioVenta ?? prod.PrecioVenta ?? 0) : 0
+        idVariacion: d.idVariacion || null,
+        nuevoPrecioVenta: precioActual
       };
     }) || [];
 
@@ -151,9 +193,10 @@ export const Proveedores: React.FC = () => {
       observaciones: compraAEditar.observaciones || '',
       detalles: compraAEditar.detalles.map((d: any) => ({
         idProducto: Number(d.idProducto),
+        idVariacion: d.idVariacion ? Number(d.idVariacion) : null,
         cantidad: Number(d.cantidad),
         costoUnitario: Number(d.costoUnitario),
-        nuevoPrecioVenta: d.nuevoPrecioVenta ? Number(d.nuevoPrecioVenta) : null,
+        nuevoPrecioVenta: d.nuevoPrecioVenta !== '' ? Number(d.nuevoPrecioVenta) : null,
         garantiaDiasPactada: Number(d.garantiaDiasPactada || 0)
       }))
     };
@@ -182,7 +225,7 @@ export const Proveedores: React.FC = () => {
 
   const guardarProveedor = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { razonSocial, ruc, telephone: telefono, email };
+    const payload = { razonSocial, ruc, telefono, email };
 
     try {
       if (editando === null) {
@@ -204,6 +247,11 @@ export const Proveedores: React.FC = () => {
     e.preventDefault();
     if (!idProvSeleccionado || !idProdSeleccionado) return;
 
+    if (variacionesDisponibles.length > 0 && !idVariacionSeleccionada) {
+      alert("Este producto requiere seleccionar una variante específica.");
+      return;
+    }
+
     const payload = {
       idProveedor: Number(idProvSeleccionado),
       totalCompra: cantidadCompra * costoUnitarioCompra,
@@ -212,6 +260,7 @@ export const Proveedores: React.FC = () => {
       detalles: [
         {
           idProducto: Number(idProdSeleccionado),
+          idVariacion: idVariacionSeleccionada ? Number(idVariacionSeleccionada) : null,
           cantidad: Number(cantidadCompra),
           costoUnitario: Number(costoUnitarioCompra),
           nuevoPrecioVenta: nuevoPrecioVenta !== '' ? Number(nuevoPrecioVenta) : null,
@@ -224,13 +273,15 @@ export const Proveedores: React.FC = () => {
       await api.post('/proveedores/compras', payload);
       alert("Compra registrada correctamente.");
       setIdProdSeleccionado('');
+      setIdVariacionSeleccionada('');
+      setVariacionesDisponibles([]);
       setCantidadCompra(1);
       setCostoUnitarioCompra(0);
       setNuevoPrecioVenta('');
       setObservacionesCompra('');
       await cargarDatos();
-    } catch {
-      alert("No fue posible registrar la compra.");
+    } catch (err: any) {
+      alert(err.response?.data?.mensaje || "No fue posible registrar la compra.");
     }
   };
 
@@ -328,10 +379,45 @@ export const Proveedores: React.FC = () => {
                     <label>Producto</label>
                     <select value={idProdSeleccionado} onChange={e => seleccionarProductoCompra(e.target.value)} className={styles.input} required>
                       <option value="">Seleccionar producto</option>
-                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stockActual})</option>)}
+                      {productos.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre} {p.tieneVariaciones ? '(Tiene Variantes)' : `(Stock: ${p.stockActual})`}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
+
+                {/* SELECTOR DESPLEGABLE DE VARIANTES SI EXISTEN */}
+                {variacionesDisponibles.length > 0 && (
+                  <div className={styles.gridSpan2}>
+                    <div className={styles.formGroup}>
+                      <label style={{ color: '#38bdf8', fontWeight: 'bold' }}>Variante Específica *</label>
+                      <select 
+                        value={idVariacionSeleccionada} 
+                        onChange={e => seleccionarVariacionCompra(e.target.value)} 
+                        className={styles.input} 
+                        style={{ border: '1px solid #38bdf8' }}
+                        required
+                      >
+                        <option value="">Seleccionar variante (Color/Capacidad/RAM)</option>
+                        {variacionesDisponibles.map(v => {
+                          const idVar = v.id ?? v.Id;
+                          const nombreVar = v.nombreVariacion ?? v.NombreVariacion ?? 'Variante';
+                          const colorVar = v.color ?? v.Color ?? '';
+                          const almacVar = v.almacenamiento ?? v.Almacenamiento ?? '';
+                          const stockVar = v.stockActual ?? v.StockActual ?? 0;
+
+                          return (
+                            <option key={idVar} value={idVar}>
+                              {nombreVar} {colorVar && `- ${colorVar}`} {almacVar} (Stock: {stockVar})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 <div className={styles.formGroup}>
                   <label>Cantidad</label>
@@ -451,7 +537,11 @@ export const Proveedores: React.FC = () => {
                     <td>
                       <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                         {c.detalles?.map((d: any, idx: number) => (
-                          <div key={idx}>• {d.cantidad}x {d.productoNombre} (a C$ {d.costoUnitario})</div>
+                          <div key={idx}>
+                            • {d.cantidad}x {d.productoNombre} 
+                            {d.variacionNombre && <strong style={{ color: '#38bdf8' }}> ({d.variacionNombre})</strong>} 
+                            (a C$ {d.costoUnitario})
+                          </div>
                         ))}
                       </div>
                     </td>
@@ -548,7 +638,7 @@ export const Proveedores: React.FC = () => {
       {/* MODAL DE EDICIÓN DE COMPRA */}
       {compraAEditar && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalContent} style={{ maxWidth: '650px', width: '90%' }}>
+          <div className={styles.modalContent} style={{ maxWidth: '750px', width: '90%' }}>
             <div className={styles.modalHeader}>
               <h4>🛠️ Auditoría de Compra #{compraAEditar.id}</h4>
               <button onClick={() => setCompraAEditar(null)} className={styles.btnCancelar}>
@@ -583,73 +673,102 @@ export const Proveedores: React.FC = () => {
               <div>
                 <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>Detalle de Lote e Ítems</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                  {compraAEditar.detalles?.map((det: any, idx: number) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '6px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '6px' }}>
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Producto</small>
-                        <select 
-                          value={det.idProducto} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].idProducto = Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ fontSize: '0.75rem', padding: '4px' }}
-                        >
-                          {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                        </select>
-                      </div>
+                  {compraAEditar.detalles?.map((det: any, idx: number) => {
+                    const prodSeleccionado = productos.find(p => (p.id ?? p.Id) === det.idProducto);
+                    const tieneVars = prodSeleccionado?.tieneVariaciones && prodSeleccionado?.variaciones?.length > 0;
 
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cantidad</small>
-                        <input 
-                          type="number" 
-                          min={1} 
-                          value={det.cantidad} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].cantidad = Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ padding: '4px', textAlign: 'center' }}
-                        />
-                      </div>
+                    return (
+                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: tieneVars ? '1.5fr 1.5fr 1fr 1fr 1fr' : '2fr 1fr 1fr 1fr', gap: '6px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '6px' }}>
+                        <div>
+                          <small style={{ fontSize: '9px', color: '#94a3b8' }}>Producto</small>
+                          <select 
+                            value={det.idProducto} 
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              const newProdId = Number(e.target.value);
+                              copia[idx].idProducto = newProdId;
+                              copia[idx].idVariacion = null;
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.input}
+                            style={{ fontSize: '0.75rem', padding: '4px' }}
+                          >
+                            {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                          </select>
+                        </div>
 
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#94a3b8' }}>Costo Unit.</small>
-                        <input 
-                          type="number" 
-                          min={0} 
-                          value={det.costoUnitario} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].costoUnitario = Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ padding: '4px', textAlign: 'center' }}
-                        />
-                      </div>
+                        {tieneVars && (
+                          <div>
+                            <small style={{ fontSize: '9px', color: '#38bdf8' }}>Variante</small>
+                            <select 
+                              value={det.idVariacion || ''} 
+                              onChange={e => {
+                                const copia = [...compraAEditar.detalles];
+                                copia[idx].idVariacion = e.target.value ? Number(e.target.value) : null;
+                                setCompraAEditar({ ...compraAEditar, detalles: copia });
+                              }}
+                              className={styles.input}
+                              style={{ fontSize: '0.75rem', padding: '4px' }}
+                              required
+                            >
+                              <option value="">Seleccionar variante</option>
+                              {prodSeleccionado.variaciones.map((v: any) => (
+                                <option key={v.id} value={v.id}>{v.nombreVariacion}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
-                      <div>
-                        <small style={{ fontSize: '9px', color: '#38bdf8' }}>Precio Venta</small>
-                        <input 
-                          type="number" 
-                          min={0} 
-                          value={det.nuevoPrecioVenta || ''} 
-                          onChange={e => {
-                            const copia = [...compraAEditar.detalles];
-                            copia[idx].nuevoPrecioVenta = e.target.value === '' ? '' : Number(e.target.value);
-                            setCompraAEditar({ ...compraAEditar, detalles: copia });
-                          }}
-                          className={styles.input}
-                          style={{ padding: '4px', textAlign: 'center' }}
-                        />
+                        <div>
+                          <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cantidad</small>
+                          <input 
+                            type="number" 
+                            min={1} 
+                            value={det.cantidad} 
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].cantidad = Number(e.target.value);
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.input}
+                            style={{ padding: '4px', textAlign: 'center' }}
+                          />
+                        </div>
+
+                        <div>
+                          <small style={{ fontSize: '9px', color: '#94a3b8' }}>Costo Unit.</small>
+                          <input 
+                            type="number" 
+                            min={0} 
+                            value={det.costoUnitario} 
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].costoUnitario = Number(e.target.value);
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.input}
+                            style={{ padding: '4px', textAlign: 'center' }}
+                          />
+                        </div>
+
+                        <div>
+                          <small style={{ fontSize: '9px', color: '#38bdf8' }}>Precio Venta</small>
+                          <input 
+                            type="number" 
+                            min={0} 
+                            value={det.nuevoPrecioVenta || ''} 
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].nuevoPrecioVenta = e.target.value === '' ? '' : Number(e.target.value);
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.input}
+                            style={{ padding: '4px', textAlign: 'center' }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
