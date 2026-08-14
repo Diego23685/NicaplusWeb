@@ -280,6 +280,12 @@ export const Taller: React.FC = () => {
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
                 <strong>FALLA:</strong><br>${datos.diagnostico}<br>
                 <div class="linea"></div>
+                <!-- AGREGADO: NOTAS DE GARANTÍA -->
+                ${datos.notasGarantia ? `
+                    <strong>CONDICIONES / GARANTÍA:</strong><br>
+                    <p style="font-size: 9px; margin: 4px 0;">${datos.notasGarantia}</p>
+                    <div class="linea"></div>
+                ` : ''}
                 <div class="center" style="margin-bottom: 30px;">Conserve este voucher para retirar su equipo.</div>
                 <script>
                     window.onload = function() {
