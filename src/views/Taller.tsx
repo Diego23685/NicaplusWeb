@@ -259,9 +259,19 @@ export const Taller: React.FC = () => {
             <head>
                 <title>Comprobante_Taller_${ordenId}</title>
                 <style>
-                    body { font-family: 'Courier New', monospace; width: 200px; margin: 10px; font-size: 11px; color: #000; line-height: 1.2; }
+                    /* Forzamos márgenes en 0 para evitar hojas extra */
+                    @page { margin: 0; }
+                    body { 
+                        font-family: 'Courier New', monospace; 
+                        width: 72mm; /* Ajuste óptimo para papel de 80mm */
+                        margin: 0 auto; 
+                        padding: 5px 0;
+                        font-size: 11px; 
+                        color: #000; 
+                        line-height: 1.2; 
+                    }
                     .center { text-align: center; }
-                    .linea { border-bottom: 1px dashed #000; margin: 8px 0; }
+                    .linea { border-bottom: 1px dashed #000; margin: 6px 0; }
                     .titulo { font-weight: bold; font-size: 13px; }
                 </style>
             </head>
@@ -280,13 +290,13 @@ export const Taller: React.FC = () => {
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
                 <strong>FALLA:</strong><br>${datos.diagnostico}<br>
                 <div class="linea"></div>
-                <!-- AGREGADO: NOTAS DE GARANTÍA -->
                 ${datos.notasGarantia ? `
                     <strong>CONDICIONES / GARANTÍA:</strong><br>
-                    <p style="font-size: 9px; margin: 4px 0;">${datos.notasGarantia}</p>
+                    <p style="font-size: 9px; margin: 3px 0;">${datos.notasGarantia}</p>
                     <div class="linea"></div>
                 ` : ''}
-                <div class="center" style="margin-bottom: 30px;">Conserve este voucher para retirar su equipo.</div>
+                <!-- Quitamos el margin-bottom para que corte inmediatamente al terminar -->
+                <div class="center" style="margin-bottom: 5px;">Conserve este voucher para retirar su equipo.</div>
                 <script>
                     window.onload = function() {
                         window.print();
