@@ -1,20 +1,22 @@
 // Taller.tsx
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { 
-    FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
-    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle 
-} from 'react-icons/fa';
-import styles from '../assets/styles/Taller.module.css'; // Importación de estilos modulares
+import { FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle } from 'react-icons/fa';
+import styles from '../assets/styles/Taller.module.css';
 
 interface Orden {
     id: number;
+    idCliente?: number | null;
+    clienteNombre: string;
+    clienteTelefono: string;
+    idUsuario?: number | null;
+    tecnicoNombre: string;
     dispositivo: string;
     diagnostico: string;
     estado: string;
     fechaIngreso: string;
+    fechaEntrega?: string | null;
     notas: string;
-    cliente?: { nombre: string; telefono: string; email: string };
 }
 
 interface Cliente {
@@ -24,36 +26,52 @@ interface Cliente {
     email: string;
 }
 
+interface DatosCliente {
+    nombre: string;
+    telefono: string;
+    email: string;
+}
+
 export const Taller: React.FC = () => {
+
+    // =========================================================
+    // DATOS PRINCIPALES
+    // =========================================================
+
     const [ordenes, setOrdenes] = useState<Orden[]>([]);
     const [clientes, setClientes] = useState<Cliente[]>([]);
+
     const [dispositivo, setDispositivo] = useState('');
     const [diagnostico, setDiagnostico] = useState('');
+
     const [notasGarantia, setNotasGarantia] = useState('Garantía de 30 días sobre la reparación efectuada. No cubre sellos rotos o humedad.');
-    
-    // Sistema de Notificaciones / Toast en lugar de Alerts
-    const [notificacion, setNotificacion] = useState<{ mostrar: boolean; mensaje: string; tipo: 'exito' | 'error' | 'warning' }>({
-        mostrar: false,
-        mensaje: '',
-        tipo: 'exito'
-    });
+
+    // =========================================================
+    // NOTIFICACIONES
+    // =========================================================
+
+    const [notificacion, setNotificacion] = useState<{ mostrar: boolean; mensaje: string; tipo: 'exito' | 'error' | 'warning'; }>({ mostrar: false, mensaje: '', tipo: 'exito' });
 
     const mostrarToast = (mensaje: string, tipo: 'exito' | 'error' | 'warning' = 'exito') => {
         setNotificacion({ mostrar: true, mensaje, tipo });
-        setTimeout(() => {
-            setNotificacion(prev => ({ ...prev, mostrar: false }));
-        }, 4000);
+        setTimeout(() => { setNotificacion(prev => ({ ...prev, mostrar: false })); }, 4000);
     };
 
-    // Gestión de Cliente (Selección o Registro Nuevo)
-    const [modoNuevoCliente, setModoNuevoCliente] = useState(false);
+    // =========================================================
+    // GESTIÓN DE CLIENTE
+    // =========================================================
+
+    const [modoCliente, setModoCliente] = useState<'existente' | 'nuevo' | 'no-identificado'>('existente');
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
     const [busquedaCliente, setBusquedaCliente] = useState('');
     const [nombreCliente, setNombreCliente] = useState('');
     const [telefonoCliente, setTelefonoCliente] = useState('');
     const [emailCliente, setEmailCliente] = useState('');
 
-    // Estados para el Modal de Entrega Final
+    // =========================================================
+    // MODAL DE ENTREGA
+    // =========================================================
+
     const [mostrarModalEntrega, setMostrarModalEntrega] = useState(false);
     const [ordenAEntregar, setOrdenAEntregar] = useState<Orden | null>(null);
     const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
@@ -61,36 +79,53 @@ export const Taller: React.FC = () => {
     const [costoReparacion, setCostoReparacion] = useState<number>(0);
     const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo');
 
-    // Estados para el modal de selección de Avisar / Imprimir
+    // =========================================================
+    // MODAL DE ACCIONES
+    // =========================================================
+
     const [mostrarModalAccion, setMostrarModalAccion] = useState(false);
     const [ordenParaAccion, setOrdenParaAccion] = useState<Orden | null>(null);
     const [tipoAccionContexto, setTipoAccionContexto] = useState<'AlListo' | 'AlEntregar'>('AlListo');
     const [datosEntregaCache, setDatosEntregaCache] = useState<any>(null);
 
+    // =========================================================
+    // CARGAR DATOS
+    // =========================================================
+
     const cargarDatos = async () => {
         try {
-            const [resOrdenes, resClientes] = await Promise.all([
-                api.get('/ordenesservicio'),
-                api.get('/clientes')
-            ]);
+            const [resOrdenes, resClientes] = await Promise.all([api.get('/ordenesservicio'), api.get('/clientes')]);
             setOrdenes(resOrdenes.data);
             setClientes(resClientes.data);
         } catch (err) {
-            console.error("Error al cargar datos del taller:", err);
-            mostrarToast("No se pudieron cargar los datos del taller.", "error");
+            console.error('Error al cargar datos del taller:', err);
+            mostrarToast('No se pudieron cargar los datos del taller.', 'error');
         }
     };
 
     useEffect(() => { cargarDatos(); }, []);
 
-    const clientesFiltrados = clientes.filter(c => 
-        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || 
-        c.telefono.includes(busquedaCliente)
-    );
+    // =========================================================
+    // CLIENTES FILTRADOS
+    // =========================================================
+
+    const clientesFiltrados = clientes.filter(c => c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || c.telefono.includes(busquedaCliente));
+
+    // =========================================================
+    // IMPRIMIR CONTRATO DE GARANTÍA
+    // =========================================================
 
     const imprimirContratoGarantiaCompleto = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
-        if (!ventana) return;
+
+        if (!ventana) {
+            mostrarToast('El navegador bloqueó la ventana de impresión.', 'warning');
+            return;
+        }
+
+        const clienteNombre = datos.cliente?.nombre || 'Cliente no identificado';
+        const clienteTelefono = datos.cliente?.telefono || 'N/D';
+        const clienteEmail = datos.cliente?.email || 'N/D';
 
         const html = `
             <html>
@@ -98,47 +133,20 @@ export const Taller: React.FC = () => {
                 <title>Contrato_Garantia_ORD-${ordenId}</title>
                 <style>
                     @page { size: letter; margin: 15mm; }
-                    body { 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        color: #581c7e; 
-                        line-height: 1.5; 
-                        font-size: 13px;
-                        margin: 0;
-                        padding: 0;
-                    }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #581c7e; line-height: 1.5; font-size: 13px; margin: 0; padding: 0; }
                     .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
                     .header-logo { font-size: 24px; font-weight: 800; color: #581c7e; letter-spacing: -0.5px; }
                     .header-sub { font-size: 11px; color: #64748b; line-height: 1.3; }
                     .doc-title { text-align: right; font-size: 16px; font-weight: bold; color: #0f172a; text-transform: uppercase; }
                     .doc-number { text-align: right; font-size: 18px; font-weight: 800; color: #dc2626; margin-top: 5px; }
-                    
-                    .section-title { 
-                        font-size: 12px; 
-                        font-weight: bold; 
-                        text-transform: uppercase; 
-                        color: #581c7e; 
-                        border-bottom: 2px solid #e2e8f0; 
-                        padding-bottom: 5px; 
-                        margin: 20px 0 10px 0; 
-                    }
-                    
+                    .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #581c7e; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin: 20px 0 10px 0; }
                     .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
                     .info-grid td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
                     .info-label { font-weight: bold; color: #475569; width: 25%; background: #f8fafc; font-size: 11px; text-transform: uppercase; }
                     .info-value { color: #0f172a; }
-
-                    .terms-box { 
-                        background: #f8fafc; 
-                        border: 1px solid #e2e8f0; 
-                        border-radius: 6px; 
-                        padding: 15px; 
-                        font-size: 11px; 
-                        color: #334155; 
-                        text-align: justify;
-                    }
+                    .terms-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; font-size: 11px; color: #334155; text-align: justify; }
                     .terms-box ol { margin: 0; padding-left: 18px; }
                     .terms-box li { margin-bottom: 8px; }
-                    
                     .signatures-table { width: 100%; margin-top: 50px; border-collapse: collapse; }
                     .signatures-table td { width: 50%; text-align: center; vertical-align: bottom; height: 80px; }
                     .linea-firma { width: 200px; border-bottom: 1px solid #94a3b8; margin: 0 auto 5px auto; }
@@ -150,18 +158,12 @@ export const Taller: React.FC = () => {
                     <tr>
                         <td>
                             <div class="header-logo">NICAPLUS GAMING</div>
-                            <div class="header-sub">
-                                Venta de celulares y accesorios<br>
-                                De la estatua de la madre 1c y media al norte, León, Nicaragua<br>
-                                Soporte: +505 8787-0821 | taller@nicaplus.com
-                            </div>
+                            <div class="header-sub">Venta de celulares y accesorios<br>De la estatua de la madre 1c y media al norte, León, Nicaragua<br>Soporte: +505 8787-0821 | taller@nicaplus.com</div>
                         </td>
                         <td style="text-align: right; vertical-align: top;">
                             <div class="doc-title">Póliza de Garantía de Servicio</div>
                             <div class="doc-number">ORD-${ordenId}</div>
-                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">
-                                Fecha de Emisión: ${new Date().toLocaleDateString('es-NI')}
-                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">Fecha de Emisión: ${new Date().toLocaleDateString('es-NI')}</div>
                         </td>
                     </tr>
                 </table>
@@ -170,13 +172,13 @@ export const Taller: React.FC = () => {
                 <table class="info-grid">
                     <tr>
                         <td class="info-label">Nombre del Cliente</td>
-                        <td class="info-value"><strong>${datos.cliente.nombre}</strong></td>
+                        <td class="info-value"><strong>${clienteNombre}</strong></td>
                         <td class="info-label">Teléfono de Contacto</td>
-                        <td class="info-value">${datos.cliente.telefono || 'N/D'}</td>
+                        <td class="info-value">${clienteTelefono}</td>
                     </tr>
                     <tr>
                         <td class="info-label">Correo Electrónico</td>
-                        <td class="info-value" colspan="3">${datos.cliente.email || 'taller@nicaplus.com'}</td>
+                        <td class="info-value" colspan="3">${clienteEmail}</td>
                     </tr>
                 </table>
 
@@ -190,33 +192,23 @@ export const Taller: React.FC = () => {
                         <td class="info-label">Reporte Inicial (Falla)</td>
                         <td class="info-value" colspan="3">${datos.diagnostico}</td>
                     </tr>
-                    ${datos.diagnosticoFinal ? `
-                    <tr>
-                        <td class="info-label">Solución Aplicada</td>
-                        <td class="info-value" colspan="3">${datos.diagnosticoFinal}</td>
-                    </tr>
-                    ` : ''}
-                    ${datos.herramientasUsadas ? `
-                    <tr>
-                        <td class="info-label">Respuestos / Insumos</td>
-                        <td class="info-value" colspan="3">${datos.herramientasUsadas}</td>
-                    </tr>
-                    ` : ''}
+                    ${datos.diagnosticoFinal ? `<tr><td class="info-label">Solución Aplicada</td><td class="info-value" colspan="3">${datos.diagnosticoFinal}</td></tr>` : ''}
+                    ${datos.herramientasUsadas ? `<tr><td class="info-label">Repuestos / Insumos</td><td class="info-value" colspan="3">${datos.herramientasUsadas}</td></tr>` : ''}
                 </table>
 
                 <div class="section-title">Cláusulas y Condiciones de la Garantía Limitada</div>
                 <div class="terms-box">
                     <ol>
-                        <li><strong>Ámbito de Cobertura:</strong> La presente póliza cubre única y exclusivamente la mano de obra y los componentes sustituidos detallados en esta orden. No ampara fallas ajenas al sector intervenido originalmente.</li>
+                        <li><strong>Ámbito de Cobertura:</strong> La presente póliza cubre única y exclusivamente la mano de obra y los componentes sustituidos detallados en esta orden.</li>
                         <li><strong>Periodo de Validez:</strong> Las notas de tiempo establecidas para este servicio son: <strong>${datos.notasGarantia}</strong>.</li>
                         <li><strong>Exclusiones de Cobertura:</strong> La garantía quedará automáticamente anulada bajo las siguientes circunstancias:
                             <ul>
-                                <li>Rotura, manipulación, alteración o remoción de los sellos de garantía físicos de NICAPLUS GAMING colocados en el chasis del equipo.</li>
-                                <li>Evidencia de daños físicos posteriores a la entrega (golpes, fisuras, abolladuras, puertos forzados).</li>
-                                <li>Presencia de humedad, sulfatación, ingreso de líquidos, sobrecargas eléctricas o plagas de insectos en el interior de la placa de circuito.</li>
+                                <li>Rotura, manipulación, alteración o remoción de los sellos de garantía físicos de NICAPLUS GAMING.</li>
+                                <li>Evidencia de daños físicos posteriores a la entrega.</li>
+                                <li>Presencia de humedad, sulfatación, ingreso de líquidos, sobrecargas eléctricas o plagas de insectos.</li>
                             </ul>
                         </li>
-                        <li><strong>Condiciones para Reclamación:</strong> Para hacer efectivo el reclamo, es requisito indispensable presentar este contrato impreso o digital de forma legible. El equipo será sometido a un diagnóstico técnico inicial de evaluación.</li>
+                        <li><strong>Condiciones para Reclamación:</strong> Para hacer efectivo el reclamo, es requisito presentar este contrato impreso o digital.</li>
                     </ol>
                 </div>
 
@@ -234,18 +226,33 @@ export const Taller: React.FC = () => {
                 </table>
 
                 <script>
-                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    }
                 </script>
             </body>
             </html>
         `;
+
         ventana.document.write(html);
         ventana.document.close();
     };
 
+    // =========================================================
+    // IMPRIMIR VOUCHER DE INGRESO
+    // =========================================================
+
     const imprimirDocumentosSoporte = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
-        if (!ventana) return;
+
+        if (!ventana) {
+            mostrarToast('El navegador bloqueó la ventana de impresión.', 'warning');
+            return;
+        }
+
+        const clienteNombre = datos.cliente?.nombre || 'Cliente no identificado';
+        const clienteTelefono = datos.cliente?.telefono || 'N/D';
 
         const html = `
             <html>
@@ -266,29 +273,39 @@ export const Taller: React.FC = () => {
                     <strong>INGRESO #ORD-${ordenId}</strong>
                 </div>
                 <div class="linea"></div>
-                <strong>CLIENTE:</strong> ${datos.cliente.nombre}<br>
-                <strong>TELÉFONO:</strong> ${datos.cliente.telefono}<br>
+                <strong>CLIENTE:</strong> ${clienteNombre}<br>
+                <strong>TELÉFONO:</strong> ${clienteTelefono}<br>
                 <strong>FECHA:</strong> ${new Date().toLocaleDateString()}<br>
                 <div class="linea"></div>
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
                 <strong>FALLA:</strong><br>${datos.diagnostico}<br>
                 <div class="linea"></div>
-                <div class="center" style="margin-bottom: 30px;">
-                    Conserve este voucher para retirar su equipo.<br>
-                </div>
+                <div class="center" style="margin-bottom: 30px;">Conserve este voucher para retirar su equipo.</div>
                 <script>
-                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    }
                 </script>
             </body>
             </html>
         `;
+
         ventana.document.write(html);
         ventana.document.close();
     };
 
+    // =========================================================
+    // IMPRIMIR VOUCHER DE ENTREGA
+    // =========================================================
+
     const imprimirVoucherEntrega = (datosEntrega: any) => {
         const ventana = window.open('', '_blank');
-        if (!ventana) return;
+
+        if (!ventana) {
+            mostrarToast('El navegador bloqueó la ventana de impresión.', 'warning');
+            return;
+        }
 
         const html = `
             <html>
@@ -311,80 +328,93 @@ export const Taller: React.FC = () => {
                 </div>
                 <div class="linea"></div>
                 <strong>CLIENTE:</strong> ${datosEntrega.clienteNombre}<br>
-                <strong>TELÉFONO:</strong> ${datosEntrega.clienteTelefono}<br>
+                <strong>TELÉFONO:</strong> ${datosEntrega.clienteTelefono || 'N/D'}<br>
                 <strong>FECHA SALIDA:</strong> ${new Date().toLocaleDateString()}<br>
                 <div class="linea"></div>
                 <strong>EQUIPO RETIRADO:</strong><br>${datosEntrega.dispositivo}<br><br>
                 <strong>SOLUCIÓN TÉCNICA:</strong><br>${datosEntrega.diagnosticoFinal}<br><br>
                 <strong>REPUESTOS:</strong><br>${datosEntrega.herramientasUsadas}<br>
                 <div class="linea"></div>
-                
                 <div class="total-box">
-                    TOTAL PAGADO: C$ ${datosEntrega.costoReparacion.toLocaleString('es-NI')}<br>
+                    TOTAL PAGADO: C$ ${Number(datosEntrega.costoReparacion).toLocaleString('es-NI')}<br>
                     MÉTODO: ${datosEntrega.metodoPago.toUpperCase()}
                 </div>
-                
                 <div class="linea"></div>
                 <center><strong>GARANTÍA EN TICKET</strong></center>
-                <p style="font-size: 9px; text-align: justify;">
-                    ${datosEntrega.notasGarantia}
-                </p>
+                <p style="font-size: 9px; text-align: justify;">${datosEntrega.notasGarantia}</p>
                 <div class="linea"></div>
                 <br><br>
-                <div class="center">
-                    _______________________<br>
-                    Firma de Cliente Conforme
-                </div>
+                <div class="center">_______________________<br>Firma de Cliente Conforme</div>
                 <script>
-                    window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    }
                 </script>
             </body>
             </html>
         `;
+
         ventana.document.write(html);
         ventana.document.close();
     };
 
+    // =========================================================
+    // WHATSAPP
+    // =========================================================
+
     const abrirEnlaceWhatsApp = (orden: Orden, tipo: 'Listo' | 'Entregado', datosAdicionales?: any) => {
-        if (!orden.cliente?.telefono) {
-            mostrarToast("El cliente no tiene un teléfono válido registrado.", "warning");
+        if (!orden.clienteTelefono) {
+            mostrarToast('Esta orden no tiene teléfono de contacto. No se puede enviar WhatsApp.', 'warning');
             return;
         }
 
-        let telefono = orden.cliente.telefono.replace(/\s+/g, '').replace(/-/g, '');
-        if (!telefono.startsWith('505')) {
-            telefono = '505' + telefono;
-        }
+        let telefono = orden.clienteTelefono.replace(/\s+/g, '').replace(/-/g, '');
+        if (!telefono.startsWith('505')) { telefono = '505' + telefono; }
 
-        let textoMensaje = "";
+        const nombreCliente = orden.clienteNombre || 'cliente';
+        let textoMensaje = '';
 
         if (tipo === 'Listo') {
-            textoMensaje = `¡Hola *${orden.cliente.nombre}*! 👋 Te saludamos de *NICAPLUS GAMING*. Te notificamos que tu equipo *${orden.dispositivo}* (Orden #${orden.id}) ya se encuentra reparado y listo para ser retirado en tienda. 🛠️✨`;
+            textoMensaje = `¡Hola *${nombreCliente}*! 👋 Te saludamos de *NICAPLUS GAMING*. Te notificamos que tu equipo *${orden.dispositivo}* (Orden #${orden.id}) ya se encuentra reparado y listo para ser retirado en tienda. 🛠️✨`;
         } else {
             const costo = datosAdicionales?.costoReparacion || 0;
-            textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${orden.cliente.nombre}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${costo.toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
+            textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${nombreCliente}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${Number(costo).toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
         }
 
         const url = `https://api.whatsapp.com/send/?phone=${telefono}&text=${encodeURIComponent(textoMensaje)}&type=phone_number&app_absent=0`;
         window.open(url, '_blank');
     };
 
+    // =========================================================
+    // REGISTRAR INGRESO AL TALLER
+    // =========================================================
+
     const registrarIngresoTaller = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!dispositivo || !diagnostico) {
-            mostrarToast("Complete los datos requeridos del dispositivo.", "warning");
+
+        if (!dispositivo.trim() || !diagnostico.trim()) {
+            mostrarToast('Complete los datos requeridos del dispositivo.', 'warning');
             return;
         }
 
-        let idClienteFinal = idClienteSeleccionado;
+        let idClienteFinal: number | null = null;
 
         try {
-            if (modoNuevoCliente) {
-                if (!nombreCliente || !telefonoCliente) {
-                    mostrarToast("Complete los datos obligatorios del nuevo cliente.", "warning");
+            if (modoCliente === 'existente') {
+                idClienteFinal = idClienteSeleccionado;
+                if (!idClienteFinal) {
+                    mostrarToast('Seleccione un cliente o marque "Cliente no identificado".', 'warning');
                     return;
                 }
+            }
+
+            if (modoCliente === 'nuevo') {
+                if (!nombreCliente.trim() || !telefonoCliente.trim()) {
+                    mostrarToast('Complete el nombre y teléfono del nuevo cliente.', 'warning');
+                    return;
+                }
+
                 const resCliente = await api.post('/clientes', {
                     nombre: nombreCliente,
                     telefono: telefonoCliente,
@@ -394,53 +424,59 @@ export const Taller: React.FC = () => {
                 idClienteFinal = resCliente.data.id;
             }
 
-            if (!idClienteFinal || idClienteFinal === 0) {
-                mostrarToast("Debe seleccionar un cliente de la base de datos o registrar uno nuevo.", "warning");
-                return;
-            }
-
-            const clienteAsociado = clientes.find(c => c.id === idClienteFinal) || { nombre: nombreCliente, telefono: telefonoCliente, email: emailCliente };
+            if (modoCliente === 'no-identificado') { idClienteFinal = null; }
 
             const usuarioLogueado = JSON.parse(localStorage.getItem('usuario') || '{}');
-
-            const resOrden = await api.post('/ordenesservicio', {
+            const payload = {
                 idCliente: idClienteFinal,
-                idUsuario: usuarioLogueado.id, // <-- Enviar el ID aquí
+                idUsuario: usuarioLogueado.id || null,
                 dispositivo,
                 diagnostico,
                 notas: notasGarantia
-            });
+            };
 
-            mostrarToast(`Equipo #${resOrden.data.id} ingresado correctamente.`, "exito");
-            
-            imprimirDocumentosSoporte(resOrden.data.id, {
-                dispositivo,
-                diagnostico,
-                notasGarantia,
-                cliente: { nombre: clienteAsociado.nombre, telefono: clienteAsociado.telefono }
-            });
+            console.log('Payload orden taller:', payload);
+            const resOrden = await api.post('/ordenesservicio', payload);
+            const ordenCreada = resOrden.data;
 
-            imprimirContratoGarantiaCompleto(resOrden.data.id, {
-                dispositivo,
-                diagnostico,
-                notasGarantia,
-                cliente: clienteAsociado
-            });
+            let clienteParaImpresion: DatosCliente = { nombre: 'Cliente no identificado', telefono: '', email: '' };
 
-            setDispositivo(''); 
-            setDiagnostico(''); 
+            if (modoCliente === 'existente') {
+                const cliente = clientes.find(c => c.id === idClienteFinal);
+                if (cliente) {
+                    clienteParaImpresion = { nombre: cliente.nombre, telefono: cliente.telefono, email: cliente.email };
+                }
+            }
+
+            if (modoCliente === 'nuevo') {
+                clienteParaImpresion = { nombre: nombreCliente, telefono: telefonoCliente, email: emailCliente };
+            }
+
+            mostrarToast(`Equipo #${ordenCreada.id} ingresado correctamente.`, 'exito');
+            imprimirDocumentosSoporte(ordenCreada.id, { dispositivo, diagnostico, notasGarantia, cliente: clienteParaImpresion });
+            imprimirContratoGarantiaCompleto(ordenCreada.id, { dispositivo, diagnostico, notasGarantia, cliente: clienteParaImpresion });
+
+            setDispositivo('');
+            setDiagnostico('');
             setIdClienteSeleccionado(null);
             setBusquedaCliente('');
-            setNombreCliente(''); 
-            setTelefonoCliente(''); 
+            setNombreCliente('');
+            setTelefonoCliente('');
             setEmailCliente('');
-            setModoNuevoCliente(false);
-            
-            cargarDatos();
-        } catch (err) {
-            mostrarToast("Error en el flujo de registro del taller.", "error");
+            setModoCliente('existente');
+
+            await cargarDatos();
+
+        } catch (err: any) {
+            console.error('Error al registrar ingreso:', err);
+            const mensaje = err?.response?.data?.message || err?.response?.data?.title || 'Error en el flujo de registro del taller.';
+            mostrarToast(mensaje, 'error');
         }
     };
+
+    // =========================================================
+    // AVANZAR ESTADO
+    // =========================================================
 
     const avanzarEstado = async (id: number, estadoActual: string) => {
         const orden = ordenes.find(o => o.id === id);
@@ -457,27 +493,30 @@ export const Taller: React.FC = () => {
         }
 
         let siguienteEstado = '';
-        if (estadoActual === 'Recibido') siguienteEstado = 'En Revisión';
-        else if (estadoActual === 'En Revisión') siguienteEstado = 'Listo';
-        else return;
+        if (estadoActual === 'Recibido') { siguienteEstado = 'En Revisión'; }
+        else if (estadoActual === 'En Revisión') { siguienteEstado = 'Listo'; }
+        else { return; }
 
         try {
-            const payload = { nuevoEstado: siguienteEstado };
-
-            await api.put(`/ordenesservicio/${id}/estado`, payload);
-            cargarDatos();
+            await api.put(`/ordenesservicio/${id}/estado`, { nuevoEstado: siguienteEstado });
+            await cargarDatos();
 
             if (siguienteEstado === 'Listo') {
                 setOrdenParaAccion(orden);
                 setTipoAccionContexto('AlListo');
                 setMostrarModalAccion(true);
             } else {
-                mostrarToast(`Orden #${id} movida a ${siguienteEstado}.`, "exito");
+                mostrarToast(`Orden #${id} movida a ${siguienteEstado}.`, 'exito');
             }
         } catch (err) {
-            mostrarToast("Error al actualizar el estado técnico.", "error");
+            console.error(err);
+            mostrarToast('Error al actualizar el estado técnico.', 'error');
         }
     };
+
+    // =========================================================
+    // ENTREGA FINAL
+    // =========================================================
 
     const ejecutarEntregaFinal = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -489,17 +528,17 @@ export const Taller: React.FC = () => {
                 herramientasUsed: herramientasUsadas || 'Herramientas básicas de banco técnico',
                 costoReparacion: Number(costoReparacion),
                 metodoPago: metodoPagoEntrega,
-                idProductoServicio: 1 
+                idProductoServicio: 1
             };
 
             await api.put(`/ordenesservicio/${ordenAEntregar.id}/entregar`, payload);
-            
+
             const datosImpresion = {
                 ordenId: ordenAEntregar.id,
                 dispositivo: ordenAEntregar.dispositivo,
-                clienteNombre: ordenAEntregar.cliente?.nombre || 'Cliente General',
-                clienteTelefono: ordenAEntregar.cliente?.telefono || 'N/D',
-                clienteEmail: ordenAEntregar.cliente?.email || '',
+                clienteNombre: ordenAEntregar.clienteNombre || 'Cliente no identificado',
+                clienteTelefono: ordenAEntregar.clienteTelefono || 'N/D',
+                clienteEmail: '',
                 diagnosticoFinal,
                 herramientasUsadas: payload.herramientasUsed,
                 costoReparacion: payload.costoReparacion,
@@ -510,16 +549,22 @@ export const Taller: React.FC = () => {
             setDatosEntregaCache(datosImpresion);
             setOrdenParaAccion(ordenAEntregar);
             setTipoAccionContexto('AlEntregar');
-            
             setMostrarModalEntrega(false);
             setOrdenAEntregar(null);
-            cargarDatos();
 
+            await cargarDatos();
             setMostrarModalAccion(true);
-        } catch (err) {
-            mostrarToast("Error al procesar la entrega final del equipo.", "error");
+
+        } catch (err: any) {
+            console.error('Error en entrega:', err);
+            const mensaje = err?.response?.data?.message || err?.response?.data?.title || 'Error al procesar la entrega final del equipo.';
+            mostrarToast(mensaje, 'error');
         }
     };
+
+    // =========================================================
+    // CLASE DEL HEADER KANBAN
+    // =========================================================
 
     const getColumnHeaderClass = (columnaName: string) => {
         if (columnaName === 'Listo') return styles.colListo;
@@ -527,30 +572,16 @@ export const Taller: React.FC = () => {
         return styles.colRecibido;
     };
 
+    // =========================================================
+    // RENDER
+    // =========================================================
+
     return (
         <div className={styles.tallerContainer}>
-            
-            {/* NOTIFICACIÓN TIPO TOAST ELEGANTE */}
+
+            {/* TOAST */}
             {notificacion.mostrar && (
-                <div 
-                    style={{
-                        position: 'fixed',
-                        bottom: '24px',
-                        right: '24px',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '12px 20px',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
-                        backgroundColor: notificacion.tipo === 'exito' ? '#10b981' : notificacion.tipo === 'warning' ? '#f59e0b' : '#ef4444',
-                        transition: 'all 0.3s ease'
-                    }}
-                >
+                <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', borderRadius: '8px', color: '#fff', fontWeight: '600', fontSize: '14px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)', backgroundColor: notificacion.tipo === 'exito' ? '#10b981' : notificacion.tipo === 'warning' ? '#f59e0b' : '#ef4444' }}>
                     {notificacion.tipo === 'exito' && <FaCheckCircle size={18} />}
                     {notificacion.tipo === 'warning' && <FaExclamationTriangle size={18} />}
                     {notificacion.tipo === 'error' && <FaTimes size={18} />}
@@ -558,67 +589,39 @@ export const Taller: React.FC = () => {
                 </div>
             )}
 
-            {/* FORMULARIO AVANZADO DE INGRESO */}
+            {/* FORMULARIO DE INGRESO */}
             <form onSubmit={registrarIngresoTaller} className={styles.formIngreso}>
                 <h3 className={styles.formTitle}>
                     <FaTools /> Registro de Ingreso de Equipos y Control de Dueños
                 </h3>
-                
+
                 <div className={styles.formGrid}>
-                    
-                    {/* BUSCADOR Y SELECTOR DE CLIENTE */}
                     <div className={styles.formGroup}>
                         <div className={styles.labelWrapper}>
-                            <label className={styles.label}>
-                                <FaUser /> Cliente de la Orden
-                            </label>
-                            
+                            <label className={styles.label}><FaUser /> Cliente de la Orden</label>
                         </div>
 
-                        {modoNuevoCliente ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <input 
-                                    type="text" 
-                                    value={nombreCliente} 
-                                    onChange={e => setNombreCliente(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Nombre completo" 
-                                    required 
-                                />
-                                <input 
-                                    type="text" 
-                                    value={telefonoCliente} 
-                                    onChange={e => setTelefonoCliente(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Teléfono" 
-                                    required 
-                                />
-                                <input 
-                                    type="email" 
-                                    value={emailCliente} 
-                                    onChange={e => setEmailCliente(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Email (Opcional)" 
-                                />
-                            </div>
-                        ) : (
+                        {/* SELECTOR DE MODO */}
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                            <button type="button" onClick={() => { setModoCliente('existente'); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'existente' ? '#581c7e' : '#fff', color: modoCliente === 'existente' ? '#fff' : '#334155' }}>
+                                Cliente existente
+                            </button>
+                            <button type="button" onClick={() => { setModoCliente('nuevo'); setIdClienteSeleccionado(null); setBusquedaCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'nuevo' ? '#581c7e' : '#fff', color: modoCliente === 'nuevo' ? '#fff' : '#334155' }}>
+                                Nuevo cliente
+                            </button>
+                            <button type="button" onClick={() => { setModoCliente('no-identificado'); setIdClienteSeleccionado(null); setBusquedaCliente(''); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'no-identificado' ? '#dc2626' : '#fff', color: modoCliente === 'no-identificado' ? '#fff' : '#334155' }}>
+                                Sin identificar
+                            </button>
+                        </div>
+
+                        {/* CLIENTE EXISTENTE */}
+                        {modoCliente === 'existente' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <div className={styles.inputIconWrapper}>
                                     <FaSearch className={styles.inputIcon} />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Filtrar clientes por nombre o celular..." 
-                                        value={busquedaCliente} 
-                                        onChange={e => setBusquedaCliente(e.target.value)} 
-                                        className={`${styles.input} ${styles.inputWithIcon}`} 
-                                    />
+                                    <input type="text" placeholder="Filtrar clientes por nombre o celular..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)} className={`${styles.input} ${styles.inputWithIcon}`} />
                                 </div>
-                                <select 
-                                    value={idClienteSeleccionado || 0} 
-                                    onChange={e => setIdClienteSeleccionado(Number(e.target.value))} 
-                                    className={styles.select} 
-                                    required
-                                >
+                                <select value={idClienteSeleccionado || 0} onChange={e => { const valor = Number(e.target.value); setIdClienteSeleccionado(valor === 0 ? null : valor); }} className={styles.select}>
                                     <option value={0}>-- Selecciona el Cliente --</option>
                                     {clientesFiltrados.map(c => (
                                         <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
@@ -626,43 +629,42 @@ export const Taller: React.FC = () => {
                                 </select>
                             </div>
                         )}
+
+                        {/* NUEVO CLIENTE */}
+                        {modoCliente === 'nuevo' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} className={styles.input} placeholder="Nombre completo" />
+                                <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} className={styles.input} placeholder="Teléfono" />
+                                <input type="email" value={emailCliente} onChange={e => setEmailCliente(e.target.value)} className={styles.input} placeholder="Email (Opcional)" />
+                            </div>
+                        )}
+
+                        {/* SIN IDENTIFICAR */}
+                        {modoCliente === 'no-identificado' && (
+                            <div style={{ padding: '12px', borderRadius: '8px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '13px' }}>
+                                <strong>Cliente no identificado</strong><br />
+                                El equipo será ingresado al taller sin asociarlo a un cliente.
+                            </div>
+                        )}
                     </div>
 
+                    {/* DISPOSITIVO */}
                     <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                            <FaLaptop /> Dispositivo corporativo
-                        </label>
-                        <input 
-                            type="text" 
-                            value={dispositivo} 
-                            onChange={e => setDispositivo(e.target.value)} 
-                            className={styles.input} 
-                            placeholder="Ej: PS5 Slim o Nintendo Switch" 
-                            required 
-                        />
+                        <label className={styles.label}><FaLaptop /> Dispositivo</label>
+                        <input type="text" value={dispositivo} onChange={e => setDispositivo(e.target.value)} className={styles.input} placeholder="Ej: PS5 Slim o Nintendo Switch" required />
                     </div>
                 </div>
 
+                {/* DIAGNÓSTICO */}
                 <div className={styles.formGroup} style={{ marginBottom: '14px' }}>
                     <label className={styles.label}>Falla y Diagnóstico Inicial</label>
-                    <textarea 
-                        value={diagnostico} 
-                        onChange={e => setDiagnostico(e.target.value)} 
-                        className={styles.textarea} 
-                        placeholder="Detalles de la falla técnica detectada..." 
-                        required 
-                    />
+                    <textarea value={diagnostico} onChange={e => setDiagnostico(e.target.value)} className={styles.textarea} placeholder="Detalles de la falla técnica detectada..." required />
                 </div>
 
+                {/* GARANTÍA */}
                 <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
                     <label className={styles.label}>Condiciones y Póliza de Garantía a Imprimir</label>
-                    
-                    <input 
-                        type="text" 
-                        value={notasGarantia} 
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotasGarantia(e.target.value)} 
-                        className={styles.input} 
-                    />
+                    <input type="text" value={notasGarantia} onChange={e => setNotasGarantia(e.target.value)} className={styles.input} />
                 </div>
 
                 <button type="submit" className={styles.btnSubmit}>
@@ -670,69 +672,65 @@ export const Taller: React.FC = () => {
                 </button>
             </form>
 
-            {/* TABLERO KANBAN ADAPTATIVO */}
+            {/* KANBAN */}
             <div className={styles.kanbanTablero}>
-                {['Recibido', 'En Revisión', 'Listo'].map(columna => (
-                    <div className={styles.kanbanColumna} key={columna}>
-                        <h4 className={`${styles.columnHeader} ${getColumnHeaderClass(columna)}`}>
-                            {columna} ({ordenes.filter(o => o.estado === columna).length})
-                        </h4>
-                        
-                        <div className={styles.cardsContainer}>
-                            {ordenes.filter(o => o.estado === columna).map(orden => (
-                                <div key={orden.id} className={styles.card}>
-                                    <div className={styles.cardHeader}>
-                                        <strong className={styles.cardTitle}>{orden.dispositivo}</strong>
-                                        <span className={styles.cardBadge}>#{orden.id}</span>
-                                    </div>
-                                    <p className={styles.cardDesc}>{orden.diagnostico}</p>
-                                    <div className={styles.cardDivider}>
-                                        <small className={styles.cardClientName}>Cliente: {orden.cliente?.nombre}</small>
-                                        <small className={styles.cardClientPhone}>Tel: {orden.cliente?.telefono}</small>
-                                    </div>
-                                    <div className={styles.cardActions}>
-                                        <button 
-                                            onClick={() => avanzarEstado(orden.id, orden.estado)} 
-                                            className={styles.btnAvanzar}
-                                        >
-                                            {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'} 
-                                            <FaChevronRight size={10} />
-                                        </button>
-                                        {orden.estado === 'Listo' && (
-                                            <button 
-                                                title="Notificar por WhatsApp de inmediato" 
-                                                onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} 
-                                                className={styles.btnWhatsAppQuick}
-                                            >
-                                                <FaWhatsapp size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {ordenes.filter(o => o.estado === columna).length === 0 && (
-                                <div className={styles.emptyColumnText}>
-                                    Sin órdenes en este estado
-                                </div>
-                            )}
+                {['Recibido', 'En Revisión', 'Listo'].map(columna => {
+                    const ordenesColumna = ordenes.filter(o => o.estado === columna);
+                    return (
+                        <div className={styles.kanbanColumna} key={columna}>
+                            <h4 className={`${styles.columnHeader} ${getColumnHeaderClass(columna)}`}>
+                                {columna} ({ordenesColumna.length})
+                            </h4>
+
+                            <div className={styles.cardsContainer}>
+                                {ordenesColumna.map(orden => {
+                                    const tieneTelefono = !!orden.clienteTelefono;
+                                    return (
+                                        <div key={orden.id} className={styles.card}>
+                                            <div className={styles.cardHeader}>
+                                                <strong className={styles.cardTitle}>{orden.dispositivo}</strong>
+                                                <span className={styles.cardBadge}>#{orden.id}</span>
+                                            </div>
+
+                                            <p className={styles.cardDesc}>{orden.diagnostico}</p>
+
+                                            <div className={styles.cardDivider}>
+                                                <small className={styles.cardClientName}>Cliente: {orden.clienteNombre || 'No identificado'}</small>
+                                                <small className={styles.cardClientPhone}>Tel: {orden.clienteTelefono || 'No registrado'}</small>
+                                            </div>
+
+                                            <div className={styles.cardActions}>
+                                                <button onClick={() => avanzarEstado(orden.id, orden.estado)} className={styles.btnAvanzar}>
+                                                    {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'}
+                                                    <FaChevronRight size={10} />
+                                                </button>
+
+                                                {orden.estado === 'Listo' && tieneTelefono && (
+                                                    <button title="Notificar por WhatsApp" onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} className={styles.btnWhatsAppQuick}>
+                                                        <FaWhatsapp size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {ordenesColumna.length === 0 && (
+                                    <div className={styles.emptyColumnText}>Sin órdenes en este estado</div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
-            {/* MODAL DE LIQUIDACIÓN Y ENTREGA FINAL */}
+            {/* MODAL DE ENTREGA */}
             {mostrarModalEntrega && ordenAEntregar && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>
-                        
                         <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>
-                                <FaTools /> Liquidación de Orden #{ordenAEntregar.id}
-                            </h3>
-                            <button 
-                                onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} 
-                                className={styles.btnCloseModal}
-                            >
+                            <h3 className={styles.modalTitle}><FaTools /> Liquidación de Orden #{ordenAEntregar.id}</h3>
+                            <button onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} className={styles.btnCloseModal}>
                                 <FaTimes />
                             </button>
                         </div>
@@ -740,161 +738,111 @@ export const Taller: React.FC = () => {
                         <form onSubmit={ejecutarEntregaFinal} className={styles.modalForm}>
                             <div className={styles.infoRow}>
                                 <small className={styles.infoRowLabel}>Equipo a Retirar:</small>
-                                <strong>{ordenAEntregar.dispositivo}</strong> ({ordenAEntregar.cliente?.nombre})
+                                <strong>{ordenAEntregar.dispositivo}</strong> ({ordenAEntregar.clienteNombre || 'Cliente no identificado'})
                             </div>
 
                             <div className={styles.formGroup}>
                                 <label className={styles.label}><FaUser /> Diagnóstico de Reparación Final</label>
-                                <textarea 
-                                    value={diagnosticoFinal} 
-                                    onChange={e => setDiagnosticoFinal(e.target.value)} 
-                                    className={styles.textarea} 
-                                    placeholder="Escriba la solución aplicada..." 
-                                    required 
-                                />
+                                <textarea value={diagnosticoFinal} onChange={e => setDiagnosticoFinal(e.target.value)} className={styles.textarea} placeholder="Escriba la solución aplicada..." required />
                             </div>
 
                             <div className={styles.formGroup}>
                                 <label className={styles.label}><FaWrench /> Repuestos / Herramientas Utilizadas</label>
-                                <input 
-                                    type="text" 
-                                    value={herramientasUsadas} 
-                                    onChange={e => setHerramientasUsadas(e.target.value)} 
-                                    className={styles.input} 
-                                    placeholder="Ej: Cambio de puerto HDMI, limpieza interna" 
-                                    required 
-                                />
+                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} className={styles.input} placeholder="Ej: Cambio de puerto HDMI, limpieza interna" required />
                             </div>
 
                             <div className={styles.formGroup}>
                                 <label className={styles.label}><FaMoneyBillWave /> Método de Pago</label>
-                                <select 
-                                    value={metodoPagoEntrega} 
-                                    onChange={e => setMetodoPagoEntrega(e.target.value)} 
-                                    className={styles.select} 
-                                    required
-                                >
+                                <select value={metodoPagoEntrega} onChange={e => setMetodoPagoEntrega(e.target.value)} className={styles.select} required>
                                     <option value="Efectivo">💵 Efectivo</option>
                                     <option value="Transferencia">🏦 Transferencia Bancaria</option>
                                     <option value="Tarjeta">💳 Tarjeta</option>
-                                    <option value="Crédito">🛑 Crédito (Cuenta por Cobrar)</option>
+                                    <option value="Crédito">🛑 Crédito</option>
                                 </select>
                             </div>
 
                             <div className={styles.formGroup}>
                                 <label className={styles.label}><FaMoneyBillWave /> Costo del Servicio Técnico (C$)</label>
-                                <input 
-                                    type="number" 
-                                    value={costoReparacion || ''} 
-                                    onChange={e => setCostoReparacion(Number(e.target.value))} 
-                                    className={`${styles.input} ${styles.inputCosto}`} 
-                                    placeholder="Monto cobrado en Córdobas" 
-                                    min={0} 
-                                    required 
-                                />
+                                <input type="number" value={costoReparacion || ''} onChange={e => setCostoReparacion(Number(e.target.value))} className={`${styles.input} ${styles.inputCosto}`} placeholder="Monto cobrado en Córdobas" min={0} required />
                             </div>
 
                             <div className={styles.modalActions}>
-                                <button type="submit" className={styles.btnModalConfirm}>
-                                    Procesar Salida
-                                </button>
-                                <button 
-                                    type="button" 
-                                    onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} 
-                                    className={styles.btnModalCancel}
-                                >
-                                    Cancelar
-                                </button>
+                                <button type="submit" className={styles.btnModalConfirm}>Procesar Salida</button>
+                                <button type="button" onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} className={styles.btnModalCancel}>Cancelar</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* MODAL INTERACTIVO: ACCIÓN RÁPIDA / WHATSAPP / IMPRESIÓN */}
+            {/* MODAL DE ACCIONES */}
             {mostrarModalAccion && ordenParaAccion && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalSuccessContent}>
-                        
                         <FaCheckCircle size={50} className={styles.successIcon} />
-                        
                         <h3 className={styles.successTitle}>
                             {tipoAccionContexto === 'AlListo' ? '¡Equipo Marcado Como Listo!' : '¡Orden Procesada Exitosamente!'}
                         </h3>
+
                         <p className={styles.successDesc}>
-                            Selecciona las acciones comerciales inmediatas para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo}).
+                            Selecciona las acciones comerciales inmediatas para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo})
                         </p>
 
                         <div className={styles.actionButtonsContainer}>
-                            
-                            <button 
-                                onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)}
-                                className={`${styles.btnActionBase} ${styles.btnActionWhatsApp}`}
-                            >
-                                <FaWhatsapp size={18} /> Avisar al Cliente por WhatsApp
+                            {/* WHATSAPP */}
+                            <button onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)} disabled={!ordenParaAccion.clienteTelefono} className={`${styles.btnActionBase} ${styles.btnActionWhatsApp}`} style={{ opacity: ordenParaAccion.clienteTelefono ? 1 : 0.5, cursor: ordenParaAccion.clienteTelefono ? 'pointer' : 'not-allowed' }}>
+                                <FaWhatsapp size={18} />
+                                {ordenParaAccion.clienteTelefono ? 'Avisar al Cliente por WhatsApp' : 'Sin teléfono para WhatsApp'}
                             </button>
 
-                            <button 
-                                onClick={() => {
-                                    if (tipoAccionContexto === 'AlListo') {
-                                        imprimirDocumentosSoporte(ordenParaAccion.id, {
-                                            dispositivo: ordenParaAccion.dispositivo,
-                                            diagnostico: ordenParaAccion.diagnostico,
-                                            notasGarantia,
-                                            cliente: { nombre: ordenParaAccion.cliente?.nombre || '', telefono: ordenParaAccion.cliente?.telefono || '', email: ordenParaAccion.cliente?.email || '' }
-                                        });
-                                    } else if (datosEntregaCache) {
-                                        imprimirVoucherEntrega(datosEntregaCache);
-                                    }
-                                }}
-                                className={`${styles.btnActionBase} ${styles.btnActionPrint}`}
-                            >
+                            {/* TICKET */}
+                            <button onClick={() => {
+                                if (tipoAccionContexto === 'AlListo') {
+                                    imprimirDocumentosSoporte(ordenParaAccion.id, {
+                                        dispositivo: ordenParaAccion.dispositivo,
+                                        diagnostico: ordenParaAccion.diagnostico,
+                                        notasGarantia,
+                                        cliente: { nombre: ordenParaAccion.clienteNombre || 'Cliente no identificado', telefono: ordenParaAccion.clienteTelefono || '', email: '' }
+                                    });
+                                } else if (datosEntregaCache) {
+                                    imprimirVoucherEntrega(datosEntregaCache);
+                                }
+                            }} className={`${styles.btnActionBase} ${styles.btnActionPrint}`}>
                                 <FaPrint size={18} /> Imprimir Ticket Comercial (Térmico)
                             </button>
 
-                            <button 
-                                onClick={() => {
-                                    const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo' 
-                                        ? {
-                                            dispositivo: ordenParaAccion.dispositivo,
-                                            diagnostico: ordenParaAccion.diagnostico,
-                                            notasGarantia,
-                                            cliente: ordenParaAccion.cliente || { nombre: 'Cliente General', telefono: 'N/D', email: '' }
-                                          }
-                                        : {
-                                            dispositivo: ordenParaAccion.dispositivo,
-                                            diagnostico: ordenParaAccion.diagnostico,
-                                            diagnosticoFinal: datosEntregaCache?.diagnosticoFinal,
-                                            herramientasUsadas: datosEntregaCache?.herramientasUsadas,
-                                            notasGarantia,
-                                            cliente: { 
-                                                nombre: datosEntregaCache?.clienteNombre, 
-                                                telefono: datosEntregaCache?.clienteTelefono, 
-                                                email: datosEntregaCache?.clienteEmail 
-                                            }
-                                          };
-                                    imprimirContratoGarantiaCompleto(ordenParaAccion.id, datosGarantiaParaImprimir);
-                                }}
-                                className={`${styles.btnActionBase}`}
-                                style={{ backgroundColor: '#2563eb', color: '#fff' }}
-                            >
+                            {/* CONTRATO */}
+                            <button onClick={() => {
+                                const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo'
+                                    ? {
+                                        dispositivo: ordenParaAccion.dispositivo,
+                                        diagnostico: ordenParaAccion.diagnostico,
+                                        notasGarantia,
+                                        cliente: { nombre: ordenParaAccion.clienteNombre || 'Cliente no identificado', telefono: ordenParaAccion.clienteTelefono || '', email: '' }
+                                    }
+                                    : {
+                                        dispositivo: ordenParaAccion.dispositivo,
+                                        diagnostico: ordenParaAccion.diagnostico,
+                                        diagnosticoFinal: datosEntregaCache?.diagnosticoFinal,
+                                        herramientasUsadas: datosEntregaCache?.herramientasUsadas,
+                                        notasGarantia,
+                                        cliente: { nombre: datosEntregaCache?.clienteNombre || 'Cliente no identificado', telefono: datosEntregaCache?.clienteTelefono || '', email: datosEntregaCache?.clienteEmail || '' }
+                                    };
+
+                                imprimirContratoGarantiaCompleto(ordenParaAccion.id, datosGarantiaParaImprimir);
+                            }} className={styles.btnActionBase} style={{ backgroundColor: '#2563eb', color: '#fff' }}>
                                 <FaFileContract size={18} /> Imprimir Contrato Garantía (Hoja Entera A4)
                             </button>
 
-                            <button 
-                                onClick={() => { 
-                                    setMostrarModalAccion(false); 
-                                    setOrdenParaAccion(null); 
-                                    setDatosEntregaCache(null); 
-                                }}
-                                className={`${styles.btnActionBase} ${styles.btnActionReturn}`}
-                            >
+                            {/* VOLVER */}
+                            <button onClick={() => { setMostrarModalAccion(false); setOrdenParaAccion(null); setDatosEntregaCache(null); }} className={`${styles.btnActionBase} ${styles.btnActionReturn}`}>
                                 Listo, Volver al Tablero
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
         </div>
     );
 };
