@@ -1,7 +1,12 @@
 // Taller.tsx
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle } from 'react-icons/fa';
+import { 
+    FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
+    FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, 
+    FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle,
+    FaConciergeBell
+} from 'react-icons/fa';
 import styles from '../assets/styles/Taller.module.css';
 
 interface Orden {
@@ -32,6 +37,13 @@ interface DatosCliente {
     email: string;
 }
 
+interface ProductoServicio {
+    id: number;
+    nombre: string;
+    precioVenta?: number;
+    requiereServicio?: boolean;
+}
+
 export const Taller: React.FC = () => {
 
     // =========================================================
@@ -40,6 +52,7 @@ export const Taller: React.FC = () => {
 
     const [ordenes, setOrdenes] = useState<Orden[]>([]);
     const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [serviciosCatalogo, setServiciosCatalogo] = useState<ProductoServicio[]>([]);
 
     const [dispositivo, setDispositivo] = useState('');
     const [diagnostico, setDiagnostico] = useState('');
@@ -78,6 +91,7 @@ export const Taller: React.FC = () => {
     const [herramientasUsadas, setHerramientasUsadas] = useState('');
     const [costoReparacion, setCostoReparacion] = useState<number>(0);
     const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo');
+    const [idProductoServicioSeleccionado, setIdProductoServicioSeleccionado] = useState<number>(1);
 
     // =========================================================
     // MODAL DE ACCIONES
@@ -94,9 +108,27 @@ export const Taller: React.FC = () => {
 
     const cargarDatos = async () => {
         try {
-            const [resOrdenes, resClientes] = await Promise.all([api.get('/ordenesservicio'), api.get('/clientes')]);
+            const [resOrdenes, resClientes, resProductos] = await Promise.all([
+                api.get('/ordenesservicio'),
+                api.get('/clientes'),
+                api.get('/products')
+            ]);
+
             setOrdenes(resOrdenes.data);
             setClientes(resClientes.data);
+
+            // Filtrar productos marcados como servicio o tomar todo el catálogo si es necesario
+            const servicios = resProductos.data.filter((p: ProductoServicio) => p.requiereServicio === true);
+            
+            if (servicios.length > 0) {
+                setServiciosCatalogo(servicios);
+                setIdProductoServicioSeleccionado(servicios[0].id);
+            } else if (resProductos.data.length > 0) {
+                // Fallback: Si ningún producto tiene la bandera en true, pasar los productos disponibles
+                setServiciosCatalogo(resProductos.data);
+                setIdProductoServicioSeleccionado(resProductos.data[0].id);
+            }
+
         } catch (err) {
             console.error('Error al cargar datos del taller:', err);
             mostrarToast('No se pudieron cargar los datos del taller.', 'error');
@@ -259,11 +291,10 @@ export const Taller: React.FC = () => {
             <head>
                 <title>Comprobante_Taller_${ordenId}</title>
                 <style>
-                    /* Forzamos márgenes en 0 para evitar hojas extra */
                     @page { margin: 0; }
                     body { 
                         font-family: 'Courier New', monospace; 
-                        width: 72mm; /* Ajuste óptimo para papel de 80mm */
+                        width: 72mm; 
                         margin: 0 auto; 
                         padding: 5px 0;
                         font-size: 11px; 
@@ -295,7 +326,6 @@ export const Taller: React.FC = () => {
                     <p style="font-size: 9px; margin: 3px 0;">${datos.notasGarantia}</p>
                     <div class="linea"></div>
                 ` : ''}
-                <!-- Quitamos el margin-bottom para que corte inmediatamente al terminar -->
                 <div class="center" style="margin-bottom: 5px;">Conserve este voucher para retirar su equipo.</div>
                 <script>
                     window.onload = function() {
@@ -451,7 +481,6 @@ export const Taller: React.FC = () => {
                 notas: notasGarantia
             };
 
-            console.log('Payload orden taller:', payload);
             const resOrden = await api.post('/ordenesservicio', payload);
             const ordenCreada = resOrden.data;
 
@@ -544,7 +573,7 @@ export const Taller: React.FC = () => {
                 herramientasUsed: herramientasUsadas || 'Herramientas básicas de banco técnico',
                 costoReparacion: Number(costoReparacion),
                 metodoPago: metodoPagoEntrega,
-                idProductoServicio: 1
+                idProductoServicio: idProductoServicioSeleccionado || 1
             };
 
             await api.put(`/ordenesservicio/${ordenAEntregar.id}/entregar`, payload);
@@ -755,6 +784,27 @@ export const Taller: React.FC = () => {
                             <div className={styles.infoRow}>
                                 <small className={styles.infoRowLabel}>Equipo a Retirar:</small>
                                 <strong>{ordenAEntregar.dispositivo}</strong> ({ordenAEntregar.clienteNombre || 'Cliente no identificado'})
+                            </div>
+
+                            {/* CONCEPTOS DE SERVICIO TÉCNICO DESDE CATÁLOGO */}
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaConciergeBell /> Concepto Contable del Servicio</label>
+                                <select 
+                                    value={idProductoServicioSeleccionado} 
+                                    onChange={e => setIdProductoServicioSeleccionado(Number(e.target.value))} 
+                                    className={styles.select} 
+                                    required
+                                >
+                                    {serviciosCatalogo.length > 0 ? (
+                                        serviciosCatalogo.map(s => (
+                                            <option key={s.id} value={s.id}>
+                                                {s.nombre} {s.precioVenta ? `(C$ ${s.precioVenta})` : ''}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value={1}>Mantenimiento / Servicio Técnico (Predeterminado #1)</option>
+                                    )}
+                                </select>
                             </div>
 
                             <div className={styles.formGroup}>
