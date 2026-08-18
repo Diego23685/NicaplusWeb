@@ -81,7 +81,7 @@
 }
 
 .select {
-  composes: input;
+  
   cursor: pointer;
 }
 
@@ -362,4 +362,286 @@
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
+}
+
+/* Truncamiento inteligente en tabla */
+.subTextCredencialesTruncate {
+    display: block;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Fila interactiva para abrir Drawer */
+.tableRowClickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-left 0.2s ease;
+}
+
+.tableRowClickable:hover {
+    background-color: rgba(56, 189, 248, 0.08) !important;
+}
+
+.rowSelected {
+    background-color: rgba(88, 28, 126, 0.3) !important;
+    border-left: 4px solid #a855f7;
+}
+
+/* OVERLAY TRANSPARENTE / OSCURO */
+.drawerOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* ESTRUCTURA DE LA GAVETA (DRAWER) */
+.drawerContainer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 440px;
+    max-width: 90vw;
+    height: 100vh;
+    background: #0f172a;
+    border-left: 1px solid #334155;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawerHeader {
+    padding: 20px;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.drawerHeader h3 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.15rem;
+}
+
+.drawerSubhead {
+    color: #38bdf8;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.btnCloseDrawer {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.btnCloseDrawer:hover {
+    color: #ef4444;
+}
+
+/* CUERPO DEL DRAWER CON SCROLL */
+.drawerBody {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.drawerBadgeWrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.badgeNoRenovar {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.drawerSection h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.drawerCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 14px;
+}
+
+.drawerCard p {
+    margin: 4px 0;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+}
+
+.credentialsBox {
+    background: #090d16;
+    border-color: #1e293b;
+}
+
+.servicioTitle {
+    color: #38bdf8;
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 8px !important;
+}
+
+/* TEXTO DE CREDENCIALES COMPLETO Y SELECCIONABLE */
+.fullCredentialsText {
+    color: #f1f5f9;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    word-break: break-all;
+    white-space: pre-wrap;
+    background: #1e293b;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    user-select: text;
+}
+
+.drawerCardGrid {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.montoHighlight {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #4ade80 !important;
+}
+
+.drawerSectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.btnVerHistorialDrawer {
+    background: #334155;
+    color: #38bdf8;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btnVerHistorialDrawer:hover {
+    background: #475569;
+}
+
+.historialContainerDrawer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.facturaBadge {
+    background: #334155;
+    color: #38bdf8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.obsText {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-top: 5px !important;
+    font-style: italic;
+}
+
+/* FOOTER DE LA GAVETA CON ACCIONES */
+.drawerFooter {
+    padding: 16px 20px;
+    background: #1e293b;
+    border-top: 1px solid #334155;
+    display: flex;
+    gap: 10px;
+}
+
+.btnAvisarDrawer {
+    flex: 1;
+    background: #25d366;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btnAvisarDrawer:hover {
+    background: #1da851;
+}
+
+.btnRenovarDrawer {
+    flex: 1;
+    background: #38bdf8;
+    color: #0f172a;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btnRenovarDrawer:hover {
+    background: #7dd3fc;
+}
+
+/* ANIMACIONES */
+@keyframes slideLeft {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }

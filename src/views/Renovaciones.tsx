@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaTimes, FaUser, FaKey, FaCalendarAlt, FaHistory } from 'react-icons/fa';
 import styles from '../assets/styles/Renovaciones.module.css';
 
 interface Cliente {
@@ -27,7 +27,7 @@ interface HistorialRenovacion {
     fechaPago: string;
     nuevaFechaVencimiento: string;
     observacion: string;
-    idVenta?: number; // 🟢 ID DE LA FACTURA ASOCIADA
+    idVenta?: number;
 }
 
 export const Renovaciones: React.FC = () => {
@@ -36,9 +36,11 @@ export const Renovaciones: React.FC = () => {
     const [busqueda, setBusqueda] = useState<string>('');
     const [cargando, setCargando] = useState<boolean>(true);
 
+    // 🟢 ESTADO PARA LA GAVETA DE DETALLES
+    const [registroDrawer, setRegistroDrawer] = useState<Suscripcion | null>(null);
+
     const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(false);
     const [historialRenovaciones, setHistorialRenovaciones] = useState<HistorialRenovacion[]>([]);
-    const [servicioSeleccionado, setServicioSeleccionado] = useState<Suscripcion | null>(null);
     const [cargandoHistorial, setCargandoHistorial] = useState<boolean>(false);
 
     const [mostrarRenovar, setMostrarRenovar] = useState<boolean>(false);
@@ -62,6 +64,12 @@ export const Renovaciones: React.FC = () => {
         try {
             const res = await api.get<Suscripcion[]>('/suscripciones/alertas');
             setSuscripciones(res.data);
+            
+            // Si hay un drawer abierto, actualizamos su objeto dinámicamente
+            if (registroDrawer) {
+                const actualizado = res.data.find(s => s.id === registroDrawer.id);
+                if (actualizado) setRegistroDrawer(actualizado);
+            }
         } catch (err) {
             console.error("Error al traer alertas de renovación:", err);
         } finally {
@@ -77,7 +85,8 @@ export const Renovaciones: React.FC = () => {
         const termino = busqueda.toLowerCase();
         return suscripciones.filter(s => {
             const coincideTexto = s.nombreServicio.toLowerCase().includes(termino) || 
-                                  (s.cliente?.nombre?.toLowerCase().includes(termino) ?? false);
+                                  (s.cliente?.nombre?.toLowerCase().includes(termino) ?? false) ||
+                                  s.detallesCredenciales.toLowerCase().includes(termino);
             const coincideAlerta = filtroAlerta === 'Todos' ? true : s.alertaFiltro === filtroAlerta;
             return coincideTexto && coincideAlerta;
         });
@@ -146,7 +155,6 @@ export const Renovaciones: React.FC = () => {
     const abrirHistorial = async (suscripcion: Suscripcion) => {
         try {
             setCargandoHistorial(true);
-            setServicioSeleccionado(suscripcion);
             const res = await api.get<HistorialRenovacion[]>(`/renovaciones/suscripcion/${suscripcion.id}`);
             setHistorialRenovaciones(res.data);
             setMostrarHistorial(true);
@@ -254,14 +262,14 @@ export const Renovaciones: React.FC = () => {
             <div className={styles.searchContainer}>
                 <input 
                     type="text" 
-                    placeholder="Filtrar por nombre de servicio o nombre de cliente..." 
+                    placeholder="Filtrar por servicio, cliente o correo/credencial..." 
                     value={busqueda} 
                     onChange={e => setBusqueda(e.target.value)} 
                     className={styles.input} 
                 />
             </div>
 
-            {/* TABLA DE CONTENIDO CON SCROLL INTELIGENTE */}
+            {/* TABLA DE CONTENIDO */}
             <div className={styles.tablePanel}>
                 <div className={styles.tableWrapper}>
                     <table className={styles.table}>
@@ -277,15 +285,23 @@ export const Renovaciones: React.FC = () => {
                         <tbody>
                             {suscripcionesFiltradas.map((s) => {
                                 const configBadge = badgeEstilo(s.alertaFiltro);
+                                const esSeleccionado = registroDrawer?.id === s.id;
+
                                 return (
-                                    <tr key={s.id}>
+                                    <tr 
+                                        key={s.id} 
+                                        onClick={() => setRegistroDrawer(s)}
+                                        className={`${styles.tableRowClickable} ${esSeleccionado ? styles.rowSelected : ''}`}
+                                    >
                                         <td>
                                             <strong>{s.cliente?.nombre || 'Cliente Genérico'}</strong>
                                             <small className={styles.subText}>📞 {s.cliente?.telefono || 'Sin número'}</small>
                                         </td>
                                         <td>
                                             <strong>{s.nombreServicio}</strong>
-                                            <small className={styles.subTextCredenciales}>{s.detallesCredenciales}</small>
+                                            <small className={styles.subTextCredencialesTruncate}>
+                                                {s.detallesCredenciales}
+                                            </small>
                                         </td>
                                         <td>
                                             {new Date(s.fechaVencimiento).toLocaleDateString()}
@@ -306,13 +322,13 @@ export const Renovaciones: React.FC = () => {
                                             )}
                                         </td>
 
-                                        <td style={{ textAlign: 'center' }}>
+                                        <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                                             <div className={styles.actionsCellWrapper}>
                                                 <button onClick={() => dispararRecordatorioWhatsApp(s)} className={styles.btnAvisar}>
                                                     <FaWhatsapp /> Avisar
                                                 </button>
 
-                                                <button onClick={() => abrirHistorial(s)} className={styles.btnHistorialIcon}>
+                                                <button onClick={() => { setRegistroDrawer(s); abrirHistorial(s); }} className={styles.btnHistorialIcon}>
                                                     📜
                                                 </button>
 
@@ -360,52 +376,136 @@ export const Renovaciones: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL HISTORIAL SIDEBAR */}
-            {mostrarHistorial && (
-                <div className={styles.sidebarHistorial}>
-                    <div className={styles.sidebarHeader}>
-                        <h3>📜 Historial</h3>
-                        <button onClick={() => setMostrarHistorial(false)} className={styles.btnCloseSidebar}>X</button>
-                    </div>
-                    <hr style={{ borderColor: '#334155', margin: '15px 0' }}/>
-                    {servicioSeleccionado && (
-                        <div className={styles.infoCard}>
-                            <strong>{servicioSeleccionado.nombreServicio}</strong>
-                            <small>{servicioSeleccionado.cliente?.nombre}</small>
-                        </div>
-                    )}
-                    {cargandoHistorial ? (
-                        <p>Cargando historial...</p>
-                    ) : historialRenovaciones.length === 0 ? (
-                        <p style={{ color: '#94a3b8' }}>Esta suscripción todavía no tiene renovaciones.</p>
-                    ) : (
-                        historialRenovaciones.map((r) => (
-                            <div key={r.id} className={styles.historialCard}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <strong>💰 C${r.monto}</strong>
-                                    {r.idVenta && (
-                                        <span style={{ 
-                                            background: '#334155', 
-                                            color: '#38bdf8', 
-                                            padding: '2px 8px', 
-                                            borderRadius: '4px', 
-                                            fontSize: '0.75rem', 
-                                            fontWeight: 'bold' 
-                                        }}>
-                                            Factura #{r.idVenta}
-                                        </span>
-                                    )}
-                                </div>
-                                <small>Método: {r.metodoPago}</small>
-                                <small>Fecha pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
-                                <small className={styles.vencimientoFuturo}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
-                                <p>{r.observacion}</p>
+            {/* 🟢 DRAWER / GAVETA DESPLEGABLE DE INFORMACIÓN COMPLETA */}
+            {registroDrawer && (
+                <>
+                    <div className={styles.drawerOverlay} onClick={() => setRegistroDrawer(null)} />
+                    <aside className={styles.drawerContainer}>
+                        <div className={styles.drawerHeader}>
+                            <div>
+                                <h3>Detalle del Servicio</h3>
+                                <span className={styles.drawerSubhead}>ID Registro: #{registroDrawer.id}</span>
                             </div>
-                        ))
-                    )}
-                </div>
+                            <button onClick={() => setRegistroDrawer(null)} className={styles.btnCloseDrawer}>
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        <div className={styles.drawerBody}>
+                            {/* BADGE DE ESTADO */}
+                            <div className={styles.drawerBadgeWrapper}>
+                                <span className={styles.badgeAlert} style={{ background: badgeEstilo(registroDrawer.alertaFiltro).bg, color: badgeEstilo(registroDrawer.alertaFiltro).color }}>
+                                    Estatus: {registroDrawer.alertaFiltro === 'Normal' ? 'Vigente ✓' : registroDrawer.alertaFiltro}
+                                </span>
+                                {registroDrawer.estado === 'NoRenovar' && (
+                                    <span className={styles.badgeNoRenovar}>🚫 Marcar como No Renovar</span>
+                                )}
+                            </div>
+
+                            {/* SECCIÓN INFORMACIÓN DE CLIENTE */}
+                            <div className={styles.drawerSection}>
+                                <h4><FaUser /> Datos del Cliente</h4>
+                                <div className={styles.drawerCard}>
+                                    <p><strong>Nombre:</strong> {registroDrawer.cliente?.nombre || 'Cliente Genérico'}</p>
+                                    <p><strong>Teléfono:</strong> {registroDrawer.cliente?.telefono || 'Sin número de contacto'}</p>
+                                </div>
+                            </div>
+
+                            {/* SECCIÓN CREDENCIALES COMPLETAS (SIN TRUNCAR) */}
+                            <div className={styles.drawerSection}>
+                                <h4><FaKey /> Credenciales / Detalles de Cuenta</h4>
+                                <div className={`${styles.drawerCard} ${styles.credentialsBox}`}>
+                                    <p className={styles.servicioTitle}>{registroDrawer.nombreServicio}</p>
+                                    <div className={styles.fullCredentialsText}>
+                                        {registroDrawer.detallesCredenciales}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SECCIÓN VENCIMIENTO Y COSTO */}
+                            <div className={styles.drawerSection}>
+                                <h4><FaCalendarAlt /> Estado Financiero</h4>
+                                <div className={styles.drawerCardGrid}>
+                                    <div>
+                                        <small>Costo Renovación</small>
+                                        <p className={styles.montoHighlight}>C$ {registroDrawer.costoRenovacion}</p>
+                                    </div>
+                                    <div>
+                                        <small>Fecha Vencimiento</small>
+                                        <p>{new Date(registroDrawer.fechaVencimiento).toLocaleDateString()}</p>
+                                        <small style={{ color: registroDrawer.diasRestantes < 0 ? '#ef4444' : '#4ade80', fontWeight: 'bold' }}>
+                                            {registroDrawer.diasRestantes < 0 ? `Vencido hace ${Math.abs(registroDrawer.diasRestantes)} días` : registroDrawer.diasRestantes === 0 ? '¡Vence Hoy!' : `Faltan ${registroDrawer.diasRestantes} días`}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* HISTORIAL DENTRO DE LA GAVETA */}
+                            <div className={styles.drawerSection}>
+                                <div className={styles.drawerSectionHeader}>
+                                    <h4><FaHistory /> Historial de Pagos</h4>
+                                    <button 
+                                        onClick={() => abrirHistorial(registroDrawer)} 
+                                        className={styles.btnVerHistorialDrawer}
+                                    >
+                                        Cargar Historial
+                                    </button>
+                                </div>
+
+                                {mostrarHistorial && (
+                                    <div className={styles.historialContainerDrawer}>
+                                        {cargandoHistorial ? (
+                                            <p className={styles.loadingText}>Cargando cronología...</p>
+                                        ) : historialRenovaciones.length === 0 ? (
+                                            <p className={styles.emptyHistorial}>Sin renovaciones previas registradas.</p>
+                                        ) : (
+                                            historialRenovaciones.map((r) => (
+                                                <div key={r.id} className={styles.historialCard}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <strong>💰 C${r.monto}</strong>
+                                                        {r.idVenta && (
+                                                            <span className={styles.facturaBadge}>
+                                                                Factura #{r.idVenta}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <small>Método: {r.metodoPago}</small>
+                                                    <small>Pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
+                                                    <small className={styles.vencimientoFuturo}>
+                                                        Nuevo Venc.: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}
+                                                    </small>
+                                                    {r.observacion && <p className={styles.obsText}>{r.observacion}</p>}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ACCIONES RÁPIDAS EN FOOTER DE LA GAVETA */}
+                        <div className={styles.drawerFooter}>
+                            <button 
+                                onClick={() => dispararRecordatorioWhatsApp(registroDrawer)} 
+                                className={styles.btnAvisarDrawer}
+                            >
+                                <FaWhatsapp /> Enviar Aviso WhatsApp
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSuscripcionRenovar(registroDrawer);
+                                    setMonto(registroDrawer.costoRenovacion);
+                                    setFechaPago(obtenerFechaLocalHoy());
+                                    setMostrarRenovar(true);
+                                }}
+                                className={styles.btnRenovarDrawer}
+                            >
+                                💵 Renovar
+                            </button>
+                        </div>
+                    </aside>
+                </>
             )}
-            
 
             {/* MODAL PROCESAR PAGO */}
             {mostrarRenovar && suscripcionRenovar && (
