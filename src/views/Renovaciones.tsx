@@ -36,16 +36,17 @@ export const Renovaciones: React.FC = () => {
     const [busqueda, setBusqueda] = useState<string>('');
     const [cargando, setCargando] = useState<boolean>(true);
 
-    // 🟢 ESTADO PARA LA GAVETA DE DETALLES
     const [registroDrawer, setRegistroDrawer] = useState<Suscripcion | null>(null);
 
     const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(false);
     const [historialRenovaciones, setHistorialRenovaciones] = useState<HistorialRenovacion[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState<boolean>(false);
 
+    // 🟢 ESTADOS DE RENOVACIÓN (INCLUYE DURACIÓN DE MESES)
     const [mostrarRenovar, setMostrarRenovar] = useState<boolean>(false);
     const [suscripcionRenovar, setSuscripcionRenovar] = useState<Suscripcion | null>(null);
     const [monto, setMonto] = useState<number>(0);
+    const [mesesRenovacion, setMesesRenovacion] = useState<number>(1); // 👈 Nuevo estado
     const [metodoPago, setMetodoPago] = useState<string>('Efectivo');
     const [fechaPago, setFechaPago] = useState<string>('');
 
@@ -65,7 +66,6 @@ export const Renovaciones: React.FC = () => {
             const res = await api.get<Suscripcion[]>('/suscripciones/alertas');
             setSuscripciones(res.data);
             
-            // Si hay un drawer abierto, actualizamos su objeto dinámicamente
             if (registroDrawer) {
                 const actualizado = res.data.find(s => s.id === registroDrawer.id);
                 if (actualizado) setRegistroDrawer(actualizado);
@@ -91,6 +91,23 @@ export const Renovaciones: React.FC = () => {
             return coincideTexto && coincideAlerta;
         });
     }, [suscripciones, busqueda, filtroAlerta]);
+
+    // 🟢 MANEJO DE CAMBIO DE MESES Y RECÁLCULO DE MONTO SUGERIDO
+    const handleCambioMeses = (nuevosMeses: number) => {
+        setMesesRenovacion(nuevosMeses);
+        if (suscripcionRenovar) {
+            // Ajusta proporcionalmente el costo base
+            setMonto(suscripcionRenovar.costoRenovacion * nuevosMeses);
+        }
+    };
+
+    const abrirModalRenovacion = (s: Suscripcion) => {
+        setSuscripcionRenovar(s);
+        setMesesRenovacion(1);
+        setMonto(s.costoRenovacion);
+        setFechaPago(obtenerFechaLocalHoy());
+        setMostrarRenovar(true);
+    };
 
     const dispararRecordatorioWhatsApp = (item: Suscripcion) => {
         if (!item.cliente || !item.cliente.telefono) {
@@ -177,9 +194,10 @@ export const Renovaciones: React.FC = () => {
             const datos = {
                 idSuscripcion: suscripcionRenovar.id,
                 monto: monto,
+                meses: mesesRenovacion, // 👈 Enviamos la cantidad de meses elegidos
                 metodoPago: metodoPago,
                 fechaPago: fechaPago,
-                observacion: `Renovación ${suscripcionRenovar.nombreServicio}`
+                observacion: `Renovación de ${mesesRenovacion} mes(es) - ${suscripcionRenovar.nombreServicio}`
             };
 
             await api.post('/renovaciones', datos);
@@ -333,12 +351,7 @@ export const Renovaciones: React.FC = () => {
                                                 </button>
 
                                                 <button
-                                                    onClick={() => {
-                                                        setSuscripcionRenovar(s);
-                                                        setMonto(s.costoRenovacion);
-                                                        setFechaPago(obtenerFechaLocalHoy());
-                                                        setMostrarRenovar(true);
-                                                    }}
+                                                    onClick={() => abrirModalRenovacion(s)}
                                                     className={styles.btnRenovar}
                                                 >
                                                     💵 Renovar
@@ -376,7 +389,7 @@ export const Renovaciones: React.FC = () => {
                 </div>
             </div>
 
-            {/* 🟢 DRAWER / GAVETA DESPLEGABLE DE INFORMACIÓN COMPLETA */}
+            {/* DRAWER / GAVETA DESPLEGABLE */}
             {registroDrawer && (
                 <>
                     <div className={styles.drawerOverlay} onClick={() => setRegistroDrawer(null)} />
@@ -392,7 +405,6 @@ export const Renovaciones: React.FC = () => {
                         </div>
 
                         <div className={styles.drawerBody}>
-                            {/* BADGE DE ESTADO */}
                             <div className={styles.drawerBadgeWrapper}>
                                 <span className={styles.badgeAlert} style={{ background: badgeEstilo(registroDrawer.alertaFiltro).bg, color: badgeEstilo(registroDrawer.alertaFiltro).color }}>
                                     Estatus: {registroDrawer.alertaFiltro === 'Normal' ? 'Vigente ✓' : registroDrawer.alertaFiltro}
@@ -402,7 +414,6 @@ export const Renovaciones: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* SECCIÓN INFORMACIÓN DE CLIENTE */}
                             <div className={styles.drawerSection}>
                                 <h4><FaUser /> Datos del Cliente</h4>
                                 <div className={styles.drawerCard}>
@@ -411,7 +422,6 @@ export const Renovaciones: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* SECCIÓN CREDENCIALES COMPLETAS (SIN TRUNCAR) */}
                             <div className={styles.drawerSection}>
                                 <h4><FaKey /> Credenciales / Detalles de Cuenta</h4>
                                 <div className={`${styles.drawerCard} ${styles.credentialsBox}`}>
@@ -422,12 +432,11 @@ export const Renovaciones: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* SECCIÓN VENCIMIENTO Y COSTO */}
                             <div className={styles.drawerSection}>
                                 <h4><FaCalendarAlt /> Estado Financiero</h4>
                                 <div className={styles.drawerCardGrid}>
                                     <div>
-                                        <small>Costo Renovación</small>
+                                        <small>Costo Base Mensual</small>
                                         <p className={styles.montoHighlight}>C$ {registroDrawer.costoRenovacion}</p>
                                     </div>
                                     <div>
@@ -440,7 +449,6 @@ export const Renovaciones: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* HISTORIAL DENTRO DE LA GAVETA */}
                             <div className={styles.drawerSection}>
                                 <div className={styles.drawerSectionHeader}>
                                     <h4><FaHistory /> Historial de Pagos</h4>
@@ -483,7 +491,6 @@ export const Renovaciones: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* ACCIONES RÁPIDAS EN FOOTER DE LA GAVETA */}
                         <div className={styles.drawerFooter}>
                             <button 
                                 onClick={() => dispararRecordatorioWhatsApp(registroDrawer)} 
@@ -492,12 +499,7 @@ export const Renovaciones: React.FC = () => {
                                 <FaWhatsapp /> Enviar Aviso WhatsApp
                             </button>
                             <button
-                                onClick={() => {
-                                    setSuscripcionRenovar(registroDrawer);
-                                    setMonto(registroDrawer.costoRenovacion);
-                                    setFechaPago(obtenerFechaLocalHoy());
-                                    setMostrarRenovar(true);
-                                }}
+                                onClick={() => abrirModalRenovacion(registroDrawer)}
                                 className={styles.btnRenovarDrawer}
                             >
                                 💵 Renovar
@@ -507,7 +509,7 @@ export const Renovaciones: React.FC = () => {
                 </>
             )}
 
-            {/* MODAL PROCESAR PAGO */}
+            {/* 🟢 MODAL PROCESAR PAGO (CON DURACIÓN EN MESES) */}
             {mostrarRenovar && suscripcionRenovar && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalBox}>
@@ -518,6 +520,21 @@ export const Renovaciones: React.FC = () => {
                             <small>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
                         </div>
 
+                        {/* DURACIÓN EN MESES */}
+                        <label className={styles.label}>Duración de la Suscripción</label>
+                        <select 
+                            value={mesesRenovacion} 
+                            onChange={e => handleCambioMeses(Number(e.target.value))} 
+                            className={styles.select} 
+                            style={{ marginBottom: '15px' }}
+                        >
+                            <option value={1}>1 Mes</option>
+                            <option value={2}>2 Meses</option>
+                            <option value={3}>3 Meses (Trimestral)</option>
+                            <option value={6}>6 Meses (Semestral)</option>
+                            <option value={12}>12 Meses (Anual)</option>
+                        </select>
+
                         <label className={styles.label}>Fecha de Pago</label>
                         <input 
                             type="date" 
@@ -527,10 +544,16 @@ export const Renovaciones: React.FC = () => {
                             style={{ marginBottom: '15px' }} 
                         />
 
-                        <label className={styles.label}>Monto</label>
-                        <input type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} className={styles.input} style={{ marginBottom: '15px' }} />
+                        <label className={styles.label}>Monto Total (C$)</label>
+                        <input 
+                            type="number" 
+                            value={monto} 
+                            onChange={e => setMonto(Number(e.target.value))} 
+                            className={styles.input} 
+                            style={{ marginBottom: '15px' }} 
+                        />
 
-                        <label className={styles.label}>Método de pago</label>
+                        <label className={styles.label}>Método de Pago</label>
                         <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} className={styles.select} style={{ marginBottom: '20px' }}>
                             <option value="Efectivo">Efectivo</option>
                             <option value="Transferencia">Transferencia</option>
