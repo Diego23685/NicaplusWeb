@@ -42,11 +42,11 @@ export const Renovaciones: React.FC = () => {
     const [historialRenovaciones, setHistorialRenovaciones] = useState<HistorialRenovacion[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState<boolean>(false);
 
-    // 🟢 ESTADOS DE RENOVACIÓN (INCLUYE DURACIÓN DE MESES)
+    // 🟢 ESTADOS DE RENOVACIÓN (CAMBIO: DÍAS EN LUGAR DE MESES)
     const [mostrarRenovar, setMostrarRenovar] = useState<boolean>(false);
     const [suscripcionRenovar, setSuscripcionRenovar] = useState<Suscripcion | null>(null);
     const [monto, setMonto] = useState<number>(0);
-    const [mesesRenovacion, setMesesRenovacion] = useState<number>(1); // 👈 Nuevo estado
+    const [diasRenovacion, setDiasRenovacion] = useState<number>(30); // 👈 Por defecto 30 días
     const [metodoPago, setMetodoPago] = useState<string>('Efectivo');
     const [fechaPago, setFechaPago] = useState<string>('');
 
@@ -92,18 +92,20 @@ export const Renovaciones: React.FC = () => {
         });
     }, [suscripciones, busqueda, filtroAlerta]);
 
-    // 🟢 MANEJO DE CAMBIO DE MESES Y RECÁLCULO DE MONTO SUGERIDO
-    const handleCambioMeses = (nuevosMeses: number) => {
-        setMesesRenovacion(nuevosMeses);
+    // 🟢 MANEJO DEL CAMBIO DE DÍAS Y RECÁLCULO PROPORCIONAL DE MONTO
+    const handleCambioDias = (nuevosDias: number) => {
+        setDiasRenovacion(nuevosDias);
         if (suscripcionRenovar) {
-            // Ajusta proporcionalmente el costo base
-            setMonto(suscripcionRenovar.costoRenovacion * nuevosMeses);
+            // Calcula costo prorrateado considerando la tarifa base como de 30 días
+            const costoDiario = suscripcionRenovar.costoRenovacion / 30;
+            const nuevoMonto = Math.round(costoDiario * nuevosDias);
+            setMonto(nuevoMonto);
         }
     };
 
     const abrirModalRenovacion = (s: Suscripcion) => {
         setSuscripcionRenovar(s);
-        setMesesRenovacion(1);
+        setDiasRenovacion(30);
         setMonto(s.costoRenovacion);
         setFechaPago(obtenerFechaLocalHoy());
         setMostrarRenovar(true);
@@ -189,15 +191,19 @@ export const Renovaciones: React.FC = () => {
             alert("Por favor seleccione una fecha válida.");
             return;
         }
+        if (diasRenovacion <= 0) {
+            alert("Ingrese un número válido de días para la renovación.");
+            return;
+        }
 
         try {
             const datos = {
                 idSuscripcion: suscripcionRenovar.id,
                 monto: monto,
-                meses: mesesRenovacion, // 👈 Enviamos la cantidad de meses elegidos
+                dias: diasRenovacion, // 👈 Enviamos la cantidad exacta de días
                 metodoPago: metodoPago,
                 fechaPago: fechaPago,
-                observacion: `Renovación de ${mesesRenovacion} mes(es) - ${suscripcionRenovar.nombreServicio}`
+                observacion: `Renovación por ${diasRenovacion} día(s) - ${suscripcionRenovar.nombreServicio}`
             };
 
             await api.post('/renovaciones', datos);
@@ -509,7 +515,7 @@ export const Renovaciones: React.FC = () => {
                 </>
             )}
 
-            {/* 🟢 MODAL PROCESAR PAGO (CON DURACIÓN EN MESES) */}
+            {/* 🟢 MODAL PROCESAR PAGO (INGRESO MANUAL DE DÍAS) */}
             {mostrarRenovar && suscripcionRenovar && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalBox}>
@@ -520,20 +526,17 @@ export const Renovaciones: React.FC = () => {
                             <small>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
                         </div>
 
-                        {/* DURACIÓN EN MESES */}
-                        <label className={styles.label}>Duración de la Suscripción</label>
-                        <select 
-                            value={mesesRenovacion} 
-                            onChange={e => handleCambioMeses(Number(e.target.value))} 
-                            className={styles.select} 
+                        {/* INGRESO MANUAL DE DÍAS */}
+                        <label className={styles.label}>Duración (Días)</label>
+                        <input 
+                            type="number"
+                            min={1}
+                            value={diasRenovacion} 
+                            onChange={e => handleCambioDias(Number(e.target.value))} 
+                            className={styles.input} 
                             style={{ marginBottom: '15px' }}
-                        >
-                            <option value={1}>1 Mes</option>
-                            <option value={2}>2 Meses</option>
-                            <option value={3}>3 Meses (Trimestral)</option>
-                            <option value={6}>6 Meses (Semestral)</option>
-                            <option value={12}>12 Meses (Anual)</option>
-                        </select>
+                            placeholder="Ej. 30, 60, 90..."
+                        />
 
                         <label className={styles.label}>Fecha de Pago</label>
                         <input 
