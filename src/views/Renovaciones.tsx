@@ -42,11 +42,11 @@ export const Renovaciones: React.FC = () => {
     const [historialRenovaciones, setHistorialRenovaciones] = useState<HistorialRenovacion[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState<boolean>(false);
 
-    // 🟢 ESTADOS DE RENOVACIÓN (CAMBIO: DÍAS EN LUGAR DE MESES)
+    // 🟢 ESTADOS DE RENOVACIÓN
     const [mostrarRenovar, setMostrarRenovar] = useState<boolean>(false);
     const [suscripcionRenovar, setSuscripcionRenovar] = useState<Suscripcion | null>(null);
     const [monto, setMonto] = useState<number>(0);
-    const [diasRenovacion, setDiasRenovacion] = useState<number>(30); // 👈 Por defecto 30 días
+    const [diasRenovacion, setDiasRenovacion] = useState<number>(30);
     const [metodoPago, setMetodoPago] = useState<string>('Efectivo');
     const [fechaPago, setFechaPago] = useState<string>('');
 
@@ -92,11 +92,9 @@ export const Renovaciones: React.FC = () => {
         });
     }, [suscripciones, busqueda, filtroAlerta]);
 
-    // 🟢 MANEJO DEL CAMBIO DE DÍAS Y RECÁLCULO PROPORCIONAL DE MONTO
     const handleCambioDias = (nuevosDias: number) => {
         setDiasRenovacion(nuevosDias);
         if (suscripcionRenovar) {
-            // Calcula costo prorrateado considerando la tarifa base como de 30 días
             const costoDiario = suscripcionRenovar.costoRenovacion / 30;
             const nuevoMonto = Math.round(costoDiario * nuevosDias);
             setMonto(nuevoMonto);
@@ -107,6 +105,7 @@ export const Renovaciones: React.FC = () => {
         setSuscripcionRenovar(s);
         setDiasRenovacion(30);
         setMonto(s.costoRenovacion);
+        setMetodoPago('Efectivo'); // Default
         setFechaPago(obtenerFechaLocalHoy());
         setMostrarRenovar(true);
     };
@@ -196,18 +195,22 @@ export const Renovaciones: React.FC = () => {
             return;
         }
 
+        const esCredito = metodoPago === 'Credito';
+
         try {
             const datos = {
                 idSuscripcion: suscripcionRenovar.id,
                 monto: monto,
-                dias: diasRenovacion, // 👈 Enviamos la cantidad exacta de días
+                dias: diasRenovacion,
                 metodoPago: metodoPago,
                 fechaPago: fechaPago,
-                observacion: `Renovación por ${diasRenovacion} día(s) - ${suscripcionRenovar.nombreServicio}`
+                observacion: esCredito 
+                    ? `[CRÉDITO PENDIENTE] Renovación por ${diasRenovacion} día(s) - ${suscripcionRenovar.nombreServicio}`
+                    : `Renovación por ${diasRenovacion} día(s) - ${suscripcionRenovar.nombreServicio}`
             };
 
             await api.post('/renovaciones', datos);
-            alert("Renovación procesada correctamente.");
+            alert(esCredito ? "Renovación a CRÉDITO registrada correctamente." : "Renovación procesada correctamente.");
             setMostrarRenovar(false);
             setSuscripcionRenovar(null);
             setCargando(true);
@@ -515,7 +518,7 @@ export const Renovaciones: React.FC = () => {
                 </>
             )}
 
-            {/* 🟢 MODAL PROCESAR PAGO (INGRESO MANUAL DE DÍAS) */}
+            {/* MODAL PROCESAR PAGO */}
             {mostrarRenovar && suscripcionRenovar && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalBox}>
@@ -526,7 +529,6 @@ export const Renovaciones: React.FC = () => {
                             <small>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
                         </div>
 
-                        {/* INGRESO MANUAL DE DÍAS */}
                         <label className={styles.label}>Duración (Días)</label>
                         <input 
                             type="number"
@@ -557,10 +559,16 @@ export const Renovaciones: React.FC = () => {
                         />
 
                         <label className={styles.label}>Método de Pago</label>
-                        <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} className={styles.select} style={{ marginBottom: '20px' }}>
+                        <select 
+                            value={metodoPago} 
+                            onChange={e => setMetodoPago(e.target.value)} 
+                            className={styles.select} 
+                            style={{ marginBottom: '20px' }}
+                        >
                             <option value="Efectivo">Efectivo</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Tarjeta">Tarjeta</option>
+                            <option value="Credito">🔴 Crédito (Pendiente)</option>
                         </select>
 
                         <div className={styles.modalActions}>
