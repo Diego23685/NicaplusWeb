@@ -7,7 +7,7 @@ import {
     FaShoppingCart, FaStore, FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
     FaArrowLeft, FaSignOutAlt, FaBars, FaTimes, FaSignInAlt, FaChevronLeft, FaChevronRight, 
     FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen, FaFacebook, FaInstagram,
-    FaCheckCircle, FaExclamationTriangle, FaShieldAlt
+    FaCheckCircle, FaExclamationTriangle, FaShieldAlt, FaInfo
 } from 'react-icons/fa';
 
 // Importación de subcomponentes externos y hooks extraídos
@@ -71,6 +71,11 @@ interface CatalogoProps {
     cliente: any;
     alCerrarSesion: () => void;
     alIrAMiCuenta?: () => void;
+}
+
+interface Notificacion {
+    mensaje: string;
+    tipo: 'error' | 'advertencia' | 'exito' | 'info';
 }
 
 /* ==========================================================================
@@ -188,11 +193,28 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const [tipoEntrega, setTipoEntrega] = useState('Envío a domicilio');
     const [metodoPago, setMetodoPago] = useState('Transferencia Bancaria');
 
+    // Estado para notificaciones suaves (Toast)
+    const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
+
     const catRowRef = useRef<HTMLDivElement | null>(null);
     const juegoRowRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    // Integración del Canvas Extrayendo la Lógica al Hook Personalizado
+    // Función auxiliar para mostrar avisos sin usar alert()
+    const mostrarAviso = (mensaje: string, tipo: 'error' | 'advertencia' | 'exito' | 'info' = 'advertencia') => {
+        setNotificacion({ mensaje, tipo });
+    };
+
+    useEffect(() => {
+        if (notificacion) {
+            const timer = setTimeout(() => {
+                setNotificacion(null);
+            }, 3500);
+            return () => clearTimeout(timer);
+        }
+    }, [notificacion]);
+
+    // Integración del Canvas
     useInteractiveCanvas(canvasRef);
 
     useEffect(() => {
@@ -211,7 +233,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             api.get('/juegos')
         ])
         .then(([p, c, j]) => {
-            console.log("PRODUCTOS DESDE API:", p.data); // Inspect aquí los campos exacta de CategoriaId/categoriaId
             setProductos(p.data || []);
             setCategorias(c.data || []);
             setJuegos(j.data || []);
@@ -231,8 +252,29 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     };
 
-    // Animación de partícula física voladora al carrito con manejo seguro del DOM
+    // Animación de partícula física voladora al carrito
     const agregarAlCarrito = (producto: Producto, e?: React.MouseEvent) => {
+        let errorStock = false;
+
+        setCarrito(prevCarrito => {
+            const existe = prevCarrito.find(item => item.producto.id === producto.id);
+            if (existe) {
+                if (!producto.esDigital && producto.stockActual <= existe.cantidad) {
+                    errorStock = true;
+                    return prevCarrito;
+                }
+                return prevCarrito.map(item =>
+                    item.producto.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
+                );
+            }
+            return [...prevCarrito, { producto, cantidad: 1 }];
+        });
+
+        if (errorStock) {
+            mostrarAviso("Límite de existencias alcanzado en tienda.", "advertencia");
+            return;
+        }
+
         if (e) {
             const cartButton = document.querySelector(`.${styles.cartBtnDesk}`) || document.querySelector(`.${styles.cartBtnMobile}`);
             
@@ -270,30 +312,17 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 }, 800);
             }
         }
-
-        setCarrito(prevCarrito => {
-            const existe = prevCarrito.find(item => item.producto.id === producto.id);
-            if (existe) {
-                if (!producto.esDigital && producto.stockActual <= existe.cantidad) {
-                    alert("Límite de existencias alcanzado en tienda.");
-                    return prevCarrito;
-                }
-                return prevCarrito.map(item =>
-                    item.producto.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
-                );
-            }
-            return [...prevCarrito, { producto, cantidad: 1 }];
-        });
     };
 
     const cambiarCantidad = (id: number, delta: number) => {
+        let alcanzadoLimite = false;
         setCarrito(prevCarrito => 
             prevCarrito.map(item => {
                 if (item.producto.id === id) {
                     const nuevaCantidad = item.cantidad + delta;
                     if (nuevaCantidad < 1) return item;
                     if (!item.producto.esDigital && item.producto.stockActual < nuevaCantidad) {
-                        alert("Límite de existencias alcanzado.");
+                        alcanzadoLimite = true;
                         return item;
                     }
                     return { ...item, cantidad: nuevaCantidad };
@@ -301,6 +330,10 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 return item;
             })
         );
+
+        if (alcanzadoLimite) {
+            mostrarAviso("Límite de existencias alcanzado.", "advertencia");
+        }
     };
 
     const removerDelCarrito = (id: number) => {
@@ -310,9 +343,19 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const enviarAWhatsApp = (e: React.FormEvent) => {
         e.preventDefault();
         if (carrito.length === 0) return;
-        if (!aceptoTerminos) return alert("Debes aceptar los Términos y Condiciones.");
-        if (!nombreCliente.trim() || !telefonoCliente.trim()) return alert("Ingresa nombre y teléfono.");
-        if (tipoEntrega === 'Envío a domicilio' && !direccionCliente.trim()) return alert("Ingresa tu dirección.");
+        
+        if (!aceptoTerminos) {
+            mostrarAviso("Debes aceptar los Términos y Condiciones para continuar.", "advertencia");
+            return;
+        }
+        if (!nombreCliente.trim() || !telefonoCliente.trim()) {
+            mostrarAviso("Por favor, ingresa tu nombre y número de teléfono.", "advertencia");
+            return;
+        }
+        if (tipoEntrega === 'Envío a domicilio' && !direccionCliente.trim()) {
+            mostrarAviso("Ingresa la dirección completa para el envío a domicilio.", "advertencia");
+            return;
+        }
 
         let mensaje = `✨ *NUEVA ORDEN - NICAPLUS GAMING* ✨\n\n👤 *CLIENTE*\n▪️ *Nombre:* ${nombreCliente.trim()}\n▪️ *Teléfono:* ${telefonoCliente.trim()}\n▪️ *Entrega:* ${tipoEntrega}\n`;
         if (tipoEntrega === 'Envío a domicilio') mensaje += `📍 *Dirección:* ${direccionCliente.trim()}\n`;
@@ -339,26 +382,21 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const productosFiltrados = useMemo(() => {
         if (!Array.isArray(productos)) return [];
 
-        // Buscamos el nombre de la categoría seleccionada a partir del ID
         const catSeleccionada = categorias.find(c => c.id === idCatSeleccionada);
         const nombreCatFiltro = catSeleccionada ? catSeleccionada.nombre.toLowerCase().trim() : null;
 
-        // Buscamos el nombre del juego seleccionado a partir del ID
         const juegoSeleccionado = juegos.find(j => j.id === idJuegoSeleccionado);
         const nombreJuegoFiltro = juegoSeleccionado ? juegoSeleccionado.nombre.toLowerCase().trim() : null;
 
         return productos.filter((p: any) => {
-            // 1. Coincidencia por búsqueda
             const nombreProd = (p.nombre || '').toLowerCase();
             const cumpleBusqueda = busqueda.trim() === '' || nombreProd.includes(busqueda.toLowerCase().trim());
 
-            // 2. Coincidencia por Categoría (Comprara cadenas en minúsculas)
             const catProducto = (p.categoriaNombre || '').toLowerCase().trim();
             const cumpleCategoria = idCatSeleccionada === null || idCatSeleccionada === undefined
                 ? true
                 : (catProducto !== '' && catProducto === nombreCatFiltro);
 
-            // 3. Coincidencia por Juego
             const juegoProducto = (p.juegoNombre || '').toLowerCase().trim();
             const cumpleJuego = idJuegoSeleccionado === null || idJuegoSeleccionado === undefined
                 ? true
@@ -397,6 +435,47 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     return (
         <div className={styles.mainWrapper}>
             <canvas ref={canvasRef} className={styles.canvasBackground} />
+
+            {/* SISTEMA DE TOAST NOTIFICACIONES */}
+            {notificacion && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backgroundColor: notificacion.tipo === 'error' ? '#3f0d12' : notificacion.tipo === 'exito' ? '#0d3f1a' : '#2d1b00',
+                    color: '#fff',
+                    borderLeft: `4px solid ${notificacion.tipo === 'error' ? '#ff4d4d' : notificacion.tipo === 'exito' ? '#00ff66' : '#ffb700'}`,
+                    padding: '12px 18px',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(8px)',
+                    animation: 'slideInToast 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    maxWidth: '380px'
+                }}>
+                    {notificacion.tipo === 'error' && <FaExclamationTriangle style={{ color: '#ff4d4d', flexShrink: 0 }} size={18} />}
+                    {notificacion.tipo === 'exito' && <FaCheckCircle style={{ color: '#00ff66', flexShrink: 0 }} size={18} />}
+                    {notificacion.tipo === 'advertencia' && <FaExclamationTriangle style={{ color: '#ffb700', flexShrink: 0 }} size={18} />}
+                    {notificacion.tipo === 'info' && <FaInfo style={{ color: '#00bfff', flexShrink: 0 }} size={18} />}
+                    <span style={{ fontSize: '13px', fontWeight: 500, lineHeight: 1.3 }}>{notificacion.mensaje}</span>
+                    <button 
+                        onClick={() => setNotificacion(null)}
+                        style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '0 4px', marginLeft: 'auto' }}
+                    >
+                        <FaTimes size={14} />
+                    </button>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes slideInToast {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `}</style>
 
             {/* OVERLAY & SIDEBAR MÓVIL */}
             {menuAbierto && (
@@ -555,7 +634,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                 {/* COLUMNA DERECHA: BANNER PROMO + BURBUJAS DE FILTRO + CUADRÍCULA */}
                                 <div className={styles.catalogoMainContent}>
                                     
-                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS: SE OCULTA SI HAY UNA BÚSQUEDA ACTIVA */}
+                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS */}
                                     {busqueda.trim() === '' && (
                                         <section className={styles.heroPromoSection}>
                                             {productoPrincipal ? (
@@ -626,9 +705,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         </section>
                                     )}
 
-                                    {/* BURBUJAS (FILTROS RÁPIDOS DE CATEGORÍAS Y JUEGOS) */}
+                                    {/* BURBUJAS (FILTROS RÁPIDOS) */}
                                     <div className={styles.filterSectionContainer}>
-                                        {/* Fila de Categorías en formato burbujas */}
                                         <div className={styles.filterRowWrapper}>
                                             <div className={styles.filterRowHeader}>
                                                 <h3>Categorías</h3>
@@ -654,7 +732,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                         key={cat.id}
                                                         className={`${styles.categoryBubble} ${idCatSeleccionada === cat.id ? styles.categoryBubbleActive : ''}`}
                                                         onClick={() => {
-                                                            // Al elegir una categoría, desactivar filtro por juego
                                                             setIdCatSeleccionada(cat.id);
                                                             setIdJuegoSeleccionado(null);
                                                         }}
@@ -668,7 +745,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                             </div>
                                         </div>
 
-                                        {/* Fila de Juegos en formato burbujas */}
                                         {juegos.length > 0 && (
                                             <div className={styles.filterRowWrapper}>
                                                 <div className={styles.filterRowHeader}>
@@ -695,7 +771,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                             key={juego.id}
                                                             className={`${styles.gameBubble} ${idJuegoSeleccionado === juego.id ? styles.gameBubbleActive : ''}`}
                                                             onClick={() => {
-                                                                // Al elegir un juego, desactivar filtro por categoría
                                                                 setIdJuegoSeleccionado(juego.id);
                                                                 setIdCatSeleccionada(null);
                                                             }}
@@ -774,7 +849,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                             />
                         )}
 
-                        {/* VISTA DEL CARRITO EXTRACTADA */}
+                        {/* VISTA DEL CARRITO */}
                         {seccionActiva === 'carrito' && (
                             <VistaCarrito 
                                 carrito={carrito}
