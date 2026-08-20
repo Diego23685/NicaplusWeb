@@ -943,8 +943,8 @@ export const Caja: React.FC = () => {
                 </div>
 
                 {/* PANEL DERECHO: CARRITO Y ACCIONES */}
-                <div className={styles.carritoPanel}>
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '45%', minHeight: '180px', flex: 1 }}>
+                <div className={styles.carritoPanel} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '140px', flex: '1 1 auto', overflow: 'hidden' }}>
                         <div className={styles.carritoHeader}>
                             <h4 className={styles.carritoTitle}>
                                 <FaShoppingCart style={{ color: '#38bdf8' }} /> Resumen de Orden
@@ -956,7 +956,7 @@ export const Caja: React.FC = () => {
                             )}
                         </div>
                         
-                        <div className={styles.scrollContainer}>
+                        <div className={styles.scrollContainer} style={{ overflowY: 'auto', flex: 1, maxHeight: '220px' }}>
                             {carrito.length === 0 && (
                                 <div className={styles.cartEmpty}>
                                     <FaShoppingCart size={24} style={{ opacity: 0.4 }} />
@@ -1071,7 +1071,7 @@ export const Caja: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className={styles.carritoFooter}>
+                    <div className={styles.carritoFooter} style={{ flexShrink: 0, paddingBottom: '16px' }}>
                         <div className={styles.formGroup}>
                             <label className={styles.formLabel}><FaUser size={10} /> Cliente Asociado</label>
                             <input 
