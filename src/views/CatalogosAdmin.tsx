@@ -35,6 +35,7 @@ interface Producto {
     esDigital: boolean;
     esSuscripcion: boolean;
     controlaStock: boolean;
+    requiereServicio?: boolean;
     diasDuracion: number;
     categoriaId: number | null;
     juegoId: number | null;
@@ -609,7 +610,7 @@ export const CatalogosAdmin: React.FC = () => {
             imagenUrl: productoVariacionAbierto.imagenUrl,
             esDigital: productoVariacionAbierto.esDigital,
             controlaStock: productoVariacionAbierto.controlaStock,
-            requiereServicio: productoVariacionAbierto.requiereServicio,
+            requiereServicio: productoVariacionAbierto.requiereServicio ?? false, // 🟢 Manejo seguro de nulabilidad
             visibleEnCatalogo: true,
             esSuscripcion: productoVariacionAbierto.esSuscripcion,
             diasDuracion: productoVariacionAbierto.diasDuracion,
