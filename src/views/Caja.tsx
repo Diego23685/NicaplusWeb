@@ -245,108 +245,166 @@ export const imprimirTicketTermico = (datosVenta: any) => {
     const metodoUsado = datosVenta.metodoPagoCongelado || "Efectivo";
     const totalReal = datosVenta.totalCongelado || datosVenta.detalles.reduce((sum: number, i: any) => sum + i.subTotal, 0);
 
+    const logoUrl = `${window.location.origin}/LogoNica.png`;
+
     const contenidoTicket = `
         <!DOCTYPE html>
         <html>
         <head>
             <title>Factura Nicaplus</title>
             <style>
-                @page { margin: 0; }
+                @page { 
+                    margin: 0; 
+                }
+                * {
+                    box-sizing: border-box;
+                }
+                html, body {
+                    width: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
                 body { 
                     font-family: 'Courier New', Courier, monospace; 
-                    width: 200px; 
-                    margin: 4px 10px; 
+                    width: 100%; 
+                    padding: 8px 4px; 
                     font-size: 11px; 
                     color: #000; 
                     line-height: 1.2;
+                    text-align: center;
+                }
+                .ticket-wrapper {
+                    width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .ticket-logo {
+                    max-width: 35%;
+                    max-height: 40px;
+                    height: auto;
+                    margin-bottom: 4px;
+                    filter: grayscale(100%) contrast(120%);
                 }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
-                .linea { border-bottom: 1px dashed #000; margin: 6px 0; }
-                table { width: 100%; border-collapse: collapse; }
+                .text-left { text-align: left; }
+                .linea { 
+                    border-bottom: 1px dashed #000; 
+                    margin: 6px 0; 
+                    width: 100%;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                }
                 .negrita { font-weight: bold; }
-                .tabla-detalles td { vertical-align: top; padding: 2px 0; }
+                .tabla-detalles td, .tabla-detalles th { 
+                    vertical-align: top; 
+                    padding: 2px 0; 
+                }
             </style>
         </head>
         <body>
-            <div class="text-center">
-                <span class="negrita" style="font-size: 13px;">NICAPLUS GAMING</span><br>
-                Tienda Digital y Taller Técnico<br>
-                León, Nicaragua<br>
-                Tel: +505 8888-8888
-            </div>
-            <div class="linea"></div>
-            <div>
-                Factura: #000${datosVenta.ventaId || 1}<br>
-                Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
-                Condición: ${escapeHtml(metodoUsado.toUpperCase())}<br>
-                Cliente: ${escapeHtml((datosVenta.cliente?.nombre || "Mostrador").substring(0, 18))}
-            </div>
-            <div class="linea"></div>
-            <table class="tabla-detalles">
-                <thead>
+            <div class="ticket-wrapper">
+                <!-- LOGO ENCABEZADO REAJUSTADO -->
+                <img src="${logoUrl}" alt="Logo Nicaplus" class="ticket-logo" />
+
+                <!-- ENCABEZADO CENTRADO -->
+                <div class="text-center" style="width: 100%;">
+                    <span class="negrita" style="font-size: 14px;">NICAPLUS GAMING</span><br>
+                    Tienda Digital y Taller Técnico<br>
+                    León, Nicaragua<br>
+                    Tel: +505 8888-8888
+                </div>
+                
+                <div class="linea"></div>
+                
+                <!-- DATOS FACTURA CENTRADOS -->
+                <div class="text-center" style="width: 100%;">
+                    Factura: #000${datosVenta.ventaId || 1}<br>
+                    Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
+                    Condición: ${escapeHtml(metodoUsado.toUpperCase())}<br>
+                    Cliente: ${escapeHtml((datosVenta.cliente?.nombre || "Mostrador").substring(0, 24))}
+                </div>
+                
+                <div class="linea"></div>
+                
+                <!-- TABLA DE DETALLES -->
+                <table class="tabla-detalles">
+                    <thead>
+                        <tr>
+                            <th align="left" class="negrita">Cant/Desc</th>
+                            <th align="right" class="negrita">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${datosVenta.detalles.map((item: any) => {
+                            const descPorItem = (item.descuento || 0) * item.cantidad;
+                            descuentoTotalAcumulado += descPorItem;
+                            
+                            return `
+                                <tr>
+                                    <td align="left">${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 22))}</td>
+                                    <td align="right">C$ ${item.subTotal}</td>
+                                </tr>
+                                ${item.descuento && item.descuento > 0 ? `
+                                <tr>
+                                    <td colspan="2" align="left" style="font-size: 9px; color: #333; padding-left: 8px;">
+                                        (Descto: -C$ ${descPorItem})
+                                    </td>
+                                </tr>
+                                ` : ''}
+                                ${item.metadataDigital ? `
+                                <tr>
+                                    <td colspan="2" align="left" style="font-size: 9px; padding-left: 8px; color: #333; word-break: break-all;">
+                                        ID: ${escapeHtml(item.metadataDigital.replace(/^DIAS:\d+\|/, ''))}
+                                    </td>
+                                </tr>
+                                ` : ''}
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="linea"></div>
+                
+                <!-- TOTALES -->
+                <table style="width: 100%;">
+                    ${descuentoTotalAcumulado > 0 ? `
                     <tr>
-                        <th align="left" class="negrita">Cant/Desc</th>
-                        <th align="right" class="negrita">Total</th>
+                        <td align="left">Subtotal:</td>
+                        <td align="right">C$ ${totalReal + descuentoTotalAcumulado}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    ${datosVenta.detalles.map((item: any) => {
-                        const descPorItem = (item.descuento || 0) * item.cantidad;
-                        descuentoTotalAcumulado += descPorItem;
-                        
-                        return `
-                            <tr>
-                                <td>${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 18))}</td>
-                                <td align="right">C$ ${item.subTotal}</td>
-                            </tr>
-                            ${item.descuento && item.descuento > 0 ? `
-                            <tr>
-                                <td colspan="2" style="font-size: 9px; color: #333; padding-left: 10px;">
-                                    (Descto: -C$ ${descPorItem})
-                                </td>
-                            </tr>
-                            ` : ''}
-                            ${item.metadataDigital ? `
-                            <tr>
-                                <td colspan="2" style="font-size:9px; padding-left:10px; color:#333; word-break: break-all;">
-                                    ID: ${escapeHtml(item.metadataDigital.replace(/^DIAS:\d+\|/, ''))}
-                                </td>
-                            </tr>
-                            ` : ''}
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-            <div class="linea"></div>
-            
-            <table style="width: 100%;">
-                ${descuentoTotalAcumulado > 0 ? `
-                <tr>
-                    <td align="left">Subtotal:</td>
-                    <td align="right">C$ ${totalReal + descuentoTotalAcumulado}</td>
-                </tr>
-                <tr>
-                    <td align="left">Descuento:</td>
-                    <td align="right">-C$ ${descuentoTotalAcumulado}</td>
-                </tr>
+                    <tr>
+                        <td align="left">Descuento:</td>
+                        <td align="right">-C$ ${descuentoTotalAcumulado}</td>
+                    </tr>
+                    ` : ''}
+                    <tr>
+                        <td align="left" class="negrita" style="font-size: 13px;">TOTAL:</td>
+                        <td align="right" class="negrita" style="font-size: 13px;">C$ ${totalReal}</td>
+                    </tr>
+                </table>
+
+                ${metodoUsado === "Crédito" && datosVenta.fechaVencimientoCreditoCongelado ? `
+                <div style="font-size: 9px; margin-top: 4px;" class="text-center">
+                    * VENCE AL CRÉDITO EL: ${new Date(datosVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString('es-NI')} *
+                </div>
                 ` : ''}
-                <tr>
-                    <td align="left" class="negrita" style="font-size: 12px;">TOTAL:</td>
-                    <td align="right" class="negrita" style="font-size: 12px;">C$ ${totalReal}</td>
-                </tr>
-            </table>
 
-            ${metodoUsado === "Crédito" && datosVenta.fechaVencimientoCreditoCongelado ? `
-            <div style="font-size: 9px; margin-top: 4px;" class="text-center">
-                * VENCE AL CRÉDITO EL: ${new Date(datosVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString('es-NI')} *
-            </div>
-            ` : ''}
+                <div class="linea"></div>
+                
+                <!-- PIE DE PAGINA CENTRADO -->
+                <div class="text-center" style="margin-top: 6px; width: 100%;">
 
-            <div class="linea"></div>
-            <div class="text-center" style="margin-top:8px;">
-                ¡Gracias por tu preferencia!<br>
-                Soporte y Garantía de Calidad.
+                    <br>FIRMA DEL CLIENTE<br><br>
+                    ______________________<br><br>   
+
+                    ¡Gracias por tu preferencia!<br>
+                    Soporte y Garantía de Calidad.
+                </div>
             </div>
         </body>
         </html>
@@ -356,10 +414,11 @@ export const imprimirTicketTermico = (datosVenta: any) => {
     ventanaImpresion.document.write(contenidoTicket);
     ventanaImpresion.document.close();
     ventanaImpresion.focus();
+
     setTimeout(() => {
         ventanaImpresion.print();
         ventanaImpresion.close();
-    }, 300);
+    }, 500);
 };
 
 export const Caja: React.FC = () => {
