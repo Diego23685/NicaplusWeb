@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -98,10 +98,17 @@ export const CatalogosAdmin: React.FC = () => {
     const [editandoProductoId, setEditandoProductoId] = useState<number | null>(null);
     const [formProducto, setFormProducto] = useState(productoFormInicial);
 
-    // VENTANA RÁPIDA DE VARIACIONES (MODAL TIPO APP)
+    // MODAL CRUD DE VARIACIONES
     const [productoVariacionAbierto, setProductoVariacionAbierto] = useState<Producto | null>(null);
     const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
     const [filtroColorVariacion, setFiltroColorVariacion] = useState<string>('Todos');
+    const [variacionEditandoIdx, setVariacionEditandoIdx] = useState<number | null>(null);
+
+    // FORMULARIO RÁPIDO AGREGAR VARIANTE
+    const [nuevaVarNombre, setNuevaVarNombre] = useState('');
+    const [nuevaVarPrecioCosto, setNuevaVarPrecioCosto] = useState<number | ''>('');
+    const [nuevaVarPrecioVenta, setNuevaVarPrecioVenta] = useState<number | ''>('');
+    const [nuevaVarStock, setNuevaVarStock] = useState<number | ''>('');
 
     // GESTIÓN DE PERFILES Y CUENTAS BATCH
     const [productoIdPerfilAbierto, setProductoIdPerfilAbierto] = useState<number | null>(null);
@@ -540,6 +547,91 @@ export const CatalogosAdmin: React.FC = () => {
         lector.readAsDataURL(archivo);
     };
 
+    // 🟢 FUNCIONES CRUD DENTRO DEL MODAL DE VARIACIONES
+    const abrirModalVariaciones = (producto: Producto) => {
+        setProductoVariacionAbierto(producto);
+        setVariacionesModal(producto.variaciones || []);
+        setFiltroColorVariacion('Todos');
+        setVariacionEditandoIdx(null);
+        setNuevaVarNombre('');
+        setNuevaVarPrecioCosto(producto.precioCosto);
+        setNuevaVarPrecioVenta(producto.precioVenta);
+        setNuevaVarStock(0);
+    };
+
+    const agregarNuevaVariacionModal = () => {
+        if (!nuevaVarNombre.trim()) {
+            alert("Escriba el nombre o descripción de la variación.");
+            return;
+        }
+
+        const nueva: VariacionProducto = {
+            productoPadreId: productoVariacionAbierto?.id,
+            nombreVariacion: nuevaVarNombre.trim(),
+            color: nuevaVarNombre.trim(),
+            precioCosto: Number(nuevaVarPrecioCosto) || (productoVariacionAbierto?.precioCosto ?? 0),
+            precioVenta: Number(nuevaVarPrecioVenta) || (productoVariacionAbierto?.precioVenta ?? 0),
+            stockActual: Number(nuevaVarStock) || 0,
+            stockMinimo: 2,
+            estado: 'Activo'
+        };
+
+        setVariacionesModal(prev => [...prev, nueva]);
+        setNuevaVarNombre('');
+        setNuevaVarStock(0);
+    };
+
+    const guardarVariacionModal = (idx: number, campo: keyof VariacionProducto, valor: any) => {
+        setVariacionesModal(prev => {
+            const copia = [...prev];
+            copia[idx] = { ...copia[idx], [campo]: valor };
+            return copia;
+        });
+    };
+
+    const eliminarVariacionModal = (idx: number) => {
+        if (!window.confirm("¿Eliminar esta variación?")) return;
+        setVariacionesModal(prev => prev.filter((_, i) => i !== idx));
+        if (variacionEditandoIdx === idx) setVariacionEditandoIdx(null);
+    };
+
+    const guardarTodasVariacionesServidor = async () => {
+        if (!productoVariacionAbierto) return;
+
+        const payload = {
+            id: productoVariacionAbierto.id,
+            nombre: productoVariacionAbierto.nombre,
+            descripcion: productoVariacionAbierto.descripcion,
+            precioVenta: productoVariacionAbierto.precioVenta,
+            precioCosto: productoVariacionAbierto.precioCosto,
+            stockActual: 0,
+            stockMinimo: 0,
+            imagenUrl: productoVariacionAbierto.imagenUrl,
+            esDigital: productoVariacionAbierto.esDigital,
+            controlaStock: productoVariacionAbierto.controlaStock,
+            requiereServicio: productoVariacionAbierto.requiereServicio,
+            visibleEnCatalogo: true,
+            esSuscripcion: productoVariacionAbierto.esSuscripcion,
+            diasDuracion: productoVariacionAbierto.diasDuracion,
+            garantiaDias: productoVariacionAbierto.garantiaDias,
+            proveedor: productoVariacionAbierto.proveedor,
+            estado: productoVariacionAbierto.estado,
+            categoriaId: productoVariacionAbierto.categoriaId,
+            juegoId: productoVariacionAbierto.juegoId,
+            tieneVariaciones: true,
+            variaciones: variacionesModal
+        };
+
+        try {
+            await api.put(`/products/${productoVariacionAbierto.id}`, payload);
+            alert("Variaciones guardadas y sincronizadas exitosamente.");
+            setProductoVariacionAbierto(null);
+            cargarSincronizacionMaster();
+        } catch (err: any) {
+            dispararErrorVisual("Error al Guardar Variaciones", err.response?.data?.mensaje || "No se pudieron actualizar las variaciones.");
+        }
+    };
+
     if (cargando) return <div className={styles.loading}>Sincronizando registros estructurales...</div>;
 
     return (
@@ -614,7 +706,7 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             )}
 
-            {/* FORMULARIO ÚNICO CENTRALIZADO CON VARIACIONES FLEXIBLES */}
+            {/* FORMULARIO ÚNICO CENTRALIZADO */}
             {mostrarFormularioProducto && (
                 <div className={styles.panel} style={{ borderColor: '#38bdf8' }}>
                     <h4 style={{ color: '#38bdf8', margin: '0 0 14px 0', fontSize: '1.1rem', fontWeight: 700 }}>
@@ -754,7 +846,7 @@ export const CatalogosAdmin: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* SECCIÓN DE VARIACIONES DINÁMICAS (CLEAN Y UNIVERSAL) */}
+                        {/* SECCIÓN DE VARIACIONES DINÁMICAS */}
                         <div className={styles.formGroup} style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                             <label className={styles.checkboxLabel} style={{ color: '#38bdf8', fontWeight: 'bold' }}>
                                 <input 
@@ -792,7 +884,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                     ...prev,
                                                     variaciones: [...prev.variaciones, {
                                                         nombreVariacion: nom,
-                                                        color: nom, // Asigna el nombre como etiqueta principal
+                                                        color: nom,
                                                         precioCosto: pc,
                                                         precioVenta: pv,
                                                         stockActual: stk,
@@ -807,7 +899,6 @@ export const CatalogosAdmin: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    {/* LISTA DE VARIACIONES SIN BANDERAS INNECESARIAS */}
                                     {formProducto.variaciones.length > 0 && (
                                         <table className={styles.table} style={{ fontSize: '0.85rem', marginTop: '10px' }}>
                                             <thead>
@@ -956,14 +1047,10 @@ export const CatalogosAdmin: React.FC = () => {
                                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                                                 {p.tieneVariaciones && (
                                                     <button 
-                                                        onClick={() => {
-                                                            setProductoVariacionAbierto(p);
-                                                            setVariacionesModal(p.variaciones || []);
-                                                            setFiltroColorVariacion('Todos');
-                                                        }} 
+                                                        onClick={() => abrirModalVariaciones(p)} 
                                                         className={styles.btn} 
                                                         style={{ background: '#f59e0b', color: '#000', padding: '6px 10px', borderRadius: '4px' }}
-                                                        title="Gestionar Stock de Variantes"
+                                                        title="CRUD y Stock de Variantes"
                                                     >
                                                         <FaPalette /> Variantes ({p.variaciones?.length || 0})
                                                     </button>
@@ -1194,43 +1281,87 @@ export const CatalogosAdmin: React.FC = () => {
                 </table>
             </div>
 
-            {/* MODAL DE GESTIÓN RÁPIDA DE VARIACIONES E INVENTARIO (CON LA PALETA DEL ERP) */}
+            {/* MODAL CRUD INTEGRAL DE VARIACIONES */}
             {productoVariacionAbierto && (
                 <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent} style={{ maxWidth: '520px', borderColor: '#38bdf8' }}>
+                    <div className={styles.modalContent} style={{ maxWidth: '680px', borderColor: '#38bdf8', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                         
                         {/* Header del Modal */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>
-                                    {productoVariacionAbierto.nombre}
+                                    🎨 Gestión de Variaciones: {productoVariacionAbierto.nombre}
                                 </h3>
-                                <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '2px' }}>
-                                    Precio Base: <strong style={{ color: '#4ade80' }}>C$ {productoVariacionAbierto.precioVenta.toLocaleString()}</strong>
-                                </div>
+                                <small style={{ color: '#94a3b8' }}>Agrega, edita precios o existencias y elimina variaciones sin recargar el catálogo.</small>
                             </div>
                             <button 
                                 onClick={() => setProductoVariacionAbierto(null)} 
-                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem' }}
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem' }}
                             >
                                 <FaTimes />
                             </button>
                         </div>
 
-                        {/* Pestañas de Filtros Rápidos con Colores del ERP */}
-                        <div style={{ display: 'flex', gap: '8px', margin: '16px 0', overflowX: 'auto', paddingBottom: '4px' }}>
+                        {/* Formulario para añadir nueva variación al vuelo */}
+                        <div style={{ background: '#0f172a', padding: '12px', borderRadius: '8px', border: '1px solid #334155', margin: '14px 0' }}>
+                            <h5 style={{ margin: '0 0 8px 0', color: '#4ade80', fontSize: '0.85rem' }}>➕ Crear Nueva Variación</h5>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
+                                <input 
+                                    type="text" 
+                                    placeholder="Nombre / Opción (Ej: Azul 128GB)" 
+                                    value={nuevaVarNombre} 
+                                    onChange={e => setNuevaVarNombre(e.target.value)} 
+                                    className={styles.input} 
+                                    style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
+                                />
+                                <input 
+                                    type="number" 
+                                    placeholder="P. Costo" 
+                                    value={nuevaVarPrecioCosto} 
+                                    onChange={e => setNuevaVarPrecioCosto(Number(e.target.value))} 
+                                    className={styles.input} 
+                                    style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
+                                />
+                                <input 
+                                    type="number" 
+                                    placeholder="P. Venta" 
+                                    value={nuevaVarPrecioVenta} 
+                                    onChange={e => setNuevaVarPrecioVenta(Number(e.target.value))} 
+                                    className={styles.input} 
+                                    style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
+                                />
+                                <input 
+                                    type="number" 
+                                    placeholder="Stock" 
+                                    value={nuevaVarStock} 
+                                    onChange={e => setNuevaVarStock(Number(e.target.value))} 
+                                    className={styles.input} 
+                                    style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={agregarNuevaVariacionModal} 
+                                    className={styles.btn} 
+                                    style={{ background: '#10b981', color: '#fff', padding: '6px 12px', fontSize: '0.8rem' }}
+                                >
+                                    <FaPlus /> Añadir
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Pestañas de Filtros de Opciones */}
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                             <button 
                                 onClick={() => setFiltroColorVariacion('Todos')} 
                                 className={styles.btn}
                                 style={{
-                                    padding: '6px 14px',
-                                    fontSize: '0.8rem',
+                                    padding: '4px 10px',
+                                    fontSize: '0.75rem',
                                     background: filtroColorVariacion === 'Todos' ? '#3b82f6' : '#1e293b',
-                                    color: '#fff',
-                                    borderColor: '#334155'
+                                    color: '#fff'
                                 }}
                             >
-                                🌐 Todas las opciones
+                                Todas ({variacionesModal.length})
                             </button>
                             
                             {Array.from(new Set(variacionesModal.map(v => v.nombreVariacion).filter(Boolean))).map((opt, i) => (
@@ -1239,11 +1370,10 @@ export const CatalogosAdmin: React.FC = () => {
                                     onClick={() => setFiltroColorVariacion(opt)}
                                     className={styles.btn}
                                     style={{
-                                        padding: '6px 14px',
-                                        fontSize: '0.8rem',
+                                        padding: '4px 10px',
+                                        fontSize: '0.75rem',
                                         background: filtroColorVariacion === opt ? '#f59e0b' : '#1e293b',
-                                        color: filtroColorVariacion === opt ? '#000' : '#fff',
-                                        borderColor: '#334155'
+                                        color: filtroColorVariacion === opt ? '#000' : '#fff'
                                     }}
                                 >
                                     {opt}
@@ -1251,104 +1381,149 @@ export const CatalogosAdmin: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Lista de Variaciones con Control +/- */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '320px', overflowY: 'auto' }}>
-                            {variacionesModal
-                                .filter(v => filtroColorVariacion === 'Todos' || v.nombreVariacion === filtroColorVariacion)
-                                .map((varItem, idx) => (
-                                    <div 
-                                        key={varItem.id || idx} 
-                                        style={{ 
-                                            border: '1px solid',
-                                            borderColor: varItem.stockActual === 0 ? '#ef4444' : '#334155', 
-                                            borderRadius: '8px', 
-                                            padding: '10px 14px', 
-                                            display: 'flex', 
-                                            justifyContent: 'space-between', 
-                                            alignItems: 'center',
-                                            background: varItem.stockActual === 0 ? 'rgba(239, 68, 68, 0.1)' : '#0f172a'
-                                        }}
-                                    >
-                                        <div>
-                                            <strong style={{ fontSize: '0.9rem', color: varItem.stockActual === 0 ? '#fca5a5' : '#f8fafc', display: 'block' }}>
-                                                {varItem.stockActual === 0 && '⚠️ '}{varItem.nombreVariacion}
-                                            </strong>
-                                            <span style={{ fontSize: '0.8rem', color: '#38bdf8' }}>
-                                                C$ {varItem.precioVenta.toLocaleString()}
-                                            </span>
-                                        </div>
+                        {/* Tabla CRUD de Variaciones */}
+                        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #334155', borderRadius: '8px' }}>
+                            <table className={styles.table} style={{ fontSize: '0.85rem' }}>
+                                <thead>
+                                    <tr>
+                                        <th>Variación</th>
+                                        <th style={{ width: '100px' }}>P. Costo</th>
+                                        <th style={{ width: '100px' }}>P. Venta</th>
+                                        <th style={{ width: '110px', textAlign: 'center' }}>Stock</th>
+                                        <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {variacionesModal.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>
+                                                No hay variaciones registradas para este artículo.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        variacionesModal
+                                            .filter(v => filtroColorVariacion === 'Todos' || v.nombreVariacion === filtroColorVariacion)
+                                            .map((varItem) => {
+                                                const idxReal = variacionesModal.findIndex(x => x === varItem);
+                                                const esEditando = variacionEditandoIdx === idxReal;
 
-                                        {/* Control Incremental con la Estética Oscura */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', padding: '4px 10px', borderRadius: '20px', border: '1px solid #334155' }}>
-                                            <button 
-                                                type="button"
-                                                onClick={() => {
-                                                    const copia = [...variacionesModal];
-                                                    const indexReal = copia.findIndex(x => x === varItem);
-                                                    if (indexReal !== -1 && copia[indexReal].stockActual > 0) {
-                                                        copia[indexReal].stockActual -= 1;
-                                                        setVariacionesModal(copia);
-                                                    }
-                                                }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: varItem.stockActual === 0 ? '#64748b' : '#ef4444', fontSize: '1rem', fontWeight: 'bold' }}
-                                            >
-                                                ➖
-                                            </button>
-                                            
-                                            <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#fff', minWidth: '24px', textAlign: 'center' }}>
-                                                {varItem.stockActual}
-                                            </span>
+                                                return (
+                                                    <tr key={idxReal} style={{ background: varItem.stockActual === 0 ? 'rgba(239, 68, 68, 0.08)' : '' }}>
+                                                        <td>
+                                                            {esEditando ? (
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={varItem.nombreVariacion} 
+                                                                    onChange={e => guardarVariacionModal(idxReal, 'nombreVariacion', e.target.value)} 
+                                                                    className={styles.input} 
+                                                                    style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
+                                                                />
+                                                            ) : (
+                                                                <strong>{varItem.stockActual === 0 && '⚠️ '}{varItem.nombreVariacion}</strong>
+                                                            )}
+                                                        </td>
 
-                                            <button 
-                                                type="button"
-                                                onClick={() => {
-                                                    const copia = [...variacionesModal];
-                                                    const indexReal = copia.findIndex(x => x === varItem);
-                                                    if (indexReal !== -1) {
-                                                        copia[indexReal].stockActual += 1;
-                                                        setVariacionesModal(copia);
-                                                    }
-                                                }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', fontSize: '1rem', fontWeight: 'bold' }}
-                                            >
-                                                ➕
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                                        <td>
+                                                            {esEditando ? (
+                                                                <input 
+                                                                    type="number" 
+                                                                    value={varItem.precioCosto} 
+                                                                    onChange={e => guardarVariacionModal(idxReal, 'precioCosto', Number(e.target.value))} 
+                                                                    className={styles.input} 
+                                                                    style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
+                                                                />
+                                                            ) : (
+                                                                <span>C$ {varItem.precioCosto}</span>
+                                                            )}
+                                                        </td>
+
+                                                        <td>
+                                                            {esEditando ? (
+                                                                <input 
+                                                                    type="number" 
+                                                                    value={varItem.precioVenta} 
+                                                                    onChange={e => guardarVariacionModal(idxReal, 'precioVenta', Number(e.target.value))} 
+                                                                    className={styles.input} 
+                                                                    style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
+                                                                />
+                                                            ) : (
+                                                                <strong style={{ color: '#38bdf8' }}>C$ {varItem.precioVenta}</strong>
+                                                            )}
+                                                        </td>
+
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1e293b', padding: '2px 8px', borderRadius: '16px', border: '1px solid #334155' }}>
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => {
+                                                                        if (varItem.stockActual > 0) {
+                                                                            guardarVariacionModal(idxReal, 'stockActual', varItem.stockActual - 1);
+                                                                        }
+                                                                    }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold' }}
+                                                                >
+                                                                    -
+                                                                </button>
+                                                                
+                                                                <span style={{ fontWeight: 'bold', minWidth: '20px', textAlign: 'center', color: '#fff' }}>
+                                                                    {varItem.stockActual}
+                                                                </span>
+
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => guardarVariacionModal(idxReal, 'stockActual', varItem.stockActual + 1)}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', fontWeight: 'bold' }}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </td>
+
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => setVariacionEditandoIdx(esEditando ? null : idxReal)} 
+                                                                    style={{ background: esEditando ? '#10b981' : '#f59e0b', border: 'none', color: '#000', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer' }}
+                                                                    title={esEditando ? "Finalizar edición" : "Editar variación"}
+                                                                >
+                                                                    {esEditando ? <FaSave size={11} /> : <FaEdit size={11} />}
+                                                                </button>
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => eliminarVariacionModal(idxReal)} 
+                                                                    style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer' }}
+                                                                    title="Eliminar variación"
+                                                                >
+                                                                    <FaTrash size={11} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
 
-                        {/* Acciones Inferiores con los Botones del Sistema */}
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                        {/* Botones de acción finales */}
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
                             <button 
-                                type="button"
-                                className={`${styles.btn} ${styles.btnPrimary}`}
-                                style={{ flex: 1, justifyContent: 'center', padding: '10px' }}
-                                onClick={async () => {
-                                    try {
-                                        await api.put(`/products/${productoVariacionAbierto.id}/variaciones-stock`, variacionesModal);
-                                        alert("Stock de variaciones actualizado correctamente.");
-                                        setProductoVariacionAbierto(null);
-                                        cargarSincronizacionMaster();
-                                    } catch (err) {
-                                        alert("Error al actualizar unidades.");
-                                    }
-                                }}
+                                type="button" 
+                                className={`${styles.btn} ${styles.btnSecondary}`} 
+                                onClick={() => setProductoVariacionAbierto(null)}
                             >
-                                Actualizar unidades
+                                Cerrar
                             </button>
 
                             <button 
-                                type="button"
-                                className={`${styles.btn} ${styles.btnSecondary}`}
-                                style={{ padding: '10px' }}
-                                onClick={() => {
-                                    const prod = productoVariacionAbierto;
-                                    setProductoVariacionAbierto(null);
-                                    editarProducto(prod);
-                                }}
+                                type="button" 
+                                className={`${styles.btn} ${styles.btnPrimary}`} 
+                                style={{ padding: '10px 18px' }}
+                                onClick={guardarTodasVariacionesServidor}
                             >
-                                Editar producto
+                                <FaSave /> Guardar Cambios en Servidor
                             </button>
                         </div>
 

@@ -10,7 +10,8 @@ import {
     FaSearch, 
     FaChevronLeft, 
     FaChevronRight, 
-    FaLock 
+    FaLock,
+    FaCalendarAlt
 } from 'react-icons/fa';
 import styles from '../assets/styles/ContabilidadCaja.module.css';
 
@@ -18,6 +19,13 @@ export const ContabilidadCaja: React.FC = () => {
     const [movimientos, setMovimientos] = useState<any[]>([]);
     const [reporte, setReporte] = useState<any>(null);
     const [cargando, setCargando] = useState(true);
+
+    const formatearLocal = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dia}`;
+    };
 
     // FILTROS DE HISTORIAL
     const [desde, setDesde] = useState('');
@@ -29,16 +37,10 @@ export const ContabilidadCaja: React.FC = () => {
     const [concepto, setConcepto] = useState('Gasto Ordinario');
     const [monto, setMonto] = useState(0);
     const [detalle, setDetalle] = useState('');
+    const [fechaMovimiento, setFechaMovimiento] = useState(formatearLocal(new Date()));
 
     // ESTADO PARA EDICIÓN DE MOVIMIENTO
     const [movimientoAEditar, setMovimientoAEditar] = useState<any | null>(null);
-
-    const formatearLocal = (d: Date) => {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dia}`;
-    };
 
     const aplicarRangoRapido = (tipoRango: 'hoy' | 'mes' | 'mesPasado') => {
         const hoy = new Date();
@@ -125,10 +127,23 @@ export const ContabilidadCaja: React.FC = () => {
     const guardarMovimiento = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/caja/movimientos', { tipo, concepto, monto: Number(monto), detalle });
+            // Concatenar con la hora actual local para preservar orden cronológico
+            const ahora = new Date();
+            const horaStr = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}:${String(ahora.getSeconds()).padStart(2, '0')}`;
+            const fechaCompletaISO = new Date(`${fechaMovimiento}T${horaStr}`).toISOString();
+
+            await api.post('/caja/movimientos', { 
+                tipo, 
+                concepto, 
+                monto: Number(monto), 
+                detalle,
+                fecha: fechaCompletaISO
+            });
+
             alert("Movimiento financiero asentado de forma conforme.");
             setMonto(0); 
             setDetalle('');
+            setFechaMovimiento(formatearLocal(new Date()));
             cargarDatosCaja();
         } catch {
             alert("Error de red al registrar flujo.");
@@ -140,7 +155,8 @@ export const ContabilidadCaja: React.FC = () => {
             alert("Los movimientos automáticos derivados de ventas o compras a proveedores deben editarse directamente desde sus módulos correspondientes.");
             return;
         }
-        setMovimientoAEditar({ ...m });
+        const fechaFormateada = m.fecha ? formatearLocal(new Date(m.fecha)) : formatearLocal(new Date());
+        setMovimientoAEditar({ ...m, fechaFormateada });
     };
 
     const guardarEdicionMovimiento = async (e: React.FormEvent) => {
@@ -148,11 +164,16 @@ export const ContabilidadCaja: React.FC = () => {
         if (!movimientoAEditar) return;
 
         try {
+            const ahora = new Date();
+            const horaStr = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}:${String(ahora.getSeconds()).padStart(2, '0')}`;
+            const fechaCompletaISO = new Date(`${movimientoAEditar.fechaFormateada}T${horaStr}`).toISOString();
+
             await api.put(`/caja/movimientos/${movimientoAEditar.id}`, {
                 tipo: movimientoAEditar.tipo,
                 concepto: movimientoAEditar.concepto,
                 monto: Number(movimientoAEditar.monto),
-                detalle: movimientoAEditar.detalle
+                detalle: movimientoAEditar.detalle,
+                fecha: fechaCompletaISO
             });
             alert("Movimiento de caja actualizado correctamente.");
             setMovimientoAEditar(null);
@@ -235,6 +256,16 @@ export const ContabilidadCaja: React.FC = () => {
                             </select>
                         </div>
                         <div className={styles.formGroup}>
+                            <label><FaCalendarAlt size={11} /> Fecha del Movimiento</label>
+                            <input 
+                                type="date" 
+                                value={fechaMovimiento} 
+                                onChange={e => setFechaMovimiento(e.target.value)} 
+                                className={styles.input} 
+                                required 
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
                             <label>Monto Transacción (C$)</label>
                             <input type="number" min={1} value={monto || ''} onChange={e => setMonto(Number(e.target.value))} className={styles.input} required />
                         </div>
@@ -246,12 +277,11 @@ export const ContabilidadCaja: React.FC = () => {
                     </form>
                 </div>
 
-                {/* PANEL DERECHO: HISTORIAL CONTABLE GENERAL CON FILTROS Y NAVEGACIÓN */}
+                {/* PANEL DERECHO: HISTORIAL CONTABLE */}
                 <div className={styles.tablePanel}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                         <h4><FaHistory /> Auditoría de Libro Diario</h4>
                         
-                        {/* CONTROLES DE FECHAS */}
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <button onClick={() => aplicarRangoRapido('hoy')} className={styles.btnRango} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Hoy</button>
                             <button onClick={() => aplicarRangoRapido('mes')} className={styles.btnRango} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Este Mes</button>
@@ -271,7 +301,6 @@ export const ContabilidadCaja: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* RANGO DESDE - HASTA */}
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
                         <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className={styles.input} style={{ fontSize: '0.75rem', padding: '4px 8px' }} />
                         <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>a</span>
@@ -304,7 +333,7 @@ export const ContabilidadCaja: React.FC = () => {
                                                         {m.detalle}
                                                     </strong>
                                                     <span className={styles.subRowText}>
-                                                        📂 {m.concepto} • 📅 {new Date(m.fecha).toLocaleString()}
+                                                        📂 {m.concepto} • 📅 {new Date(m.fecha).toLocaleDateString()}
                                                     </span>
                                                 </td>
                                                 <td className={`${styles.txtMonto} ${esIngreso ? styles.txtIngreso : styles.txtEgreso}`}>
@@ -392,6 +421,18 @@ export const ContabilidadCaja: React.FC = () => {
                                     <option value="Ajuste">Ajuste de Caja</option>
                                     <option value="Venta">Ingreso Extraordinario</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaCalendarAlt size={10} /> Fecha del Movimiento</label>
+                                <input 
+                                    type="date" 
+                                    value={movimientoAEditar.fechaFormateada} 
+                                    onChange={e => setMovimientoAEditar({ ...movimientoAEditar, fechaFormateada: e.target.value })}
+                                    className={styles.input}
+                                    style={{ width: '100%', marginTop: '4px' }}
+                                    required 
+                                />
                             </div>
 
                             <div>
