@@ -235,7 +235,18 @@ export const GarantiasCRM: React.FC = () => {
                         </div>
                         <div>
                             <label className={styles.label}>Días de Garantía</label>
-                            <input type="number" value={nuevosDias} onChange={e => setNuevosDias(Number(e.target.value))} className={styles.input} required />
+                            <input 
+                                type="number" 
+                                min={1}
+                                value={nuevosDias === 0 ? '' : nuevosDias} 
+                                onFocus={(e) => e.target.select()}
+                                onChange={e => setNuevosDias(e.target.value === '' ? 0 : Number(e.target.value))} 
+                                onBlur={() => {
+                                    if (nuevosDias < 1) setNuevosDias(1);
+                                }}
+                                className={styles.input} 
+                                required 
+                            />
                         </div>
                         <div className={styles.fullWidth}>
                             <label className={styles.label}>Cláusula de Cobertura (Lo que sí aplica)</label>
@@ -340,7 +351,15 @@ export const GarantiasCRM: React.FC = () => {
                         </div>
                         <div className={styles.fullWidth}>
                             <label className={styles.label}>Costo de Reposición / Pérdida Directa (C$)</label>
-                            <input type="number" min={0} value={costoReposicion || ''} onChange={e => setCostoReposicion(Number(e.target.value))} className={styles.input} required />
+                            <input 
+                                type="number" 
+                                min={0} 
+                                value={costoReposicion === 0 ? '' : costoReposicion} 
+                                onFocus={(e) => e.target.select()}
+                                onChange={e => setCostoReposicion(e.target.value === '' ? 0 : Number(e.target.value))} 
+                                className={styles.input} 
+                                required 
+                            />
                         </div>
                         <button type="submit" className={styles.btnPrimary}><FaPlus /> Autorizar Reposición</button>
                     </form>

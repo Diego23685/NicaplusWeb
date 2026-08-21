@@ -210,38 +210,55 @@ export const Reportes: React.FC = () => {
         if (!prodSeleccionado) return;
 
         const copia = [...detallesEditados];
+        const nuevoPrecio = prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0;
         copia[index].idProducto = idProd;
         copia[index].nombre = prodSeleccionado.nombre ?? prodSeleccionado.Nombre; 
-        copia[index].precioUnitario = prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0; 
-        copia[index].subTotal = (copia[index].cantidad * (prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0)) - (copia[index].descuento || 0);
+        copia[index].precioUnitario = nuevoPrecio; 
+        
+        const cant = Number(copia[index].cantidad) || 0;
+        const desc = Number(copia[index].descuento) || 0;
+        copia[index].subTotal = (cant * nuevoPrecio) - desc;
         setDetallesEditados(copia);
     };
 
-    const actualizarPrecioDetalle = (index: number, nuevoPrecio: number) => {
+    const actualizarPrecioDetalle = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        copia[index].precioUnitario = nuevoPrecio;
-        copia[index].subTotal = (copia[index].cantidad * nuevoPrecio) - (copia[index].descuento || 0);
+        const nuevoPrecio = valStr === '' ? 0 : Number(valStr);
+        copia[index].precioUnitario = valStr === '' ? '' : nuevoPrecio;
+        
+        const cant = Number(copia[index].cantidad) || 0;
+        const desc = Number(copia[index].descuento) || 0;
+        copia[index].subTotal = (cant * nuevoPrecio) - desc;
         setDetallesEditados(copia);
     };
 
-    const actualizarCantidadDetalle = (index: number, nuevaCantidad: number) => {
-        if (nuevaCantidad < 1) return;
+    const actualizarCantidadDetalle = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        copia[index].cantidad = nuevaCantidad;
-        copia[index].subTotal = (nuevaCantidad * copia[index].precioUnitario) - (copia[index].descuento || 0);
+        const nuevaCantidad = valStr === '' ? 0 : Number(valStr);
+        copia[index].cantidad = valStr === '' ? '' : nuevaCantidad;
+        
+        const precio = Number(copia[index].precioUnitario) || 0;
+        const desc = Number(copia[index].descuento) || 0;
+        copia[index].subTotal = (nuevaCantidad * precio) - desc;
         setDetallesEditados(copia);
     };
 
-    const actualizarDescuentoDetalle = (index: number, nuevoDescuento: number) => {
+    const actualizarDescuentoDetalle = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        copia[index].descuento = nuevoDescuento < 0 ? 0 : nuevoDescuento;
-        copia[index].subTotal = (copia[index].cantidad * copia[index].precioUnitario) - copia[index].descuento;
+        const nuevoDescuento = valStr === '' ? 0 : Math.max(0, Number(valStr));
+        copia[index].descuento = valStr === '' ? '' : nuevoDescuento;
+        
+        const cant = Number(copia[index].cantidad) || 0;
+        const precio = Number(copia[index].precioUnitario) || 0;
+        copia[index].subTotal = (cant * precio) - nuevoDescuento;
         setDetallesEditados(copia);
     };
 
-    const actualizarDiasSuscripcion = (index: number, nuevosDias: number) => {
+    const actualizarDiasSuscripcion = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        const diasValidos = nuevosDias > 0 ? nuevosDias : 30;
+        const diasNum = valStr === '' ? '' : Number(valStr);
+        const diasValidos = typeof diasNum === 'number' && diasNum > 0 ? diasNum : 30;
+        
         let metaActual = copia[index].metadataDigital || '';
         
         if (metaActual.startsWith("DIAS:")) {
@@ -254,6 +271,7 @@ export const Reportes: React.FC = () => {
                 : `DIAS:${diasValidos}`;
         }
         
+        copia[index].diasTemporales = diasNum;
         setDetallesEditados(copia);
     };
 
@@ -261,12 +279,20 @@ export const Reportes: React.FC = () => {
         e.preventDefault();
         if (!ventaAEditar) return;
 
+        const detallesSaneados = detallesEditados.map(d => ({
+            ...d,
+            cantidad: Number(d.cantidad) || 1,
+            precioUnitario: Number(d.precioUnitario) || 0,
+            descuento: Number(d.descuento) || 0,
+            subTotal: Number(d.subTotal) || 0
+        }));
+
         const payload = {
             id: ventaAEditar.id,
             idUsuario: ventaAEditar.idUsuario,
             idCliente: ventaAEditar.idCliente === 0 ? null : ventaAEditar.idCliente,
             metodoPago: nuevoMetodoPago,
-            detalles: detallesEditados
+            detalles: detallesSaneados
         };
 
         try {
@@ -336,7 +362,6 @@ export const Reportes: React.FC = () => {
         const gastosOperativos = datosReporte?.finanzas?.gastosOperativos ?? 0;
         const inversionCompras = datosReporte?.finanzas?.inversionCompras ?? 0;
         
-        // Mapeo dinámico de filtros activos para la cabecera del PDF
         const clienteNombreFiltro = clienteFiltro 
             ? (clientes.find(c => (c.id ?? c.Id) === Number(clienteFiltro))?.nombre || 'Cliente Específico')
             : 'Todos los Clientes';
@@ -1083,8 +1108,8 @@ export const Reportes: React.FC = () => {
                                         const prodAsociado = productos.find(p => (p.id ?? p.Id) === det.idProducto);
                                         const esSuscripcion = prodAsociado?.esSuscripcion || prodAsociado?.EsSuscripcion;
                                         
-                                        let diasActuales = prodAsociado?.diasDuracion || 30;
-                                        if (det.metadataDigital && det.metadataDigital.startsWith("DIAS:")) {
+                                        let diasActuales: any = det.diasTemporales ?? prodAsociado?.diasDuracion ?? 30;
+                                        if (det.diasTemporales === undefined && det.metadataDigital && det.metadataDigital.startsWith("DIAS:")) {
                                             const extraidos = parseInt(det.metadataDigital.split('|')[0].replace("DIAS:", ""));
                                             if (!isNaN(extraidos)) diasActuales = extraidos;
                                         }
@@ -1115,9 +1140,9 @@ export const Reportes: React.FC = () => {
                                                     <small style={{ fontSize: '9px', color: '#94a3b8' }}>Cant.</small>
                                                     <input 
                                                         type="number" 
-                                                        value={det.cantidad} 
+                                                        value={det.cantidad ?? ''} 
                                                         min={1} 
-                                                        onChange={e => actualizarCantidadDetalle(idx, Number(e.target.value))} 
+                                                        onChange={e => actualizarCantidadDetalle(idx, e.target.value)} 
                                                         className="inputControlado inputItem"
                                                         style={{ padding: '4px', textAlign: 'center', width: '100%' }}
                                                     />
@@ -1127,8 +1152,8 @@ export const Reportes: React.FC = () => {
                                                     <small style={{ fontSize: '9px', color: '#94a3b8' }}>Precio</small>
                                                     <input 
                                                         type="number" 
-                                                        value={det.precioUnitario} 
-                                                        onChange={e => actualizarPrecioDetalle(idx, Number(e.target.value))} 
+                                                        value={det.precioUnitario ?? ''} 
+                                                        onChange={e => actualizarPrecioDetalle(idx, e.target.value)} 
                                                         className="inputControlado inputItem"
                                                         style={{ padding: '4px', textAlign: 'center', width: '100%' }}
                                                     />
@@ -1138,9 +1163,9 @@ export const Reportes: React.FC = () => {
                                                     <small style={{ fontSize: '9px', color: '#f87171' }}>Desc. (C$)</small>
                                                     <input 
                                                         type="number" 
-                                                        value={det.descuento || 0} 
+                                                        value={det.descuento ?? ''} 
                                                         min={0}
-                                                        onChange={e => actualizarDescuentoDetalle(idx, Number(e.target.value))} 
+                                                        onChange={e => actualizarDescuentoDetalle(idx, e.target.value)} 
                                                         className="inputControlado inputItem"
                                                         style={{ padding: '4px', textAlign: 'center', borderColor: '#f87171', width: '100%' }}
                                                     />
@@ -1150,10 +1175,10 @@ export const Reportes: React.FC = () => {
                                                     <small style={{ fontSize: '9px', color: '#38bdf8' }}>Días Susc.</small>
                                                     <input 
                                                         type="number" 
-                                                        value={diasActuales} 
+                                                        value={diasActuales ?? ''} 
                                                         min={1}
                                                         disabled={!esSuscripcion}
-                                                        onChange={e => actualizarDiasSuscripcion(idx, Number(e.target.value))} 
+                                                        onChange={e => actualizarDiasSuscripcion(idx, e.target.value)} 
                                                         className="inputControlado inputItem"
                                                         style={{ padding: '4px', textAlign: 'center', opacity: esSuscripcion ? 1 : 0.4, width: '100%' }}
                                                     />

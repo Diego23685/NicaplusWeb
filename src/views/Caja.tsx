@@ -655,7 +655,7 @@ export const Caja: React.FC = () => {
     };
 
     const cambiarCantidadManual = (idProducto: number, idVariacion: number | null | undefined, cantidad: number) => {
-        const cantValida = Math.max(1, cantidad);
+        const cantValida = Math.max(0, cantidad);
         const productoBase = productos.find(p => p.id === idProducto);
 
         if (idVariacion && productoBase?.variaciones) {
@@ -684,18 +684,18 @@ export const Caja: React.FC = () => {
     const itemNombreFormateado = (nombrePadre: string, nombreVariacion: string) => `${nombrePadre} (${nombreVariacion})`;
 
     const actualizarDiasItemCarrito = (idProducto: number, idVariacion: number | null | undefined, dias: number) => {
-        if (dias < 1) return;
+        const diasValidados = Math.max(0, dias);
         setCarrito(prev => prev.map(item => {
             if (item.idProducto === idProducto && item.idVariacion === idVariacion) {
                 const pBase = productos.find(p => p.id === idProducto);
                 const diasBase = pBase?.diasDuracion || 30;
                 
                 const tarifaDiaria = pBase ? (pBase.precioVenta / diasBase) : (item.precioUnitario / 30);
-                const nuevoPrecioProporcional = Math.round(tarifaDiaria * dias);
+                const nuevoPrecioProporcional = Math.round(tarifaDiaria * diasValidados);
 
                 return { 
                     ...item, 
-                    diasSuscripcion: dias,
+                    diasSuscripcion: diasValidados,
                     precioUnitario: nuevoPrecioProporcional,
                     subTotal: Math.round((nuevoPrecioProporcional - item.descuento) * item.cantidad)
                 };
@@ -751,9 +751,9 @@ export const Caja: React.FC = () => {
             return {
                 idProducto: item.idProducto,
                 idVariacion: item.idVariacion || null,
-                cantidad: item.cantidad,
+                cantidad: item.cantidad < 1 ? 1 : item.cantidad,
                 precioUnitario: item.precioUnitario,
-                subTotal: Math.round((item.precioUnitario - (item.descuento || 0)) * item.cantidad),
+                subTotal: Math.round((item.precioUnitario - (item.descuento || 0)) * (item.cantidad < 1 ? 1 : item.cantidad)),
                 descuento: item.descuento || 0,
                 metadataDigital: metaFinal || ''
             };
@@ -1043,9 +1043,13 @@ export const Caja: React.FC = () => {
                                                 <span className={styles.cartLabel}>Cant:</span>
                                                 <input 
                                                     type="number" 
-                                                    value={item.cantidad} 
                                                     min={1} 
-                                                    onChange={(e) => cambiarCantidadManual(item.idProducto, item.idVariacion, Number(e.target.value))} 
+                                                    value={item.cantidad === 0 ? '' : item.cantidad} 
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => cambiarCantidadManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
+                                                    onBlur={() => {
+                                                        if (item.cantidad < 1) cambiarCantidadManual(item.idProducto, item.idVariacion, 1);
+                                                    }}
                                                     className={styles.cantInput} 
                                                 />
                                             </div>
@@ -1055,8 +1059,9 @@ export const Caja: React.FC = () => {
                                                 <input 
                                                     type="number" 
                                                     min={0} 
-                                                    value={item.precioUnitario} 
-                                                    onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, item.idVariacion, Number(e.target.value))} 
+                                                    value={item.precioUnitario === 0 ? '' : item.precioUnitario} 
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => cambiarPrecioUnitarioManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
                                                     className={styles.smallInput} 
                                                 />
                                             </div>
@@ -1067,8 +1072,9 @@ export const Caja: React.FC = () => {
                                                     type="number" 
                                                     min={0} 
                                                     max={item.precioUnitario} 
-                                                    value={item.descuento || 0} 
-                                                    onChange={(e) => cambiarDescuentoManual(item.idProducto, item.idVariacion, Number(e.target.value))} 
+                                                    value={item.descuento === 0 ? '' : item.descuento} 
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => cambiarDescuentoManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
                                                     className={styles.smallInput} 
                                                 />
                                             </div>
@@ -1081,8 +1087,12 @@ export const Caja: React.FC = () => {
                                                     <input 
                                                         type="number" 
                                                         min={1} 
-                                                        value={item.diasSuscripcion} 
-                                                        onChange={(e) => actualizarDiasItemCarrito(item.idProducto, item.idVariacion, Number(e.target.value))} 
+                                                        value={item.diasSuscripcion === 0 ? '' : item.diasSuscripcion} 
+                                                        onFocus={(e) => e.target.select()}
+                                                        onChange={(e) => actualizarDiasItemCarrito(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
+                                                        onBlur={() => {
+                                                            if (item.diasSuscripcion < 1) actualizarDiasItemCarrito(item.idProducto, item.idVariacion, 1);
+                                                        }}
                                                         className={styles.smallInput} 
                                                     />
                                                 </div>
@@ -1179,12 +1189,19 @@ export const Caja: React.FC = () => {
                                     <input 
                                         type="number" 
                                         min="1" 
-                                        value={diasCredito} 
+                                        value={diasCredito === 0 ? '' : diasCredito} 
+                                        onFocus={(e) => e.target.select()}
                                         onChange={e => { 
-                                            const dias = Number(e.target.value); 
-                                            setDiasCredito(dias); 
-                                            setFechaVencimientoCredito(obtenerFechaLocalISO(dias, fechaVenta)); 
+                                            const val = e.target.value === '' ? 0 : Number(e.target.value); 
+                                            setDiasCredito(val); 
+                                            setFechaVencimientoCredito(obtenerFechaLocalISO(val, fechaVenta)); 
                                         }} 
+                                        onBlur={() => {
+                                            if (diasCredito < 1) {
+                                                setDiasCredito(1);
+                                                setFechaVencimientoCredito(obtenerFechaLocalISO(1, fechaVenta));
+                                            }
+                                        }}
                                         className={styles.searchInput}
                                         style={{ border: '1px solid #ef4444', padding: '8px' }} 
                                     />

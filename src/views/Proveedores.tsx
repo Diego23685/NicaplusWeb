@@ -520,11 +520,28 @@ export const Proveedores: React.FC = () => {
 
                 <div className={styles.formGroup}>
                   <label>Cantidad</label>
-                  <input type="number" min={1} value={cantidadCompra} onChange={e => setCantidadCompra(Number(e.target.value))} className={styles.input} />
+                  <input 
+                    type="number" 
+                    min={1} 
+                    value={cantidadCompra === 0 ? '' : cantidadCompra} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setCantidadCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    onBlur={() => {
+                      if (cantidadCompra < 1) setCantidadCompra(1);
+                    }}
+                    className={styles.input} 
+                  />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Costo Unit. (Compra)</label>
-                  <input type="number" min={0} value={costoUnitarioCompra} onChange={e => setCostoUnitarioCompra(Number(e.target.value))} className={styles.input} />
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={costoUnitarioCompra === 0 ? '' : costoUnitarioCompra} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setCostoUnitarioCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    className={styles.input} 
+                  />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Precio Venta (Catálogo)</label>
@@ -533,6 +550,7 @@ export const Proveedores: React.FC = () => {
                     min={0} 
                     placeholder="Opcional"
                     value={nuevoPrecioVenta} 
+                    onFocus={(e) => e.target.select()}
                     onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} 
                     className={styles.input} 
                   />
@@ -542,14 +560,22 @@ export const Proveedores: React.FC = () => {
                   <input 
                     type="number" 
                     min={0} 
-                    value={tiempoEntregaRealDias} 
-                    onChange={e => setTiempoEntregaRealDias(Number(e.target.value))} 
+                    value={tiempoEntregaRealDias === 0 ? '' : tiempoEntregaRealDias} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setTiempoEntregaRealDias(e.target.value === '' ? 0 : Number(e.target.value))} 
                     className={styles.input} 
                   />
                 </div>
                 <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
                   <label>Garantía (días)</label>
-                  <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} className={styles.input} />
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={garantiaCompra === 0 ? '' : garantiaCompra} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setGarantiaCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    className={styles.input} 
+                  />
                 </div>
 
                 <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
@@ -851,11 +877,19 @@ export const Proveedores: React.FC = () => {
                           <input 
                             type="number" 
                             min={1} 
-                            value={det.cantidad} 
+                            value={det.cantidad === 0 ? '' : det.cantidad} 
+                            onFocus={(e) => e.target.select()}
                             onChange={e => {
                               const copia = [...compraAEditar.detalles];
-                              copia[idx].cantidad = Number(e.target.value);
+                              copia[idx].cantidad = e.target.value === '' ? 0 : Number(e.target.value);
                               setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            onBlur={() => {
+                              if (det.cantidad < 1) {
+                                const copia = [...compraAEditar.detalles];
+                                copia[idx].cantidad = 1;
+                                setCompraAEditar({ ...compraAEditar, detalles: copia });
+                              }
                             }}
                             className={styles.input}
                             style={{ padding: '4px', textAlign: 'center' }}
@@ -867,10 +901,11 @@ export const Proveedores: React.FC = () => {
                           <input 
                             type="number" 
                             min={0} 
-                            value={det.costoUnitario} 
+                            value={det.costoUnitario === 0 ? '' : det.costoUnitario} 
+                            onFocus={(e) => e.target.select()}
                             onChange={e => {
                               const copia = [...compraAEditar.detalles];
-                              copia[idx].costoUnitario = Number(e.target.value);
+                              copia[idx].costoUnitario = e.target.value === '' ? 0 : Number(e.target.value);
                               setCompraAEditar({ ...compraAEditar, detalles: copia });
                             }}
                             className={styles.input}
@@ -883,7 +918,8 @@ export const Proveedores: React.FC = () => {
                           <input 
                             type="number" 
                             min={0} 
-                            value={det.nuevoPrecioVenta || ''} 
+                            value={det.nuevoPrecioVenta === 0 ? '' : det.nuevoPrecioVenta} 
+                            onFocus={(e) => e.target.select()}
                             onChange={e => {
                               const copia = [...compraAEditar.detalles];
                               copia[idx].nuevoPrecioVenta = e.target.value === '' ? '' : Number(e.target.value);
