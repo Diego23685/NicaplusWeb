@@ -1,11 +1,10 @@
-// Taller.tsx
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
     FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, 
     FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle,
-    FaConciergeBell
+    FaConciergeBell, FaEdit, FaHistory, FaColumns
 } from 'react-icons/fa';
 import styles from '../assets/styles/Taller.module.css';
 
@@ -18,6 +17,7 @@ interface Orden {
     tecnicoNombre: string;
     dispositivo: string;
     diagnostico: string;
+    costoEstimado: number;
     estado: string;
     fechaIngreso: string;
     fechaEntrega?: string | null;
@@ -46,9 +46,7 @@ interface ProductoServicio {
 
 export const Taller: React.FC = () => {
 
-    // =========================================================
-    // DATOS PRINCIPALES
-    // =========================================================
+    const [pestanaActiva, setPestanaActiva] = useState<'tablero' | 'historial'>('tablero');
 
     const [ordenes, setOrdenes] = useState<Orden[]>([]);
     const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -56,12 +54,10 @@ export const Taller: React.FC = () => {
 
     const [dispositivo, setDispositivo] = useState('');
     const [diagnostico, setDiagnostico] = useState('');
-
+    const [costoEstimado, setCostoEstimado] = useState<string>('');
     const [notasGarantia, setNotasGarantia] = useState('Garantía de 30 días sobre la reparación efectuada. No cubre sellos rotos o humedad.');
 
-    // =========================================================
-    // NOTIFICACIONES
-    // =========================================================
+    const [busquedaHistorial, setBusquedaHistorial] = useState('');
 
     const [notificacion, setNotificacion] = useState<{ mostrar: boolean; mensaje: string; tipo: 'exito' | 'error' | 'warning'; }>({ mostrar: false, mensaje: '', tipo: 'exito' });
 
@@ -70,10 +66,6 @@ export const Taller: React.FC = () => {
         setTimeout(() => { setNotificacion(prev => ({ ...prev, mostrar: false })); }, 4000);
     };
 
-    // =========================================================
-    // GESTIÓN DE CLIENTE
-    // =========================================================
-
     const [modoCliente, setModoCliente] = useState<'existente' | 'nuevo' | 'no-identificado'>('existente');
     const [idClienteSeleccionado, setIdClienteSeleccionado] = useState<number | null>(null);
     const [busquedaCliente, setBusquedaCliente] = useState('');
@@ -81,30 +73,25 @@ export const Taller: React.FC = () => {
     const [telefonoCliente, setTelefonoCliente] = useState('');
     const [emailCliente, setEmailCliente] = useState('');
 
-    // =========================================================
-    // MODAL DE ENTREGA
-    // =========================================================
-
     const [mostrarModalEntrega, setMostrarModalEntrega] = useState(false);
     const [ordenAEntregar, setOrdenAEntregar] = useState<Orden | null>(null);
     const [diagnosticoFinal, setDiagnosticoFinal] = useState('');
     const [herramientasUsadas, setHerramientasUsadas] = useState('');
-    const [costoReparacion, setCostoReparacion] = useState<number>(0);
+    const [costoReparacion, setCostoReparacion] = useState<string>('');
     const [metodoPagoEntrega, setMetodoPagoEntrega] = useState('Efectivo');
     const [idProductoServicioSeleccionado, setIdProductoServicioSeleccionado] = useState<number>(1);
 
-    // =========================================================
-    // MODAL DE ACCIONES
-    // =========================================================
+    const [ordenAEditar, setOrdenAEditar] = useState<Orden | null>(null);
+    const [editDispositivo, setEditDispositivo] = useState('');
+    const [editDiagnostico, setEditDiagnostico] = useState('');
+    const [editCostoEstimado, setEditCostoEstimado] = useState<string>('');
+    const [editIdCliente, setEditIdCliente] = useState<number | null>(null);
+    const [editNotas, setEditNotas] = useState('');
 
     const [mostrarModalAccion, setMostrarModalAccion] = useState(false);
     const [ordenParaAccion, setOrdenParaAccion] = useState<Orden | null>(null);
     const [tipoAccionContexto, setTipoAccionContexto] = useState<'AlListo' | 'AlEntregar'>('AlListo');
     const [datosEntregaCache, setDatosEntregaCache] = useState<any>(null);
-
-    // =========================================================
-    // CARGAR DATOS
-    // =========================================================
 
     const cargarDatos = async () => {
         try {
@@ -117,18 +104,14 @@ export const Taller: React.FC = () => {
             setOrdenes(resOrdenes.data);
             setClientes(resClientes.data);
 
-            // Filtrar productos marcados como servicio o tomar todo el catálogo si es necesario
             const servicios = resProductos.data.filter((p: ProductoServicio) => p.requiereServicio === true);
-            
             if (servicios.length > 0) {
                 setServiciosCatalogo(servicios);
                 setIdProductoServicioSeleccionado(servicios[0].id);
             } else if (resProductos.data.length > 0) {
-                // Fallback: Si ningún producto tiene la bandera en true, pasar los productos disponibles
                 setServiciosCatalogo(resProductos.data);
                 setIdProductoServicioSeleccionado(resProductos.data[0].id);
             }
-
         } catch (err) {
             console.error('Error al cargar datos del taller:', err);
             mostrarToast('No se pudieron cargar los datos del taller.', 'error');
@@ -137,19 +120,13 @@ export const Taller: React.FC = () => {
 
     useEffect(() => { cargarDatos(); }, []);
 
-    // =========================================================
-    // CLIENTES FILTRADOS
-    // =========================================================
-
-    const clientesFiltrados = clientes.filter(c => c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || c.telefono.includes(busquedaCliente));
-
-    // =========================================================
-    // IMPRIMIR CONTRATO DE GARANTÍA
-    // =========================================================
+    const clientesFiltrados = clientes.filter(c => 
+        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || 
+        c.telefono.includes(busquedaCliente)
+    );
 
     const imprimirContratoGarantiaCompleto = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
-
         if (!ventana) {
             mostrarToast('El navegador bloqueó la ventana de impresión.', 'warning');
             return;
@@ -224,6 +201,7 @@ export const Taller: React.FC = () => {
                         <td class="info-label">Reporte Inicial (Falla)</td>
                         <td class="info-value" colspan="3">${datos.diagnostico}</td>
                     </tr>
+                    ${datos.costoEstimado ? `<tr><td class="info-label">Costo Presupuestado</td><td class="info-value" colspan="3">C$ ${Number(datos.costoEstimado).toLocaleString('es-NI')}</td></tr>` : ''}
                     ${datos.diagnosticoFinal ? `<tr><td class="info-label">Solución Aplicada</td><td class="info-value" colspan="3">${datos.diagnosticoFinal}</td></tr>` : ''}
                     ${datos.herramientasUsadas ? `<tr><td class="info-label">Repuestos / Insumos</td><td class="info-value" colspan="3">${datos.herramientasUsadas}</td></tr>` : ''}
                 </table>
@@ -233,14 +211,8 @@ export const Taller: React.FC = () => {
                     <ol>
                         <li><strong>Ámbito de Cobertura:</strong> La presente póliza cubre única y exclusivamente la mano de obra y los componentes sustituidos detallados en esta orden.</li>
                         <li><strong>Periodo de Validez:</strong> Las notas de tiempo establecidas para este servicio son: <strong>${datos.notasGarantia}</strong>.</li>
-                        <li><strong>Exclusiones de Cobertura:</strong> La garantía quedará automáticamente anulada bajo las siguientes circunstancias:
-                            <ul>
-                                <li>Rotura, manipulación, alteración o remoción de los sellos de garantía físicos de NICAPLUS GAMING.</li>
-                                <li>Evidencia de daños físicos posteriores a la entrega.</li>
-                                <li>Presencia de humedad, sulfatación, ingreso de líquidos, sobrecargas eléctricas o plagas de insectos.</li>
-                            </ul>
-                        </li>
-                        <li><strong>Condiciones para Reclamación:</strong> Para hacer efectivo el reclamo, es requisito presentar este contrato impreso o digital.</li>
+                        <li><strong>Exclusiones de Cobertura:</strong> La garantía quedará automáticamente anulada bajo rotura de sellos, humedad o golpes posteriores.</li>
+                        <li><strong>Condiciones para Reclamación:</strong> Es requisito indispensable presentar este contrato o el comprobante oficial.</li>
                     </ol>
                 </div>
 
@@ -271,13 +243,8 @@ export const Taller: React.FC = () => {
         ventana.document.close();
     };
 
-    // =========================================================
-    // IMPRIMIR VOUCHER DE INGRESO
-    // =========================================================
-
     const imprimirDocumentosSoporte = (ordenId: number, datos: any) => {
         const ventana = window.open('', '_blank');
-
         if (!ventana) {
             mostrarToast('El navegador bloqueó la ventana de impresión.', 'warning');
             return;
@@ -320,6 +287,7 @@ export const Taller: React.FC = () => {
                 <div class="linea"></div>
                 <strong>EQUIPO:</strong> ${datos.dispositivo}<br>
                 <strong>FALLA:</strong><br>${datos.diagnostico}<br>
+                <strong>PRECIO ESTIMADO:</strong> C$ ${Number(datos.costoEstimado || 0).toLocaleString('es-NI')}<br>
                 <div class="linea"></div>
                 ${datos.notasGarantia ? `
                     <strong>CONDICIONES / GARANTÍA:</strong><br>
@@ -341,13 +309,8 @@ export const Taller: React.FC = () => {
         ventana.document.close();
     };
 
-    // =========================================================
-    // IMPRIMIR VOUCHER DE ENTREGA
-    // =========================================================
-
     const imprimirVoucherEntrega = (datosEntrega: any) => {
         const ventana = window.open('', '_blank');
-
         if (!ventana) {
             mostrarToast('El navegador bloqueó la ventana de impresión.', 'warning');
             return;
@@ -405,10 +368,6 @@ export const Taller: React.FC = () => {
         ventana.document.close();
     };
 
-    // =========================================================
-    // WHATSAPP
-    // =========================================================
-
     const abrirEnlaceWhatsApp = (orden: Orden, tipo: 'Listo' | 'Entregado', datosAdicionales?: any) => {
         if (!orden.clienteTelefono) {
             mostrarToast('Esta orden no tiene teléfono de contacto. No se puede enviar WhatsApp.', 'warning');
@@ -418,23 +377,20 @@ export const Taller: React.FC = () => {
         let telefono = orden.clienteTelefono.replace(/\s+/g, '').replace(/-/g, '');
         if (!telefono.startsWith('505')) { telefono = '505' + telefono; }
 
-        const nombreCliente = orden.clienteNombre || 'cliente';
+        const nom = orden.clienteNombre || 'cliente';
         let textoMensaje = '';
 
         if (tipo === 'Listo') {
-            textoMensaje = `¡Hola *${nombreCliente}*! 👋 Te saludamos de *NICAPLUS GAMING*. Te notificamos que tu equipo *${orden.dispositivo}* (Orden #${orden.id}) ya se encuentra reparado y listo para ser retirado en tienda. 🛠️✨`;
+            const precioTxt = orden.costoEstimado > 0 ? ` Total a cancelar: *C$ ${Number(orden.costoEstimado).toLocaleString('es-NI')}*.` : '';
+            textoMensaje = `¡Hola *${nom}*! 👋 Te saludamos de *NICAPLUS GAMING*. Te notificamos que tu equipo *${orden.dispositivo}* (Orden #${orden.id}) ya está reparado y listo para retiro.${precioTxt} 🛠️✨`;
         } else {
-            const costo = datosAdicionales?.costoReparacion || 0;
-            textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${nombreCliente}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${Number(costo).toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa a partir de hoy. ¡Gracias por tu preferencia!`;
+            const costo = datosAdicionales?.costoReparacion || orden.costoEstimado || 0;
+            textoMensaje = `🧾 *NICAPLUS GAMING* \n\n¡Hola *${nom}*! Te confirmamos la entrega exitosa de tu *${orden.dispositivo}*. \n💰 *Total Pagado:* C$ ${Number(costo).toLocaleString('es-NI')}\n🛡️ Tu garantía de servicio técnico se encuentra activa. ¡Gracias por tu preferencia!`;
         }
 
         const url = `https://api.whatsapp.com/send/?phone=${telefono}&text=${encodeURIComponent(textoMensaje)}&type=phone_number&app_absent=0`;
         window.open(url, '_blank');
     };
-
-    // =========================================================
-    // REGISTRAR INGRESO AL TALLER
-    // =========================================================
 
     const registrarIngresoTaller = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -473,16 +429,19 @@ export const Taller: React.FC = () => {
             if (modoCliente === 'no-identificado') { idClienteFinal = null; }
 
             const usuarioLogueado = JSON.parse(localStorage.getItem('usuario') || '{}');
+            const costoFinal = costoEstimado === '' ? 0 : Number(costoEstimado);
+
             const payload = {
                 idCliente: idClienteFinal,
                 idUsuario: usuarioLogueado.id || null,
                 dispositivo,
                 diagnostico,
+                costoEstimado: costoFinal,
                 notas: notasGarantia
             };
 
             const resOrden = await api.post('/ordenesservicio', payload);
-            const ordenCreada = resOrden.data;
+            const ordenCreada = resOrden.data?.orden || resOrden.data;
 
             let clienteParaImpresion: DatosCliente = { nombre: 'Cliente no identificado', telefono: '', email: '' };
 
@@ -498,11 +457,12 @@ export const Taller: React.FC = () => {
             }
 
             mostrarToast(`Equipo #${ordenCreada.id} ingresado correctamente.`, 'exito');
-            imprimirDocumentosSoporte(ordenCreada.id, { dispositivo, diagnostico, notasGarantia, cliente: clienteParaImpresion });
-            imprimirContratoGarantiaCompleto(ordenCreada.id, { dispositivo, diagnostico, notasGarantia, cliente: clienteParaImpresion });
+            imprimirDocumentosSoporte(ordenCreada.id, { dispositivo, diagnostico, costoEstimado: costoFinal, notasGarantia, cliente: clienteParaImpresion });
+            imprimirContratoGarantiaCompleto(ordenCreada.id, { dispositivo, diagnostico, costoEstimado: costoFinal, notasGarantia, cliente: clienteParaImpresion });
 
             setDispositivo('');
             setDiagnostico('');
+            setCostoEstimado('');
             setIdClienteSeleccionado(null);
             setBusquedaCliente('');
             setNombreCliente('');
@@ -519,9 +479,37 @@ export const Taller: React.FC = () => {
         }
     };
 
-    // =========================================================
-    // AVANZAR ESTADO
-    // =========================================================
+    const abrirModalEdicion = (orden: Orden) => {
+        setOrdenAEditar(orden);
+        setEditDispositivo(orden.dispositivo);
+        setEditDiagnostico(orden.diagnostico);
+        setEditCostoEstimado(orden.costoEstimado ? orden.costoEstimado.toString() : '');
+        setEditIdCliente(orden.idCliente ?? null);
+        setEditNotas(orden.notas || '');
+    };
+
+    const guardarEdicionOrden = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!ordenAEditar) return;
+
+        try {
+            const payload = {
+                idCliente: editIdCliente === 0 ? null : editIdCliente,
+                dispositivo: editDispositivo,
+                diagnostico: editDiagnostico,
+                costoEstimado: editCostoEstimado === '' ? 0 : Number(editCostoEstimado),
+                notas: editNotas
+            };
+
+            await api.put(`/ordenesservicio/${ordenAEditar.id}`, payload);
+            mostrarToast(`Orden #${ordenAEditar.id} actualizada correctamente.`, 'exito');
+            setOrdenAEditar(null);
+            await cargarDatos();
+        } catch (err: any) {
+            console.error('Error al editar orden:', err);
+            mostrarToast(err.response?.data?.mensaje || 'Error al actualizar la orden.', 'error');
+        }
+    };
 
     const avanzarEstado = async (id: number, estadoActual: string) => {
         const orden = ordenes.find(o => o.id === id);
@@ -529,9 +517,9 @@ export const Taller: React.FC = () => {
 
         if (estadoActual === 'Listo') {
             setOrdenAEntregar(orden);
-            setDiagnosticoFinal(`Se solucionó la falla original: ${orden.diagnostico}`);
+            setDiagnosticoFinal(`Se solucionó la falla: ${orden.diagnostico}`);
             setHerramientasUsadas('');
-            setCostoReparacion(0);
+            setCostoReparacion(orden.costoEstimado ? orden.costoEstimado.toString() : '');
             setMetodoPagoEntrega('Efectivo');
             setMostrarModalEntrega(true);
             return;
@@ -559,19 +547,16 @@ export const Taller: React.FC = () => {
         }
     };
 
-    // =========================================================
-    // ENTREGA FINAL
-    // =========================================================
-
     const ejecutarEntregaFinal = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!ordenAEntregar) return;
 
         try {
+            const cobroFinal = costoReparacion === '' ? 0 : Number(costoReparacion);
             const payload = {
                 diagnosticoFinal,
-                herramientasUsed: herramientasUsadas || 'Herramientas básicas de banco técnico',
-                costoReparacion: Number(costoReparacion),
+                herramientasUsed: herramientasUsadas || 'Herramientas de banco técnico',
+                costoReparacion: cobroFinal,
                 metodoPago: metodoPagoEntrega,
                 idProductoServicio: idProductoServicioSeleccionado || 1
             };
@@ -586,7 +571,7 @@ export const Taller: React.FC = () => {
                 clienteEmail: '',
                 diagnosticoFinal,
                 herramientasUsadas: payload.herramientasUsed,
-                costoReparacion: payload.costoReparacion,
+                costoReparacion: cobroFinal,
                 metodoPago: metodoPagoEntrega,
                 notasGarantia
             };
@@ -602,14 +587,9 @@ export const Taller: React.FC = () => {
 
         } catch (err: any) {
             console.error('Error en entrega:', err);
-            const mensaje = err?.response?.data?.message || err?.response?.data?.title || 'Error al procesar la entrega final del equipo.';
-            mostrarToast(mensaje, 'error');
+            mostrarToast(err?.response?.data?.mensaje || 'Error al procesar la entrega del equipo.', 'error');
         }
     };
-
-    // =========================================================
-    // CLASE DEL HEADER KANBAN
-    // =========================================================
 
     const getColumnHeaderClass = (columnaName: string) => {
         if (columnaName === 'Listo') return styles.colListo;
@@ -617,14 +597,16 @@ export const Taller: React.FC = () => {
         return styles.colRecibido;
     };
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    const ordenesHistorialFiltradas = ordenes.filter(o => 
+        o.id.toString().includes(busquedaHistorial) ||
+        o.dispositivo.toLowerCase().includes(busquedaHistorial.toLowerCase()) ||
+        o.clienteNombre.toLowerCase().includes(busquedaHistorial.toLowerCase()) ||
+        o.estado.toLowerCase().includes(busquedaHistorial.toLowerCase())
+    );
 
     return (
         <div className={styles.tallerContainer}>
 
-            {/* TOAST */}
             {notificacion.mostrar && (
                 <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', borderRadius: '8px', color: '#fff', fontWeight: '600', fontSize: '14px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)', backgroundColor: notificacion.tipo === 'exito' ? '#10b981' : notificacion.tipo === 'warning' ? '#f59e0b' : '#ef4444' }}>
                     {notificacion.tipo === 'exito' && <FaCheckCircle size={18} />}
@@ -634,140 +616,361 @@ export const Taller: React.FC = () => {
                 </div>
             )}
 
-            {/* FORMULARIO DE INGRESO */}
-            <form onSubmit={registrarIngresoTaller} className={styles.formIngreso}>
-                <h3 className={styles.formTitle}>
-                    <FaTools /> Registro de Ingreso de Equipos y Control de Dueños
-                </h3>
+            {/* BARRA SUPERIOR DE PESTAÑAS */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #334155', paddingBottom: '12px' }}>
+                <button 
+                    type="button" 
+                    onClick={() => setPestanaActiva('tablero')}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px',
+                        background: pestanaActiva === 'tablero' ? '#581c7e' : '#1e293b', color: '#fff'
+                    }}
+                >
+                    <FaColumns /> Tablero Kanban Activo
+                </button>
+                <button 
+                    type="button" 
+                    onClick={() => setPestanaActiva('historial')}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px',
+                        background: pestanaActiva === 'historial' ? '#581c7e' : '#1e293b', color: '#fff'
+                    }}
+                >
+                    <FaHistory /> Historial General de Trabajos
+                </button>
+            </div>
 
-                <div className={styles.formGrid}>
-                    <div className={styles.formGroup}>
-                        <div className={styles.labelWrapper}>
-                            <label className={styles.label}><FaUser /> Cliente de la Orden</label>
-                        </div>
+            {pestanaActiva === 'tablero' && (
+                <>
+                    {/* FORMULARIO DE INGRESO */}
+                    <form onSubmit={registrarIngresoTaller} className={styles.formIngreso}>
+                        <h3 className={styles.formTitle}>
+                            <FaTools /> Registro de Ingreso de Equipos y Control Técnico
+                        </h3>
 
-                        {/* SELECTOR DE MODO */}
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                            <button type="button" onClick={() => { setModoCliente('existente'); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'existente' ? '#581c7e' : '#fff', color: modoCliente === 'existente' ? '#fff' : '#334155' }}>
-                                Cliente existente
-                            </button>
-                            <button type="button" onClick={() => { setModoCliente('nuevo'); setIdClienteSeleccionado(null); setBusquedaCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'nuevo' ? '#581c7e' : '#fff', color: modoCliente === 'nuevo' ? '#fff' : '#334155' }}>
-                                Nuevo cliente
-                            </button>
-                            <button type="button" onClick={() => { setModoCliente('no-identificado'); setIdClienteSeleccionado(null); setBusquedaCliente(''); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'no-identificado' ? '#dc2626' : '#fff', color: modoCliente === 'no-identificado' ? '#fff' : '#334155' }}>
-                                Sin identificar
-                            </button>
-                        </div>
-
-                        {/* CLIENTE EXISTENTE */}
-                        {modoCliente === 'existente' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className={styles.inputIconWrapper}>
-                                    <FaSearch className={styles.inputIcon} />
-                                    <input type="text" placeholder="Filtrar clientes por nombre o celular..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)} className={`${styles.input} ${styles.inputWithIcon}`} />
+                        <div className={styles.formGrid}>
+                            <div className={styles.formGroup}>
+                                <div className={styles.labelWrapper}>
+                                    <label className={styles.label}><FaUser /> Cliente de la Orden</label>
                                 </div>
-                                <select value={idClienteSeleccionado || 0} onChange={e => { const valor = Number(e.target.value); setIdClienteSeleccionado(valor === 0 ? null : valor); }} className={styles.select}>
-                                    <option value={0}>-- Selecciona el Cliente --</option>
-                                    {clientesFiltrados.map(c => (
+
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                                    <button type="button" onClick={() => { setModoCliente('existente'); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'existente' ? '#581c7e' : '#fff', color: modoCliente === 'existente' ? '#fff' : '#334155' }}>
+                                        Cliente existente
+                                    </button>
+                                    <button type="button" onClick={() => { setModoCliente('nuevo'); setIdClienteSeleccionado(null); setBusquedaCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'nuevo' ? '#581c7e' : '#fff', color: modoCliente === 'nuevo' ? '#fff' : '#334155' }}>
+                                        Nuevo cliente
+                                    </button>
+                                    <button type="button" onClick={() => { setModoCliente('no-identificado'); setIdClienteSeleccionado(null); setBusquedaCliente(''); setNombreCliente(''); setTelefonoCliente(''); setEmailCliente(''); }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', background: modoCliente === 'no-identificado' ? '#dc2626' : '#fff', color: modoCliente === 'no-identificado' ? '#fff' : '#334155' }}>
+                                        Sin identificar
+                                    </button>
+                                </div>
+
+                                {modoCliente === 'existente' && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div className={styles.inputIconWrapper}>
+                                            <FaSearch className={styles.inputIcon} />
+                                            <input type="text" placeholder="Filtrar clientes..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)} className={`${styles.input} ${styles.inputWithIcon}`} />
+                                        </div>
+                                        <select value={idClienteSeleccionado || 0} onChange={e => { const valor = Number(e.target.value); setIdClienteSeleccionado(valor === 0 ? null : valor); }} className={styles.select}>
+                                            <option value={0}>-- Selecciona el Cliente --</option>
+                                            {clientesFiltrados.map(c => (
+                                                <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {modoCliente === 'nuevo' && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} className={styles.input} placeholder="Nombre completo" />
+                                        <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} className={styles.input} placeholder="Teléfono" />
+                                        <input type="email" value={emailCliente} onChange={e => setEmailCliente(e.target.value)} className={styles.input} placeholder="Email (Opcional)" />
+                                    </div>
+                                )}
+
+                                {modoCliente === 'no-identificado' && (
+                                    <div style={{ padding: '12px', borderRadius: '8px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '13px' }}>
+                                        <strong>Cliente no identificado</strong><br />
+                                        El equipo será registrado como mostrador sin asociar a cuenta.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}><FaLaptop /> Dispositivo</label>
+                                    <input type="text" value={dispositivo} onChange={e => setDispositivo(e.target.value)} className={styles.input} placeholder="Ej: PS5 Slim, Xbox Series X, Laptop Asus" required />
+                                </div>
+
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}><FaMoneyBillWave /> Costo Estimado / Presupuesto Acordado (C$)</label>
+                                    <input 
+                                        type="number" 
+                                        value={costoEstimado} 
+                                        onChange={e => setCostoEstimado(e.target.value)} 
+                                        className={`${styles.input} ${styles.inputCosto}`} 
+                                        placeholder="0.00 (Monto inicial a cobrar)" 
+                                        min={0} 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={styles.formGroup} style={{ marginBottom: '14px' }}>
+                            <label className={styles.label}>Falla y Diagnóstico Inicial</label>
+                            <textarea value={diagnostico} onChange={e => setDiagnostico(e.target.value)} className={styles.textarea} placeholder="Detalles de la falla detectada..." required />
+                        </div>
+
+                        <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
+                            <label className={styles.label}>Condiciones y Póliza de Garantía a Imprimir</label>
+                            <input type="text" value={notasGarantia} onChange={e => setNotasGarantia(e.target.value)} className={styles.input} />
+                        </div>
+
+                        <button type="submit" className={styles.btnSubmit}>
+                            Ingresar Equipo e Imprimir Comprobante
+                        </button>
+                    </form>
+
+                    {/* KANBAN */}
+                    <div className={styles.kanbanTablero}>
+                        {['Recibido', 'En Revisión', 'Listo'].map(columna => {
+                            const ordenesColumna = ordenes.filter(o => o.estado === columna);
+                            return (
+                                <div className={styles.kanbanColumna} key={columna}>
+                                    <h4 className={`${styles.columnHeader} ${getColumnHeaderClass(columna)}`}>
+                                        {columna} ({ordenesColumna.length})
+                                    </h4>
+
+                                    <div className={styles.cardsContainer}>
+                                        {ordenesColumna.map(orden => {
+                                            const tieneTelefono = !!orden.clienteTelefono;
+                                            return (
+                                                <div key={orden.id} className={styles.card}>
+                                                    <div className={styles.cardHeader}>
+                                                        <strong className={styles.cardTitle}>{orden.dispositivo}</strong>
+                                                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => abrirModalEdicion(orden)} 
+                                                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px 4px' }}
+                                                                title="Editar Orden"
+                                                            >
+                                                                <FaEdit size={14} />
+                                                            </button>
+                                                            <span className={styles.cardBadge}>#{orden.id}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <p className={styles.cardDesc}>{orden.diagnostico}</p>
+
+                                                    <div style={{ margin: '8px 0', fontSize: '11px', color: '#10b981', fontWeight: 'bold' }}>
+                                                        Costo pactado: C$ {Number(orden.costoEstimado || 0).toLocaleString('es-NI')}
+                                                    </div>
+
+                                                    <div className={styles.cardDivider}>
+                                                        <small className={styles.cardClientName}>Cliente: {orden.clienteNombre || 'No identificado'}</small>
+                                                        <small className={styles.cardClientPhone}>Tel: {orden.clienteTelefono || 'No registrado'}</small>
+                                                    </div>
+
+                                                    <div className={styles.cardActions}>
+                                                        <button onClick={() => avanzarEstado(orden.id, orden.estado)} className={styles.btnAvanzar}>
+                                                            {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'}
+                                                            <FaChevronRight size={10} />
+                                                        </button>
+
+                                                        {orden.estado === 'Listo' && tieneTelefono && (
+                                                            <button title="Notificar por WhatsApp" onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} className={styles.btnWhatsAppQuick}>
+                                                                <FaWhatsapp size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {ordenesColumna.length === 0 && (
+                                            <div className={styles.emptyColumnText}>Sin órdenes en este estado</div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+
+            {/* PESTAÑA HISTORIAL DE TRABAJOS */}
+            {pestanaActiva === 'historial' && (
+                <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                            <h3 style={{ margin: 0, color: '#fff', fontSize: '18px' }}>Historial General de Reparaciones</h3>
+                            <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px' }}>Registro de todos los equipos ingresados, entregados y en proceso.</p>
+                        </div>
+                        <div className={styles.inputIconWrapper} style={{ minWidth: '280px' }}>
+                            <FaSearch className={styles.inputIcon} />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar por orden, cliente, equipo o estado..." 
+                                value={busquedaHistorial} 
+                                onChange={e => setBusquedaHistorial(e.target.value)} 
+                                className={`${styles.input} ${styles.inputWithIcon}`} 
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#cbd5e1' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid #475569', textAlign: 'left', background: '#0f172a' }}>
+                                    <th style={{ padding: '10px' }}>N° Orden</th>
+                                    <th style={{ padding: '10px' }}>Fecha Ingreso</th>
+                                    <th style={{ padding: '10px' }}>Cliente</th>
+                                    <th style={{ padding: '10px' }}>Equipo</th>
+                                    <th style={{ padding: '10px' }}>Diagnóstico / Falla</th>
+                                    <th style={{ padding: '10px' }}>Costo Est.</th>
+                                    <th style={{ padding: '10px' }}>Estado</th>
+                                    <th style={{ padding: '10px', textAlign: 'center' }}>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ordenesHistorialFiltradas.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No se encontraron órdenes registradas.</td>
+                                    </tr>
+                                ) : (
+                                    ordenesHistorialFiltradas.map(o => (
+                                        <tr key={o.id} style={{ borderBottom: '1px solid #334155' }}>
+                                            <td style={{ padding: '10px', fontWeight: 'bold', color: '#38bdf8' }}>#ORD-{o.id}</td>
+                                            <td style={{ padding: '10px' }}>{new Date(o.fechaIngreso || o.fechaIngreso).toLocaleDateString()}</td>
+                                            <td style={{ padding: '10px' }}>
+                                                <strong>{o.clienteNombre}</strong>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>{o.clienteTelefono || 'Sin teléfono'}</div>
+                                            </td>
+                                            <td style={{ padding: '10px' }}><strong>{o.dispositivo}</strong></td>
+                                            <td style={{ padding: '10px', maxWidth: '250px' }}>{o.diagnostico}</td>
+                                            <td style={{ padding: '10px', color: '#4ade80', fontWeight: 'bold' }}>
+                                                C$ {Number(o.costoEstimado || 0).toLocaleString('es-NI')}
+                                            </td>
+                                            <td style={{ padding: '10px' }}>
+                                                <span style={{ 
+                                                    padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
+                                                    background: o.estado === 'Entregado' ? '#065f46' : o.estado === 'Listo' ? '#1e3a8a' : '#854d0e',
+                                                    color: '#fff'
+                                                }}>
+                                                    {o.estado}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '10px', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                    {o.estado !== 'Entregado' && (
+                                                        <button 
+                                                            onClick={() => abrirModalEdicion(o)} 
+                                                            style={{ background: '#581c7e', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                                                            title="Editar Orden"
+                                                        >
+                                                            <FaEdit />
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => imprimirDocumentosSoporte(o.id, {
+                                                            dispositivo: o.dispositivo,
+                                                            diagnostico: o.diagnostico,
+                                                            costoEstimado: o.costoEstimado,
+                                                            notasGarantia: o.notas,
+                                                            cliente: { nombre: o.clienteNombre, telefono: o.clienteTelefono, email: '' }
+                                                        })} 
+                                                        style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                                                        title="Reimprimir Voucher"
+                                                    >
+                                                        <FaPrint />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE EDICIÓN DE ORDEN */}
+            {ordenAEditar && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}><FaEdit /> Editar Trabajo #{ordenAEditar.id}</h3>
+                            <button onClick={() => setOrdenAEditar(null)} className={styles.btnCloseModal}><FaTimes /></button>
+                        </div>
+
+                        <form onSubmit={guardarEdicionOrden} className={styles.modalForm}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaUser /> Reasignar Cliente</label>
+                                <select 
+                                    value={editIdCliente || 0} 
+                                    onChange={e => setEditIdCliente(Number(e.target.value) === 0 ? null : Number(e.target.value))} 
+                                    className={styles.select}
+                                >
+                                    <option value={0}>Cliente no identificado / Mostrador</option>
+                                    {clientes.map(c => (
                                         <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>
                                     ))}
                                 </select>
                             </div>
-                        )}
 
-                        {/* NUEVO CLIENTE */}
-                        {modoCliente === 'nuevo' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} className={styles.input} placeholder="Nombre completo" />
-                                <input type="text" value={telefonoCliente} onChange={e => setTelefonoCliente(e.target.value)} className={styles.input} placeholder="Teléfono" />
-                                <input type="email" value={emailCliente} onChange={e => setEmailCliente(e.target.value)} className={styles.input} placeholder="Email (Opcional)" />
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaLaptop /> Dispositivo</label>
+                                <input 
+                                    type="text" 
+                                    value={editDispositivo} 
+                                    onChange={e => setEditDispositivo(e.target.value)} 
+                                    className={styles.input} 
+                                    required 
+                                />
                             </div>
-                        )}
 
-                        {/* SIN IDENTIFICAR */}
-                        {modoCliente === 'no-identificado' && (
-                            <div style={{ padding: '12px', borderRadius: '8px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '13px' }}>
-                                <strong>Cliente no identificado</strong><br />
-                                El equipo será ingresado al taller sin asociarlo a un cliente.
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaMoneyBillWave /> Costo Estimado / Presupuesto (C$)</label>
+                                <input 
+                                    type="number" 
+                                    value={editCostoEstimado} 
+                                    onChange={e => setEditCostoEstimado(e.target.value)} 
+                                    className={`${styles.input} ${styles.inputCosto}`} 
+                                    min={0} 
+                                />
                             </div>
-                        )}
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Diagnóstico / Falla</label>
+                                <textarea 
+                                    value={editDiagnostico} 
+                                    onChange={e => setEditDiagnostico(e.target.value)} 
+                                    className={styles.textarea} 
+                                    required 
+                                />
+                            </div>
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Notas y Términos</label>
+                                <input 
+                                    type="text" 
+                                    value={editNotas} 
+                                    onChange={e => setEditNotas(e.target.value)} 
+                                    className={styles.input} 
+                                />
+                            </div>
+
+                            <div className={styles.modalActions}>
+                                <button type="submit" className={styles.btnModalConfirm}>Guardar Modificaciones</button>
+                                <button type="button" onClick={() => setOrdenAEditar(null)} className={styles.btnModalCancel}>Cancelar</button>
+                            </div>
+                        </form>
                     </div>
-
-                    {/* DISPOSITIVO */}
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}><FaLaptop /> Dispositivo</label>
-                        <input type="text" value={dispositivo} onChange={e => setDispositivo(e.target.value)} className={styles.input} placeholder="Ej: PS5 Slim o Nintendo Switch" required />
-                    </div>
                 </div>
-
-                {/* DIAGNÓSTICO */}
-                <div className={styles.formGroup} style={{ marginBottom: '14px' }}>
-                    <label className={styles.label}>Falla y Diagnóstico Inicial</label>
-                    <textarea value={diagnostico} onChange={e => setDiagnostico(e.target.value)} className={styles.textarea} placeholder="Detalles de la falla técnica detectada..." required />
-                </div>
-
-                {/* GARANTÍA */}
-                <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
-                    <label className={styles.label}>Condiciones y Póliza de Garantía a Imprimir</label>
-                    <input type="text" value={notasGarantia} onChange={e => setNotasGarantia(e.target.value)} className={styles.input} />
-                </div>
-
-                <button type="submit" className={styles.btnSubmit}>
-                    Ingresar Equipo e Imprimir Soporte y Contrato
-                </button>
-            </form>
-
-            {/* KANBAN */}
-            <div className={styles.kanbanTablero}>
-                {['Recibido', 'En Revisión', 'Listo'].map(columna => {
-                    const ordenesColumna = ordenes.filter(o => o.estado === columna);
-                    return (
-                        <div className={styles.kanbanColumna} key={columna}>
-                            <h4 className={`${styles.columnHeader} ${getColumnHeaderClass(columna)}`}>
-                                {columna} ({ordenesColumna.length})
-                            </h4>
-
-                            <div className={styles.cardsContainer}>
-                                {ordenesColumna.map(orden => {
-                                    const tieneTelefono = !!orden.clienteTelefono;
-                                    return (
-                                        <div key={orden.id} className={styles.card}>
-                                            <div className={styles.cardHeader}>
-                                                <strong className={styles.cardTitle}>{orden.dispositivo}</strong>
-                                                <span className={styles.cardBadge}>#{orden.id}</span>
-                                            </div>
-
-                                            <p className={styles.cardDesc}>{orden.diagnostico}</p>
-
-                                            <div className={styles.cardDivider}>
-                                                <small className={styles.cardClientName}>Cliente: {orden.clienteNombre || 'No identificado'}</small>
-                                                <small className={styles.cardClientPhone}>Tel: {orden.clienteTelefono || 'No registrado'}</small>
-                                            </div>
-
-                                            <div className={styles.cardActions}>
-                                                <button onClick={() => avanzarEstado(orden.id, orden.estado)} className={styles.btnAvanzar}>
-                                                    {orden.estado === 'Listo' ? 'Entregar y Cobrar' : 'Avanzar'}
-                                                    <FaChevronRight size={10} />
-                                                </button>
-
-                                                {orden.estado === 'Listo' && tieneTelefono && (
-                                                    <button title="Notificar por WhatsApp" onClick={() => abrirEnlaceWhatsApp(orden, 'Listo')} className={styles.btnWhatsAppQuick}>
-                                                        <FaWhatsapp size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {ordenesColumna.length === 0 && (
-                                    <div className={styles.emptyColumnText}>Sin órdenes en este estado</div>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+            )}
 
             {/* MODAL DE ENTREGA */}
             {mostrarModalEntrega && ordenAEntregar && (
@@ -786,7 +989,6 @@ export const Taller: React.FC = () => {
                                 <strong>{ordenAEntregar.dispositivo}</strong> ({ordenAEntregar.clienteNombre || 'Cliente no identificado'})
                             </div>
 
-                            {/* CONCEPTOS DE SERVICIO TÉCNICO DESDE CATÁLOGO */}
                             <div className={styles.formGroup}>
                                 <label className={styles.label}><FaConciergeBell /> Concepto Contable del Servicio</label>
                                 <select 
@@ -814,7 +1016,7 @@ export const Taller: React.FC = () => {
 
                             <div className={styles.formGroup}>
                                 <label className={styles.label}><FaWrench /> Repuestos / Herramientas Utilizadas</label>
-                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} className={styles.input} placeholder="Ej: Cambio de puerto HDMI, limpieza interna" required />
+                                <input type="text" value={herramientasUsadas} onChange={e => setHerramientasUsadas(e.target.value)} className={styles.input} placeholder="Ej: Cambio de pantalla, flex, limpieza interna" required />
                             </div>
 
                             <div className={styles.formGroup}>
@@ -828,12 +1030,20 @@ export const Taller: React.FC = () => {
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.label}><FaMoneyBillWave /> Costo del Servicio Técnico (C$)</label>
-                                <input type="number" value={costoReparacion || ''} onChange={e => setCostoReparacion(Number(e.target.value))} className={`${styles.input} ${styles.inputCosto}`} placeholder="Monto cobrado en Córdobas" min={0} required />
+                                <label className={styles.label}><FaMoneyBillWave /> Costo Final del Servicio (C$)</label>
+                                <input 
+                                    type="number" 
+                                    value={costoReparacion} 
+                                    onChange={e => setCostoReparacion(e.target.value)} 
+                                    className={`${styles.input} ${styles.inputCosto}`} 
+                                    placeholder="0.00" 
+                                    min={0} 
+                                    required 
+                                />
                             </div>
 
                             <div className={styles.modalActions}>
-                                <button type="submit" className={styles.btnModalConfirm}>Procesar Salida</button>
+                                <button type="submit" className={styles.btnModalConfirm}>Procesar Salida y Facturar</button>
                                 <button type="button" onClick={() => { setMostrarModalEntrega(false); setOrdenAEntregar(null); }} className={styles.btnModalCancel}>Cancelar</button>
                             </div>
                         </form>
@@ -851,22 +1061,21 @@ export const Taller: React.FC = () => {
                         </h3>
 
                         <p className={styles.successDesc}>
-                            Selecciona las acciones comerciales inmediatas para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo})
+                            Selecciona las acciones comerciales para la Orden <strong>#{ordenParaAccion.id}</strong> ({ordenParaAccion.dispositivo})
                         </p>
 
                         <div className={styles.actionButtonsContainer}>
-                            {/* WHATSAPP */}
                             <button onClick={() => abrirEnlaceWhatsApp(ordenParaAccion, tipoAccionContexto === 'AlListo' ? 'Listo' : 'Entregado', datosEntregaCache)} disabled={!ordenParaAccion.clienteTelefono} className={`${styles.btnActionBase} ${styles.btnActionWhatsApp}`} style={{ opacity: ordenParaAccion.clienteTelefono ? 1 : 0.5, cursor: ordenParaAccion.clienteTelefono ? 'pointer' : 'not-allowed' }}>
                                 <FaWhatsapp size={18} />
                                 {ordenParaAccion.clienteTelefono ? 'Avisar al Cliente por WhatsApp' : 'Sin teléfono para WhatsApp'}
                             </button>
 
-                            {/* TICKET */}
                             <button onClick={() => {
                                 if (tipoAccionContexto === 'AlListo') {
                                     imprimirDocumentosSoporte(ordenParaAccion.id, {
                                         dispositivo: ordenParaAccion.dispositivo,
                                         diagnostico: ordenParaAccion.diagnostico,
+                                        costoEstimado: ordenParaAccion.costoEstimado,
                                         notasGarantia,
                                         cliente: { nombre: ordenParaAccion.clienteNombre || 'Cliente no identificado', telefono: ordenParaAccion.clienteTelefono || '', email: '' }
                                     });
@@ -877,12 +1086,12 @@ export const Taller: React.FC = () => {
                                 <FaPrint size={18} /> Imprimir Ticket Comercial (Térmico)
                             </button>
 
-                            {/* CONTRATO */}
                             <button onClick={() => {
                                 const datosGarantiaParaImprimir = tipoAccionContexto === 'AlListo'
                                     ? {
                                         dispositivo: ordenParaAccion.dispositivo,
                                         diagnostico: ordenParaAccion.diagnostico,
+                                        costoEstimado: ordenParaAccion.costoEstimado,
                                         notasGarantia,
                                         cliente: { nombre: ordenParaAccion.clienteNombre || 'Cliente no identificado', telefono: ordenParaAccion.clienteTelefono || '', email: '' }
                                     }
@@ -891,6 +1100,7 @@ export const Taller: React.FC = () => {
                                         diagnostico: ordenParaAccion.diagnostico,
                                         diagnosticoFinal: datosEntregaCache?.diagnosticoFinal,
                                         herramientasUsadas: datosEntregaCache?.herramientasUsadas,
+                                        costoEstimado: datosEntregaCache?.costoReparacion,
                                         notasGarantia,
                                         cliente: { nombre: datosEntregaCache?.clienteNombre || 'Cliente no identificado', telefono: datosEntregaCache?.clienteTelefono || '', email: datosEntregaCache?.clienteEmail || '' }
                                     };
@@ -900,7 +1110,6 @@ export const Taller: React.FC = () => {
                                 <FaFileContract size={18} /> Imprimir Contrato Garantía (Hoja Entera A4)
                             </button>
 
-                            {/* VOLVER */}
                             <button onClick={() => { setMostrarModalAccion(false); setOrdenParaAccion(null); setDatosEntregaCache(null); }} className={`${styles.btnActionBase} ${styles.btnActionReturn}`}>
                                 Listo, Volver al Tablero
                             </button>
