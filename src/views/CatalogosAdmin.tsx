@@ -220,7 +220,11 @@ export const CatalogosAdmin: React.FC = () => {
 
     const handleProductoInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
-        const valorFinal = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+        let valorFinal: any = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+
+        if (type === 'number') {
+            valorFinal = value === '' ? '' : Number(value);
+        }
 
         setFormProducto(prev => {
             const nuevoEstado = { ...prev, [name]: valorFinal };
@@ -388,16 +392,20 @@ export const CatalogosAdmin: React.FC = () => {
 
     const guardarProducto = async (e: FormEvent, mantenerParaDuplicar: boolean = false) => {
         e.preventDefault();
+        
         const payload = {
             ...(editandoProductoId ? { id: editandoProductoId } : {}), 
             ...formProducto,
+            precioCosto: Number(formProducto.precioCosto) || 0,
+            precioVenta: Number(formProducto.precioVenta) || 0,
+            stockActual: formProducto.controlaStock ? (Number(formProducto.stockActual) || 0) : 0,
             descripcion: formProducto.descripcion || 'Sin descripción detallada',
             stockMinimo: formProducto.controlaStock ? 2 : 0,
             categoriaId: formProducto.categoriaId ? Number(formProducto.categoriaId) : null,
             juegoId: formProducto.esDigital && formProducto.juegoId ? Number(formProducto.juegoId) : null,
             visibleEnCatalogo: true,
-            diasDuracion: formProducto.esDigital ? Number(formProducto.diasDuracion) : (Number(formProducto.diasDuracion) || 1),
-            garantiaDias: Number(formProducto.garantiaDias)
+            diasDuracion: formProducto.esDigital ? (Number(formProducto.diasDuracion) || 30) : (Number(formProducto.diasDuracion) || 1),
+            garantiaDias: Number(formProducto.garantiaDias) || 0
         };
 
         try {
@@ -412,7 +420,7 @@ export const CatalogosAdmin: React.FC = () => {
                 setFormProducto(prev => ({
                     ...prev,
                     nombre: `${prev.nombre} (Siguiente)`,
-                    stockActual: prev.controlaStock ? prev.stockActual : 0
+                    stockActual: prev.controlaStock ? (Number(prev.stockActual) || 0) : 0
                 }));
             } else {
                 limpiarFormularioProducto();
@@ -548,7 +556,7 @@ export const CatalogosAdmin: React.FC = () => {
         lector.readAsDataURL(archivo);
     };
 
-    // 🟢 FUNCIONES CRUD DENTRO DEL MODAL DE VARIACIONES
+    // FUNCIONES CRUD DENTRO DEL MODAL DE VARIACIONES
     const abrirModalVariaciones = (producto: Producto) => {
         setProductoVariacionAbierto(producto);
         setVariacionesModal(producto.variaciones || []);
@@ -603,24 +611,30 @@ export const CatalogosAdmin: React.FC = () => {
             id: productoVariacionAbierto.id,
             nombre: productoVariacionAbierto.nombre,
             descripcion: productoVariacionAbierto.descripcion,
-            precioVenta: productoVariacionAbierto.precioVenta,
-            precioCosto: productoVariacionAbierto.precioCosto,
+            precioVenta: Number(productoVariacionAbierto.precioVenta) || 0,
+            precioCosto: Number(productoVariacionAbierto.precioCosto) || 0,
             stockActual: 0,
             stockMinimo: 0,
             imagenUrl: productoVariacionAbierto.imagenUrl,
             esDigital: productoVariacionAbierto.esDigital,
             controlaStock: productoVariacionAbierto.controlaStock,
-            requiereServicio: productoVariacionAbierto.requiereServicio ?? false, // 🟢 Manejo seguro de nulabilidad
+            requiereServicio: productoVariacionAbierto.requiereServicio ?? false,
             visibleEnCatalogo: true,
             esSuscripcion: productoVariacionAbierto.esSuscripcion,
-            diasDuracion: productoVariacionAbierto.diasDuracion,
-            garantiaDias: productoVariacionAbierto.garantiaDias,
+            diasDuracion: Number(productoVariacionAbierto.diasDuracion) || 30,
+            garantiaDias: Number(productoVariacionAbierto.garantiaDias) || 0,
             proveedor: productoVariacionAbierto.proveedor,
             estado: productoVariacionAbierto.estado,
-            categoriaId: productoVariacionAbierto.categoriaId,
-            juegoId: productoVariacionAbierto.juegoId,
+            categoriaId: productoVariacionAbierto.categoriaId ? Number(productoVariacionAbierto.categoriaId) : null,
+            juegoId: productoVariacionAbierto.juegoId ? Number(productoVariacionAbierto.juegoId) : null,
             tieneVariaciones: true,
-            variaciones: variacionesModal
+            variaciones: variacionesModal.map(v => ({
+                ...v,
+                precioCosto: Number(v.precioCosto) || 0,
+                precioVenta: Number(v.precioVenta) || 0,
+                stockActual: Number(v.stockActual) || 0,
+                stockMinimo: Number(v.stockMinimo) || 2
+            }))
         };
 
         try {
@@ -727,11 +741,27 @@ export const CatalogosAdmin: React.FC = () => {
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                     <div style={{ flex: 1 }}>
                                         <label className={styles.label}>Precio Compra (C$)</label>
-                                        <input type="number" name="precioCosto" value={formProducto.precioCosto || ''} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                        <input 
+                                            type="number" 
+                                            step="any"
+                                            name="precioCosto" 
+                                            value={formProducto.precioCosto} 
+                                            onChange={handleProductoInputChange} 
+                                            className={styles.input} 
+                                            required={!formProducto.tieneVariaciones} 
+                                        />
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <label className={styles.label}>Precio Venta (C$)</label>
-                                        <input type="number" name="precioVenta" value={formProducto.precioVenta || ''} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                        <input 
+                                            type="number" 
+                                            step="any"
+                                            name="precioVenta" 
+                                            value={formProducto.precioVenta} 
+                                            onChange={handleProductoInputChange} 
+                                            className={styles.input} 
+                                            required={!formProducto.tieneVariaciones} 
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -811,7 +841,7 @@ export const CatalogosAdmin: React.FC = () => {
                                         <input 
                                             type="number" 
                                             name="stockActual" 
-                                            value={formProducto.controlaStock ? (formProducto.stockActual || '') : 0} 
+                                            value={formProducto.controlaStock ? formProducto.stockActual : 0} 
                                             onChange={handleProductoInputChange} 
                                             className={styles.input} 
                                             disabled={!formProducto.controlaStock} 
@@ -1197,7 +1227,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                                     <FaTrash size={10} />
                                                                                                 </button>
                                                                                                 <button 
-                                                                                                    type="button"
+                                                                                                    type="button" 
                                                                                                     onClick={() => removerCuentaCompletaManual(perfil.accountGroupKey!)} 
                                                                                                     style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                                                                                     title="Eliminar Cuenta Completa (Lote)"
@@ -1319,7 +1349,7 @@ export const CatalogosAdmin: React.FC = () => {
                                     type="number" 
                                     placeholder="P. Costo" 
                                     value={nuevaVarPrecioCosto} 
-                                    onChange={e => setNuevaVarPrecioCosto(Number(e.target.value))} 
+                                    onChange={e => setNuevaVarPrecioCosto(e.target.value === '' ? '' : Number(e.target.value))} 
                                     className={styles.input} 
                                     style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
                                 />
@@ -1327,7 +1357,7 @@ export const CatalogosAdmin: React.FC = () => {
                                     type="number" 
                                     placeholder="P. Venta" 
                                     value={nuevaVarPrecioVenta} 
-                                    onChange={e => setNuevaVarPrecioVenta(Number(e.target.value))} 
+                                    onChange={e => setNuevaVarPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} 
                                     className={styles.input} 
                                     style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
                                 />
@@ -1335,7 +1365,7 @@ export const CatalogosAdmin: React.FC = () => {
                                     type="number" 
                                     placeholder="Stock" 
                                     value={nuevaVarStock} 
-                                    onChange={e => setNuevaVarStock(Number(e.target.value))} 
+                                    onChange={e => setNuevaVarStock(e.target.value === '' ? '' : Number(e.target.value))} 
                                     className={styles.input} 
                                     style={{ margin: 0, fontSize: '0.8rem', padding: '6px 8px' }} 
                                 />
@@ -1429,7 +1459,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                 <input 
                                                                     type="number" 
                                                                     value={varItem.precioCosto} 
-                                                                    onChange={e => guardarVariacionModal(idxReal, 'precioCosto', Number(e.target.value))} 
+                                                                    onChange={e => guardarVariacionModal(idxReal, 'precioCosto', Number(e.target.value) || 0)} 
                                                                     className={styles.input} 
                                                                     style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
                                                                 />
@@ -1443,7 +1473,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                 <input 
                                                                     type="number" 
                                                                     value={varItem.precioVenta} 
-                                                                    onChange={e => guardarVariacionModal(idxReal, 'precioVenta', Number(e.target.value))} 
+                                                                    onChange={e => guardarVariacionModal(idxReal, 'precioVenta', Number(e.target.value) || 0)} 
                                                                     className={styles.input} 
                                                                     style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
                                                                 />
