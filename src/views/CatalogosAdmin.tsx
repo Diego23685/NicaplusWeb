@@ -107,6 +107,7 @@ export const CatalogosAdmin: React.FC = () => {
     const [juegos, setJuegos] = useState<Juego[]>([]);
     const [listaProveedores, setListaProveedores] = useState<Proveedor[]>([]);
     const [cargando, setCargando] = useState(true);
+    const [subiendoImagen, setSubiendoImagen] = useState(false);
 
     // FORMULARIO UNIFICADO DE PRODUCTOS
     const [editandoProductoId, setEditandoProductoId] = useState<number | null>(null);
@@ -597,14 +598,28 @@ export const CatalogosAdmin: React.FC = () => {
         }
     };
 
-    const procesarSubidaImagen = (e: ChangeEvent<HTMLInputElement>) => {
+    // SUBIDA FÍSICA DIRECTA AL ENDPOINT /api/uploads/producto
+    const procesarSubidaImagen = async (e: ChangeEvent<HTMLInputElement>) => {
         const archivo = e.target.files?.[0];
         if (!archivo) return;
-        const lector = new FileReader();
-        lector.onloadend = () => { 
-            if (lector.result) setFormProducto(prev => ({ ...prev, imagenUrl: lector.result!.toString() })); 
-        };
-        lector.readAsDataURL(archivo);
+
+        try {
+            setSubiendoImagen(true);
+            const formData = new FormData();
+            formData.append('archivo', archivo);
+
+            const res = await api.post('/uploads/producto', formData);
+            if (res.data && res.data.url) {
+                setFormProducto(prev => ({ ...prev, imagenUrl: res.data.url }));
+            }
+        } catch (err: any) {
+            dispararErrorVisual(
+                "Error al Subir Imagen", 
+                err.response?.data?.mensaje || "No se pudo subir la imagen al servidor. Verifique el formato y peso."
+            );
+        } finally {
+            setSubiendoImagen(false);
+        }
     };
 
     // FUNCIONES CRUD DENTRO DEL MODAL DE VARIACIONES
@@ -904,11 +919,19 @@ export const CatalogosAdmin: React.FC = () => {
                             <div style={{ marginTop: '6px' }}>
                                 <label className={styles.label}>URL Imagen o Archivo</label>
                                 <input type="text" name="imagenUrl" placeholder="https://..." value={formProducto.imagenUrl} onChange={handleProductoInputChange} className={styles.input} />
-                                <input type="file" accept="image/*" onChange={procesarSubidaImagen} className={styles.input} style={{ marginTop: '6px' }} />
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={procesarSubidaImagen} 
+                                    className={styles.input} 
+                                    style={{ marginTop: '6px' }} 
+                                    disabled={subiendoImagen}
+                                />
+                                {subiendoImagen && <small style={{ color: '#38bdf8', display: 'block', marginTop: '4px' }}>Subiendo imagen al servidor...</small>}
                             </div>
                             
                             <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
-                                <button type="submit" className={`${styles.btn} ${editandoProductoId ? styles.btnWarning : styles.btnPrimary}`} style={{ flex: 1, justifyContent: 'center' }}>
+                                <button type="submit" className={`${styles.btn} ${editandoProductoId ? styles.btnWarning : styles.btnPrimary}`} style={{ flex: 1, justifyContent: 'center' }} disabled={subiendoImagen}>
                                     {editandoProductoId ? 'Actualizar Ficha' : 'Insertar'}
                                 </button>
                                 
@@ -919,6 +942,7 @@ export const CatalogosAdmin: React.FC = () => {
                                         className={styles.btn} 
                                         style={{ background: '#6366f1', color: '#fff', justifyContent: 'center' }} 
                                         title="Guarda e inicia otro producto conservando la categoría y proveedor"
+                                        disabled={subiendoImagen}
                                     >
                                         <FaCopy /> Guardar y Crear Otro
                                     </button>
@@ -1283,7 +1307,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                         {!perfil.ocupado && !esEditando && (
                                                                                             <>
                                                                                                 <button 
-                                                                                                    type="button"
+                                                                                                    type="button" 
                                                                                                     onClick={() => removerPerfilManual(perfil.id)} 
                                                                                                     style={{ background: '#f59e0b', border: 'none', color: '#000', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRight: '1px solid #334155' }}
                                                                                                     title="Eliminar solo este perfil"
