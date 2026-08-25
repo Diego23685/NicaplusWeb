@@ -608,7 +608,13 @@ export const CatalogosAdmin: React.FC = () => {
             const formData = new FormData();
             formData.append('archivo', archivo);
 
-            const res = await api.post('/uploads/producto', formData);
+            // Forzar multipart/form-data para evitar que axios intente serializar como JSON
+            const res = await api.post('/uploads/producto', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
             if (res.data && res.data.url) {
                 setFormProducto(prev => ({ ...prev, imagenUrl: res.data.url }));
             }
@@ -619,6 +625,8 @@ export const CatalogosAdmin: React.FC = () => {
             );
         } finally {
             setSubiendoImagen(false);
+            // Limpiar el input para permitir seleccionar el mismo archivo si es necesario
+            e.target.value = '';
         }
     };
 
