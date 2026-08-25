@@ -122,6 +122,7 @@ export const CatalogosAdmin: React.FC = () => {
     const [productoHistorial, setProductoHistorial] = useState<Producto | null>(null);
     const [historialVentas, setHistorialVentas] = useState<HistorialVentaItem[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
+    const [busquedaHistorial, setBusquedaHistorial] = useState('');
 
     // FORMULARIO RÁPIDO AGREGAR VARIANTE
     const [nuevaVarNombre, setNuevaVarNombre] = useState('');
@@ -236,6 +237,23 @@ export const CatalogosAdmin: React.FC = () => {
             });
     }, [perfilesActuales, busquedaPerfil, ordenPerfil]);
 
+    // Filtrado omnidireccional del historial
+    const ventasFiltradas = useMemo(() => {
+        if (!busquedaHistorial.trim()) return historialVentas;
+        const q = busquedaHistorial.toLowerCase().trim();
+        return historialVentas.filter(h => 
+            h.fecha.toLowerCase().includes(q) ||
+            h.ventaId.toString().includes(q) ||
+            h.clienteNombre.toLowerCase().includes(q) ||
+            (h.clienteTelefono && h.clienteTelefono.includes(q)) ||
+            h.cantidad.toString().includes(q) ||
+            h.precioUnitario.toString().includes(q) ||
+            h.subTotal.toString().includes(q) ||
+            h.metodoPago.toLowerCase().includes(q) ||
+            h.operador.toLowerCase().includes(q)
+        );
+    }, [historialVentas, busquedaHistorial]);
+
     const handleProductoInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         let valorFinal: any = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -261,6 +279,7 @@ export const CatalogosAdmin: React.FC = () => {
 
     const abrirHistorialProducto = async (producto: Producto) => {
         setProductoHistorial(producto);
+        setBusquedaHistorial('');
         setCargandoHistorial(true);
         try {
             const res = await api.get(`/products/${producto.id}/historial-ventas`);
@@ -1279,8 +1298,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                                 >
                                                                                                     <FaBoxes size={10} />
                                                                                                 </button>
-                                                             
-                                                             </>
+                                                                                            </>
                                                                                         )}
                                                                                     </div>
                                                                                 )}
@@ -1361,7 +1379,7 @@ export const CatalogosAdmin: React.FC = () => {
             {/* MODAL DE HISTORIAL DE VENTAS DEL PRODUCTO */}
             {productoHistorial && (
                 <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent} style={{ maxWidth: '820px', borderColor: '#38bdf8', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                    <div className={styles.modalContent} style={{ maxWidth: '850px', borderColor: '#38bdf8', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>
@@ -1377,11 +1395,36 @@ export const CatalogosAdmin: React.FC = () => {
                             </button>
                         </div>
 
-                        <div style={{ flex: 1, overflowY: 'auto', marginTop: '14px', border: '1px solid #334155', borderRadius: '8px' }}>
+                        {/* Barra de Búsqueda y Filtro de Transacciones */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#0f172a', padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', marginTop: '12px' }}>
+                            <FaSearch style={{ color: '#38bdf8' }} />
+                            <input 
+                                type="text" 
+                                placeholder="🔍 Buscar por fecha, factura #, cliente, cantidad, precio, subtotal, método de pago o cajero..." 
+                                value={busquedaHistorial} 
+                                onChange={e => setBusquedaHistorial(e.target.value)} 
+                                className={styles.input} 
+                                style={{ margin: 0, padding: '6px 10px', fontSize: '0.85rem', flex: 1 }}
+                            />
+                            {busquedaHistorial && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setBusquedaHistorial('')} 
+                                    className={styles.btn} 
+                                    style={{ background: '#475569', color: '#fff', padding: '4px 8px', fontSize: '0.75rem' }}
+                                >
+                                    Limpiar
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', marginTop: '10px', border: '1px solid #334155', borderRadius: '8px' }}>
                             {cargandoHistorial ? (
                                 <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>Consultando transacciones en servidor...</div>
-                            ) : historialVentas.length === 0 ? (
-                                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No se registran ventas para este producto en la base de datos.</div>
+                            ) : ventasFiltradas.length === 0 ? (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                                    {busquedaHistorial ? 'No hay transacciones que coincidan con la búsqueda.' : 'No se registran ventas para este producto en la base de datos.'}
+                                </div>
                             ) : (
                                 <table className={styles.table} style={{ fontSize: '0.85rem' }}>
                                     <thead>
@@ -1397,7 +1440,7 @@ export const CatalogosAdmin: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {historialVentas.map((h, i) => (
+                                        {ventasFiltradas.map((h, i) => (
                                             <tr key={i}>
                                                 <td>{h.fecha}</td>
                                                 <td><strong>#{h.ventaId}</strong></td>
@@ -1419,9 +1462,9 @@ export const CatalogosAdmin: React.FC = () => {
                             )}
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
                             <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                                Total Unidades Vendidas: <strong style={{ color: '#4ade80' }}>{historialVentas.reduce((acc, curr) => acc + curr.cantidad, 0)} u.</strong>
+                                Mostrando: <strong style={{ color: '#38bdf8' }}>{ventasFiltradas.length}</strong> de {historialVentas.length} ventas | Total Unidades: <strong style={{ color: '#4ade80' }}>{ventasFiltradas.reduce((acc, curr) => acc + curr.cantidad, 0)} u.</strong>
                             </span>
                             <button 
                                 type="button" 
