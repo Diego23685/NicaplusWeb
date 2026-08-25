@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -60,6 +60,19 @@ interface PerfilCuenta {
     accountGroupKey?: string;
 }
 
+interface HistorialVentaItem {
+    ventaId: number;
+    fecha: string;
+    clienteId: number | null;
+    clienteNombre: string;
+    clienteTelefono: string;
+    cantidad: number;
+    precioUnitario: number;
+    subTotal: number;
+    metodoPago: string;
+    operador: string;
+}
+
 interface Categoria { id: number; nombre: string; imagenUrl: string; }
 interface Juego { id: number; nombre: string; imagenUrl: string; }
 interface Proveedor { id: number; razonSocial: string; }
@@ -104,6 +117,11 @@ export const CatalogosAdmin: React.FC = () => {
     const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
     const [filtroColorVariacion, setFiltroColorVariacion] = useState<string>('Todos');
     const [variacionEditandoIdx, setVariacionEditandoIdx] = useState<number | null>(null);
+
+    // MODAL DE HISTORIAL DE VENTAS
+    const [productoHistorial, setProductoHistorial] = useState<Producto | null>(null);
+    const [historialVentas, setHistorialVentas] = useState<HistorialVentaItem[]>([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
     // FORMULARIO RÁPIDO AGREGAR VARIANTE
     const [nuevaVarNombre, setNuevaVarNombre] = useState('');
@@ -239,6 +257,20 @@ export const CatalogosAdmin: React.FC = () => {
             
             return nuevoEstado;
         });
+    };
+
+    const abrirHistorialProducto = async (producto: Producto) => {
+        setProductoHistorial(producto);
+        setCargandoHistorial(true);
+        try {
+            const res = await api.get(`/products/${producto.id}/historial-ventas`);
+            setHistorialVentas(res.data);
+        } catch (err: any) {
+            dispararErrorVisual("Error al Cargar Historial", err.response?.data?.mensaje || "No se pudieron obtener las ventas de este artículo.");
+            setHistorialVentas([]);
+        } finally {
+            setCargandoHistorial(false);
+        }
     };
 
     const abrirGestionPerfiles = async (producto: Producto) => {
@@ -1046,8 +1078,12 @@ export const CatalogosAdmin: React.FC = () => {
                                 <React.Fragment key={p.id}>
                                     <tr style={{ borderBottom: productoIdPerfilAbierto === p.id ? 'none' : '' }}>
                                         <td>{p.imagenUrl ? <img src={p.imagenUrl} alt="P" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px' }} /> : <FaImage style={{ color: '#475569', fontSize: '1.2rem' }} />}</td>
-                                        <td>
-                                            <strong>{p.nombre}</strong><br/>
+                                        <td 
+                                            style={{ cursor: 'pointer' }} 
+                                            onClick={() => abrirHistorialProducto(p)}
+                                            title="Clic para ver historial de ventas de este artículo"
+                                        >
+                                            <strong style={{ color: '#38bdf8', textDecoration: 'underline' }}>{p.nombre}</strong><br/>
                                             <small style={{ color: '#94a3b8' }}>
                                                 {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
                                                 <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
@@ -1076,6 +1112,15 @@ export const CatalogosAdmin: React.FC = () => {
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                <button 
+                                                    onClick={() => abrirHistorialProducto(p)} 
+                                                    className={styles.btn} 
+                                                    style={{ background: '#0284c7', color: '#fff', padding: '6px 10px', borderRadius: '4px' }}
+                                                    title="Ver historial de ventas"
+                                                >
+                                                    <FaHistory />
+                                                </button>
+
                                                 {p.tieneVariaciones && (
                                                     <button 
                                                         onClick={() => abrirModalVariaciones(p)} 
@@ -1234,7 +1279,8 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                                 >
                                                                                                     <FaBoxes size={10} />
                                                                                                 </button>
-                                                                                            </>
+                                                             
+                                                             </>
                                                                                         )}
                                                                                     </div>
                                                                                 )}
@@ -1311,6 +1357,83 @@ export const CatalogosAdmin: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* MODAL DE HISTORIAL DE VENTAS DEL PRODUCTO */}
+            {productoHistorial && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent} style={{ maxWidth: '820px', borderColor: '#38bdf8', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>
+                                    📋 Historial de Ventas: {productoHistorial.nombre}
+                                </h3>
+                                <small style={{ color: '#94a3b8' }}>Registro cronológico detallado de despachos, clientes y montos facturados.</small>
+                            </div>
+                            <button 
+                                onClick={() => setProductoHistorial(null)} 
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem' }}
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', marginTop: '14px', border: '1px solid #334155', borderRadius: '8px' }}>
+                            {cargandoHistorial ? (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>Consultando transacciones en servidor...</div>
+                            ) : historialVentas.length === 0 ? (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No se registran ventas para este producto en la base de datos.</div>
+                            ) : (
+                                <table className={styles.table} style={{ fontSize: '0.85rem' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Factura</th>
+                                            <th>Cliente</th>
+                                            <th style={{ textAlign: 'center' }}>Cant.</th>
+                                            <th>P. Unitario</th>
+                                            <th>SubTotal</th>
+                                            <th>Método Pago</th>
+                                            <th>Atendió</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {historialVentas.map((h, i) => (
+                                            <tr key={i}>
+                                                <td>{h.fecha}</td>
+                                                <td><strong>#{h.ventaId}</strong></td>
+                                                <td>
+                                                    <strong>{h.clienteNombre}</strong>
+                                                    {h.clienteTelefono && h.clienteTelefono !== 'N/A' && (
+                                                        <small style={{ display: 'block', color: '#94a3b8' }}>Tel: {h.clienteTelefono}</small>
+                                                    )}
+                                                </td>
+                                                <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#4ade80' }}>{h.cantidad} u.</td>
+                                                <td>C$ {h.precioUnitario}</td>
+                                                <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {h.subTotal}</td>
+                                                <td>{h.metodoPago}</td>
+                                                <td style={{ color: '#cbd5e1' }}>{h.operador}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                                Total Unidades Vendidas: <strong style={{ color: '#4ade80' }}>{historialVentas.reduce((acc, curr) => acc + curr.cantidad, 0)} u.</strong>
+                            </span>
+                            <button 
+                                type="button" 
+                                className={`${styles.btn} ${styles.btnSecondary}`} 
+                                onClick={() => setProductoHistorial(null)}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODAL CRUD INTEGRAL DE VARIACIONES */}
             {productoVariacionAbierto && (
