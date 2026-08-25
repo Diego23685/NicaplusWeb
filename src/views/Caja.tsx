@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
   FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
-  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup,
+  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup, FaShieldAlt
 } from 'react-icons/fa';
 import styles from '../assets/styles/Caja.module.css';
 
@@ -33,6 +33,7 @@ interface Producto {
     metadataDigital?: string;
     primerPerfilId?: number;
     diasDuracion?: number;
+    garantiaDias?: number;
     tieneVariaciones?: boolean;
     variaciones?: VariacionProducto[];
 }
@@ -52,6 +53,7 @@ interface ItemCarrito {
     subTotal: number;
     metadataDigital: string;
     diasSuscripcion: number;
+    garantiaDias: number;
     descuento: number;
     idsPerfiles?: number[];
 }
@@ -131,7 +133,7 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
         "",
         separador,
         "",
-        "🔒 *CREDENCIALES DE ACCESO / PRODUCTOS*",
+        "🔒 *DETALLE DE PRODUCTOS & GARANTÍA*",
         ""
     ];
 
@@ -179,13 +181,16 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     };
 
     datosVenta.detalles.forEach((item: any, idx: number) => {
-        lineas.push(`*Servicio ${idx + 1}:* ${item.nombre || 'Servicio/Producto'}`);
+        lineas.push(`*Artículo ${idx + 1}:* ${item.nombre || 'Servicio/Producto'}`);
         lineas.push(`   🔹 *Cantidad:* ${item.cantidad}`);
         
+        const gDias = item.garantiaDias !== undefined ? item.garantiaDias : 0;
+        lineas.push(`   🛡️ *Garantía:* ${gDias > 0 ? `${gDias} días` : 'Sin garantía'}`);
+
         if (item.descuento && item.descuento > 0) {
             const descPorItem = item.descuento * item.cantidad;
             descuentoTotalAcumulado += descPorItem;
-            lineas.push(`🎁 *Descuento aplicado:* -C$ ${descPorItem}`);
+            lineas.push(`   🎁 *Descuento aplicado:* -C$ ${descPorItem}`);
         }
 
         const meta = item.metadataDigital || item.metadata || '';
@@ -223,8 +228,9 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     lineas.push("");
     lineas.push(separador);
     lineas.push("");
-    lineas.push("📌 *INFORMACIÓN OPERATIVA*:");
-    lineas.push("- Las caídas de perfiles o contraseñas deben reportarse inmediatamente.");
+    lineas.push("📌 *TÉRMINOS DE GARANTÍA Y OPERACIÓN*:");
+    lineas.push("- Conserve este comprobante para hacer efectiva su garantía.");
+    lineas.push("- Las caídas de perfiles o accesos deben reportarse dentro del periodo de vigencia.");
     lineas.push("");
     lineas.push("¡Muchas gracias por su preferencia! 🤝");
 
@@ -308,7 +314,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
         </head>
         <body>
             <div class="ticket-wrapper">
-                <!-- LOGO ENCABEZADO REAJUSTADO -->
+                <!-- LOGO ENCABEZADO -->
                 <img src="${logoUrl}" alt="Logo Nicaplus" class="ticket-logo" />
 
                 <!-- ENCABEZADO CENTRADO -->
@@ -321,7 +327,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 
                 <div class="linea"></div>
                 
-                <!-- DATOS FACTURA CENTRADOS -->
+                <!-- DATOS FACTURA -->
                 <div class="text-center" style="width: 100%;">
                     Factura: #000${datosVenta.ventaId || 1}<br>
                     Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
@@ -343,11 +349,17 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                         ${datosVenta.detalles.map((item: any) => {
                             const descPorItem = (item.descuento || 0) * item.cantidad;
                             descuentoTotalAcumulado += descPorItem;
+                            const gDias = item.garantiaDias !== undefined ? item.garantiaDias : 0;
                             
                             return `
                                 <tr>
                                     <td align="left">${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 22))}</td>
                                     <td align="right">C$ ${item.subTotal}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" align="left" style="font-size: 9px; color: #444; padding-left: 8px;">
+                                        Garantía: ${gDias > 0 ? `${gDias} días` : 'Sin garantía'}
+                                    </td>
                                 </tr>
                                 ${item.descuento && item.descuento > 0 ? `
                                 <tr>
@@ -398,12 +410,11 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 
                 <!-- PIE DE PAGINA CENTRADO -->
                 <div class="text-center" style="margin-top: 6px; width: 100%;">
-
                     <br>FIRMA DEL CLIENTE<br><br>
                     ______________________<br><br>   
 
                     ¡Gracias por tu preferencia!<br>
-                    Soporte y Garantía de Calidad.
+                    Conserve este ticket para su garantía.
                 </div>
             </div>
         </body>
@@ -539,6 +550,7 @@ export const Caja: React.FC = () => {
                 subTotal: variante.precioVenta,
                 metadataDigital: '',
                 diasSuscripcion: 30,
+                garantiaDias: productoPadre.garantiaDias ?? 0,
                 descuento: 0
             }]);
         }
@@ -619,10 +631,21 @@ export const Caja: React.FC = () => {
                 subTotal: producto.precioVenta,
                 metadataDigital: metadataDigital,
                 diasSuscripcion: producto.diasDuracion || 30,
+                garantiaDias: producto.garantiaDias ?? 0,
                 descuento: 0,
                 idsPerfiles: idsIniciales
             }]);
         }
+    };
+
+    const cambiarGarantiaManual = (idProducto: number, idVariacion: number | null | undefined, garantia: number) => {
+        const garantiaValida = Math.max(0, garantia);
+        setCarrito(prev => prev.map(item => {
+            if (item.idProducto === idProducto && item.idVariacion === idVariacion) {
+                return { ...item, garantiaDias: garantiaValida };
+            }
+            return item;
+        }));
     };
 
     const cambiarPrecioUnitarioManual = (idProducto: number, idVariacion: number | null | undefined, nuevoPrecio: number) => {
@@ -755,6 +778,7 @@ export const Caja: React.FC = () => {
                 precioUnitario: item.precioUnitario,
                 subTotal: Math.round((item.precioUnitario - (item.descuento || 0)) * (item.cantidad < 1 ? 1 : item.cantidad)),
                 descuento: item.descuento || 0,
+                garantiaDias: item.garantiaDias ?? 0,
                 metadataDigital: metaFinal || ''
             };
         });
@@ -779,6 +803,7 @@ export const Caja: React.FC = () => {
                     ...item,
                     nombre: itemCarritoOriginal ? itemCarritoOriginal.nombre : "Producto General",
                     diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30,
+                    garantiaDias: itemCarritoOriginal ? itemCarritoOriginal.garantiaDias : (item.garantiaDias ?? 0),
                     metadataDigital: item.metadataDigital || itemCarritoOriginal?.metadataDigital || ''
                 };
             });
@@ -1015,7 +1040,7 @@ export const Caja: React.FC = () => {
                             )}
                         </div>
                         
-                        <div className={styles.scrollContainer} style={{ overflowY: 'auto', flex: 1, maxHeight: '220px' }}>
+                        <div className={styles.scrollContainer} style={{ overflowY: 'auto', flex: 1, maxHeight: '250px' }}>
                             {carrito.length === 0 && (
                                 <div className={styles.cartEmpty}>
                                     <FaShoppingCart size={24} style={{ opacity: 0.4 }} />
@@ -1076,6 +1101,20 @@ export const Caja: React.FC = () => {
                                                     onFocus={(e) => e.target.select()}
                                                     onChange={(e) => cambiarDescuentoManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
                                                     className={styles.smallInput} 
+                                                />
+                                            </div>
+
+                                            <div className={styles.controlGroup}>
+                                                <span className={styles.cartLabel} style={{ color: '#fb923c' }}><FaShieldAlt size={9} /> Gar(d):</span>
+                                                <input 
+                                                    type="number" 
+                                                    min={0} 
+                                                    value={item.garantiaDias === 0 ? '' : item.garantiaDias} 
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => cambiarGarantiaManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
+                                                    placeholder="0"
+                                                    className={styles.smallInput} 
+                                                    title="Días de garantía para este artículo"
                                                 />
                                             </div>
                                         </div>

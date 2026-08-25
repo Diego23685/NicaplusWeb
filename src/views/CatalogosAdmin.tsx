@@ -238,7 +238,6 @@ export const CatalogosAdmin: React.FC = () => {
             });
     }, [perfilesActuales, busquedaPerfil, ordenPerfil]);
 
-    // Filtrado omnidireccional del historial
     const ventasFiltradas = useMemo(() => {
         if (!busquedaHistorial.trim()) return historialVentas;
         const q = busquedaHistorial.toLowerCase().trim();
@@ -505,7 +504,7 @@ export const CatalogosAdmin: React.FC = () => {
             categoriaId: producto.categoriaId?.toString() || '',
             juegoId: producto.juegoId?.toString() || '',
             diasDuracion: producto.diasDuracion || 30,
-            garantiaDias: producto.garantiaDias || 0,
+            garantiaDias: producto.garantiaDias ?? 30,
             proveedor: producto.proveedor || '',
             estado: producto.estado || 'Activo',
             tieneVariaciones: producto.tieneVariaciones || false,
@@ -530,7 +529,7 @@ export const CatalogosAdmin: React.FC = () => {
             categoriaId: producto.categoriaId?.toString() || '',
             juegoId: producto.juegoId?.toString() || '',
             diasDuracion: producto.diasDuracion || 30,
-            garantiaDias: producto.garantiaDias || 0,
+            garantiaDias: producto.garantiaDias ?? 30,
             proveedor: producto.proveedor || '',
             estado: producto.estado || 'Activo',
             tieneVariaciones: producto.tieneVariaciones || false,
@@ -608,7 +607,6 @@ export const CatalogosAdmin: React.FC = () => {
             const formData = new FormData();
             formData.append('archivo', archivo);
 
-            // Forzar multipart/form-data para evitar que axios intente serializar como JSON
             const res = await api.post('/uploads/producto', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -625,7 +623,6 @@ export const CatalogosAdmin: React.FC = () => {
             );
         } finally {
             setSubiendoImagen(false);
-            // Limpiar el input para permitir seleccionar el mismo archivo si es necesario
             e.target.value = '';
         }
     };
@@ -859,7 +856,14 @@ export const CatalogosAdmin: React.FC = () => {
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <div style={{ flex: 1 }}>
                                     <label className={styles.label}><FaShieldAlt /> Garantía (Días)</label>
-                                    <input type="number" name="garantiaDias" min={0} value={formProducto.garantiaDias} onChange={handleProductoInputChange} className={styles.input} />
+                                    <input 
+                                        type="number" 
+                                        name="garantiaDias" 
+                                        min={0} 
+                                        value={formProducto.garantiaDias} 
+                                        onChange={handleProductoInputChange} 
+                                        className={styles.input} 
+                                    />
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <label className={styles.label}><FaCheckCircle /> Estado</label>
@@ -1002,6 +1006,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                         precioCosto: pc,
                                                         precioVenta: pv,
                                                         stockActual: stk,
+                                                        stockMinimo: 2,
                                                         estado: 'Activo'
                                                     }]
                                                 }));
@@ -1057,7 +1062,6 @@ export const CatalogosAdmin: React.FC = () => {
 
             {/* SELECCIÓN DE RUBRO PRINCIPAL Y FILTROS SECUNDARIOS */}
             <div className={styles.filterCard} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
                     <button 
                         onClick={() => setRubroAdmin('todos')} 
@@ -1148,7 +1152,10 @@ export const CatalogosAdmin: React.FC = () => {
                                         <td style={{ color: '#94a3b8' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</td>
                                         <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</td>
                                         <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
-                                        <td style={{ color: '#fb923c' }}>{p.garantiaDias} días</td>
+                                        <td style={{ color: '#fb923c', fontWeight: '600' }}>
+                                            <FaShieldAlt style={{ marginRight: '4px' }} />
+                                            {p.garantiaDias > 0 ? `${p.garantiaDias} días` : 'Sin garantía'}
+                                        </td>
                                         <td style={{ color: '#cbd5e1' }}>{p.proveedor || 'N/A'}</td>
                                         <td>
                                             <span className={styles.badge} style={{
@@ -1330,7 +1337,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                                 >
                                                                                                     <FaBoxes size={10} />
                                                                                                 </button>
-                                                                                            </>
+                                                             </>
                                                                                         )}
                                                                                     </div>
                                                                                 )}
@@ -1427,7 +1434,6 @@ export const CatalogosAdmin: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Barra de Búsqueda y Filtro de Transacciones */}
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#0f172a', padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', marginTop: '12px' }}>
                             <FaSearch style={{ color: '#38bdf8' }} />
                             <input 
@@ -1515,7 +1521,6 @@ export const CatalogosAdmin: React.FC = () => {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent} style={{ maxWidth: '680px', borderColor: '#38bdf8', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                         
-                        {/* Header del Modal */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>
@@ -1531,7 +1536,6 @@ export const CatalogosAdmin: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Formulario para añadir nueva variación al vuelo */}
                         <div style={{ background: '#0f172a', padding: '12px', borderRadius: '8px', border: '1px solid #334155', margin: '14px 0' }}>
                             <h5 style={{ margin: '0 0 8px 0', color: '#4ade80', fontSize: '0.85rem' }}>➕ Crear Nueva Variación</h5>
                             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
@@ -1578,7 +1582,6 @@ export const CatalogosAdmin: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Pestañas de Filtros de Opciones */}
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                             <button 
                                 onClick={() => setFiltroColorVariacion('Todos')} 
@@ -1610,7 +1613,6 @@ export const CatalogosAdmin: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Tabla CRUD de Variaciones */}
                         <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #334155', borderRadius: '8px' }}>
                             <table className={styles.table} style={{ fontSize: '0.85rem' }}>
                                 <thead>
@@ -1736,7 +1738,6 @@ export const CatalogosAdmin: React.FC = () => {
                             </table>
                         </div>
 
-                        {/* Botones de acción finales */}
                         <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
                             <button 
                                 type="button" 
@@ -1755,7 +1756,6 @@ export const CatalogosAdmin: React.FC = () => {
                                 <FaSave /> Guardar Cambios en Servidor
                             </button>
                         </div>
-
                     </div>
                 </div>
             )}
