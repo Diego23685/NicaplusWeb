@@ -264,6 +264,9 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 }
                 * {
                     box-sizing: border-box;
+                    font-size: 12px !important;
+                    font-weight: 700 !important;
+                    color: #000000 !important;
                 }
                 html, body {
                     width: 100%;
@@ -274,9 +277,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                     font-family: 'Courier New', Courier, monospace; 
                     width: 100%; 
                     padding: 8px 4px; 
-                    font-size: 11px; 
-                    color: #000; 
-                    line-height: 1.2;
+                    line-height: 1.25;
                     text-align: center;
                 }
                 .ticket-wrapper {
@@ -287,17 +288,17 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                     justify-content: center;
                 }
                 .ticket-logo {
-                    max-width: 35%;
-                    max-height: 40px;
+                    max-width: 40%;
+                    max-height: 45px;
                     height: auto;
                     margin-bottom: 4px;
-                    filter: grayscale(100%) contrast(120%);
+                    filter: grayscale(100%) contrast(150%);
                 }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
                 .text-left { text-align: left; }
                 .linea { 
-                    border-bottom: 1px dashed #000; 
+                    border-bottom: 2px dashed #000; 
                     margin: 6px 0; 
                     width: 100%;
                 }
@@ -305,7 +306,6 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                     width: 100%; 
                     border-collapse: collapse; 
                 }
-                .negrita { font-weight: bold; }
                 .tabla-detalles td, .tabla-detalles th { 
                     vertical-align: top; 
                     padding: 2px 0; 
@@ -319,7 +319,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
 
                 <!-- ENCABEZADO CENTRADO -->
                 <div class="text-center" style="width: 100%;">
-                    <span class="negrita" style="font-size: 14px;">NICAPLUS GAMING</span><br>
+                    NICAPLUS GAMING<br>
                     Tienda Digital y Taller Técnico<br>
                     León, Nicaragua<br>
                     Tel: +505 8888-8888
@@ -328,7 +328,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 <div class="linea"></div>
                 
                 <!-- DATOS FACTURA -->
-                <div class="text-center" style="width: 100%;">
+                <div class="text-left" style="width: 100%;">
                     Factura: #000${datosVenta.ventaId || 1}<br>
                     Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
                     Condición: ${escapeHtml(metodoUsado.toUpperCase())}<br>
@@ -341,8 +341,8 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 <table class="tabla-detalles">
                     <thead>
                         <tr>
-                            <th align="left" class="negrita">Cant/Desc</th>
-                            <th align="right" class="negrita">Total</th>
+                            <th align="left">Cant/Desc</th>
+                            <th align="right">Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -357,20 +357,20 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                                     <td align="right">C$ ${item.subTotal}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="2" align="left" style="font-size: 9px; color: #444; padding-left: 8px;">
+                                    <td colspan="2" align="left" style="padding-left: 6px;">
                                         Garantía: ${gDias > 0 ? `${gDias} días` : 'Sin garantía'}
                                     </td>
                                 </tr>
                                 ${item.descuento && item.descuento > 0 ? `
                                 <tr>
-                                    <td colspan="2" align="left" style="font-size: 9px; color: #333; padding-left: 8px;">
+                                    <td colspan="2" align="left" style="padding-left: 6px;">
                                         (Descto: -C$ ${descPorItem})
                                     </td>
                                 </tr>
                                 ` : ''}
                                 ${item.metadataDigital ? `
                                 <tr>
-                                    <td colspan="2" align="left" style="font-size: 9px; padding-left: 8px; color: #333; word-break: break-all;">
+                                    <td colspan="2" align="left" style="padding-left: 6px; word-break: break-all;">
                                         ID: ${escapeHtml(item.metadataDigital.replace(/^DIAS:\d+\|/, ''))}
                                     </td>
                                 </tr>
@@ -395,14 +395,14 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                     </tr>
                     ` : ''}
                     <tr>
-                        <td align="left" class="negrita" style="font-size: 13px;">TOTAL:</td>
-                        <td align="right" class="negrita" style="font-size: 13px;">C$ ${totalReal}</td>
+                        <td align="left">TOTAL:</td>
+                        <td align="right">C$ ${totalReal}</td>
                     </tr>
                 </table>
 
                 ${metodoUsado === "Crédito" && datosVenta.fechaVencimientoCreditoCongelado ? `
-                <div style="font-size: 9px; margin-top: 4px;" class="text-center">
-                    * VENCE AL CRÉDITO EL: ${new Date(datosVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString('es-NI')} *
+                <div style="margin-top: 4px;" class="text-center">
+                    * VENCE AL CRÉDITO: ${new Date(datosVenta.fechaVencimientoCreditoCongelado + "T12:00:00").toLocaleDateString('es-NI')} *
                 </div>
                 ` : ''}
 
@@ -410,7 +410,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 
                 <!-- PIE DE PAGINA CENTRADO -->
                 <div class="text-center" style="margin-top: 6px; width: 100%;">
-                    <br>FIRMA DEL CLIENTE<br><br>
+                    FIRMA DEL CLIENTE<br><br>
                     ______________________<br><br>   
 
                     ¡Gracias por tu preferencia!<br>
