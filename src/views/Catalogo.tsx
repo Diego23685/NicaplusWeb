@@ -193,14 +193,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const [tipoEntrega, setTipoEntrega] = useState('Envío a domicilio');
     const [metodoPago, setMetodoPago] = useState('Transferencia Bancaria');
 
-    // Estado para notificaciones suaves (Toast)
     const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
 
     const catRowRef = useRef<HTMLDivElement | null>(null);
     const juegoRowRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    // Función auxiliar para mostrar avisos sin usar alert()
     const mostrarAviso = (mensaje: string, tipo: 'error' | 'advertencia' | 'exito' | 'info' = 'advertencia') => {
         setNotificacion({ mensaje, tipo });
     };
@@ -214,7 +212,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     }, [notificacion]);
 
-    // Integración del Canvas
     useInteractiveCanvas(canvasRef);
 
     useEffect(() => {
@@ -224,7 +221,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     }, [cliente]);
 
-    // Fetching Inicial de Catálogo
     useEffect(() => {
         setCargando(true);
         Promise.all([
@@ -252,7 +248,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     };
 
-    // Animación de partícula física voladora al carrito
     const agregarAlCarrito = (producto: Producto, e?: React.MouseEvent) => {
         let errorStock = false;
 
@@ -276,7 +271,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
 
         if (e) {
-            const cartButton = document.querySelector(`.${styles.cartBtnDesk}`) || document.querySelector(`.${styles.cartBtnMobile}`);
+            const cartButton = document.querySelector(`.${styles.cartBtnDesk}`) || document.querySelector(`.${styles.cartBtnMobile}`) || document.getElementById('mobile-bottom-cart-btn');
             
             if (cartButton) {
                 const rectBoton = e.currentTarget.getBoundingClientRect();
@@ -379,6 +374,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         return [...productos].sort((a, b) => b.precioVenta - a.precioVenta).slice(1, 3);
     }, [productos]);
 
+    const estaBuscando = useMemo(() => busqueda.trim().length > 0, [busqueda]);
+
     const productosFiltrados = useMemo(() => {
         if (!Array.isArray(productos)) return [];
 
@@ -390,7 +387,14 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
         return productos.filter((p: any) => {
             const nombreProd = (p.nombre || '').toLowerCase();
-            const cumpleBusqueda = busqueda.trim() === '' || nombreProd.includes(busqueda.toLowerCase().trim());
+            const descProd = (p.descripcion || '').toLowerCase();
+            const termino = busqueda.toLowerCase().trim();
+            
+            const cumpleBusqueda = termino === '' || nombreProd.includes(termino) || descProd.includes(termino);
+
+            if (estaBuscando) {
+                return cumpleBusqueda;
+            }
 
             const catProducto = (p.categoriaNombre || '').toLowerCase().trim();
             const cumpleCategoria = idCatSeleccionada === null || idCatSeleccionada === undefined
@@ -404,7 +408,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
             return cumpleBusqueda && cumpleCategoria && cumpleJuego;
         });
-    }, [productos, busqueda, idCatSeleccionada, idJuegoSeleccionado, categorias, juegos]);
+    }, [productos, busqueda, estaBuscando, idCatSeleccionada, idJuegoSeleccionado, categorias, juegos]);
 
     const totalCarritoItems = useMemo(() => carrito.reduce((sum, i) => sum + i.cantidad, 0), [carrito]);
     const totalPagar = useMemo(() => carrito.reduce((sum, item) => sum + (item.cantidad * item.producto.precioVenta), 0), [carrito]);
@@ -432,6 +436,10 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const limpiarBusqueda = () => {
+        setBusqueda('');
+    };
+
     return (
         <div className={styles.mainWrapper}>
             <canvas ref={canvasRef} className={styles.canvasBackground} />
@@ -442,6 +450,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     position: 'fixed',
                     top: '20px',
                     right: '20px',
+                    left: '20px',
                     zIndex: 9999,
                     display: 'flex',
                     alignItems: 'center',
@@ -450,11 +459,12 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     color: '#fff',
                     borderLeft: `4px solid ${notificacion.tipo === 'error' ? '#ff4d4d' : notificacion.tipo === 'exito' ? '#00ff66' : '#ffb700'}`,
                     padding: '12px 18px',
-                    borderRadius: '8px',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-                    backdropFilter: 'blur(8px)',
+                    borderRadius: '10px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(10px)',
                     animation: 'slideInToast 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                    maxWidth: '380px'
+                    maxWidth: '400px',
+                    margin: '0 auto'
                 }}>
                     {notificacion.tipo === 'error' && <FaExclamationTriangle style={{ color: '#ff4d4d', flexShrink: 0 }} size={18} />}
                     {notificacion.tipo === 'exito' && <FaCheckCircle style={{ color: '#00ff66', flexShrink: 0 }} size={18} />}
@@ -464,6 +474,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     <button 
                         onClick={() => setNotificacion(null)}
                         style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '0 4px', marginLeft: 'auto' }}
+                        aria-label="Cerrar notificación"
                     >
                         <FaTimes size={14} />
                     </button>
@@ -472,8 +483,48 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
             <style>{`
                 @keyframes slideInToast {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
+                    from { transform: translateY(-30px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                .mobile-bottom-nav {
+                    display: none;
+                }
+                @media (max-width: 768px) {
+                    .mobile-bottom-nav {
+                        display: flex;
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 62px;
+                        background: rgba(13, 8, 24, 0.95);
+                        backdrop-filter: blur(16px);
+                        border-top: 1px solid rgba(176, 2, 194, 0.3);
+                        z-index: 990;
+                        justify-content: space-around;
+                        align-items: center;
+                        padding: 0 10px;
+                        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+                    }
+                    .mobile-bottom-item {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        background: transparent;
+                        border: none;
+                        color: #94a3b8;
+                        font-size: 0.7rem;
+                        gap: 3px;
+                        flex: 1;
+                        padding: 6px 0;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+                    .mobile-bottom-item.active {
+                        color: #00e5ff;
+                        font-weight: bold;
+                    }
                 }
             `}</style>
 
@@ -481,7 +532,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             {menuAbierto && (
                 <>
                     <div 
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] transition-opacity duration-300 lg:hidden"
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[998] transition-opacity duration-300 lg:hidden"
                         onClick={() => setMenuAbierto(false)} 
                     />
                     <aside className={`fixed top-0 right-0 w-[280px] h-screen bg-[#0d0818]/98 backdrop-blur-xl z-[999] flex flex-col p-6 border-l-2 border-[#b002c2] shadow-2xl transition-transform duration-400 ease-out lg:hidden ${styles.sidebarMobile} ${styles.sidebarMobileAbierto}`}>
@@ -535,7 +586,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                             onClick={() => cambiarSeccion('carrito')} 
                             aria-label="Abrir carrito"
                         >
-                            <FaShoppingCart size={14} /> 
+                            <FaShoppingCart size={15} /> 
                             <span className={styles.cartBadgeCount}>{totalCarritoItems}</span>
                         </button>
                         <button className={styles.hamburgerBtn} onClick={() => setMenuAbierto(true)} aria-label="Abrir menú">
@@ -568,6 +619,15 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                 }}
                                 className={styles.searchInput}
                             />
+                            {busqueda && (
+                                <button 
+                                    onClick={limpiarBusqueda} 
+                                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', paddingRight: '10px' }}
+                                    aria-label="Limpiar búsqueda"
+                                >
+                                    <FaTimes size={13} />
+                                </button>
+                            )}
                         </div>
                         
                         <button 
@@ -615,27 +675,29 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                         {seccionActiva === 'productos' && (
                             <div className={`${styles.fadeEntrance} ${styles.catalogoLayout}`}>
                                 
-                                {/* COLUMNA IZQUIERDA: COMPONENTE SIDEBAR */}
-                                <SidebarCatalogo 
-                                    busqueda={busqueda}
-                                    setBusqueda={(val) => {
-                                        setBusqueda(val);
-                                        if(seccionActiva !== 'productos') setSeccionActiva('productos');
-                                    }}
-                                    categorias={categorias}
-                                    idCatSeleccionada={idCatSeleccionada}
-                                    setIdCatSeleccionada={setIdCatSeleccionada}
-                                    juegos={juegos}
-                                    idJuegoSeleccionado={idJuegoSeleccionado}
-                                    setIdJuegoSeleccionado={setIdJuegoSeleccionado}
-                                    obtenerIconoCategoria={obtenerIconoCategoria}
-                                />
+                                {/* COLUMNA IZQUIERDA: COMPONENTE SIDEBAR (OCULTO EN FILTRADO ACTIVO) */}
+                                {!estaBuscando && (
+                                    <SidebarCatalogo 
+                                        busqueda={busqueda}
+                                        setBusqueda={(val) => {
+                                            setBusqueda(val);
+                                            if(seccionActiva !== 'productos') setSeccionActiva('productos');
+                                        }}
+                                        categorias={categorias}
+                                        idCatSeleccionada={idCatSeleccionada}
+                                        setIdCatSeleccionada={setIdCatSeleccionada}
+                                        juegos={juegos}
+                                        idJuegoSeleccionado={idJuegoSeleccionado}
+                                        setIdJuegoSeleccionado={setIdJuegoSeleccionado}
+                                        obtenerIconoCategoria={obtenerIconoCategoria}
+                                    />
+                                )}
 
-                                {/* COLUMNA DERECHA: BANNER PROMO + BURBUJAS DE FILTRO + CUADRÍCULA */}
-                                <div className={styles.catalogoMainContent}>
+                                {/* COLUMNA DERECHA */}
+                                <div className={styles.catalogoMainContent} style={estaBuscando ? { width: '100%', maxWidth: '100%' } : {}}>
                                     
-                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS */}
-                                    {busqueda.trim() === '' && (
+                                    {/* SECCIÓN DE ANUNCIOS DINÁMICOS (SÓLO SI NO HAY BÚSQUEDA) */}
+                                    {!estaBuscando && (
                                         <section className={styles.heroPromoSection}>
                                             {productoPrincipal ? (
                                                 <div className={styles.mainPromoBanner}>
@@ -705,99 +767,129 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         </section>
                                     )}
 
-                                    {/* BURBUJAS (FILTROS RÁPIDOS) */}
-                                    <div className={styles.filterSectionContainer}>
-                                        <div className={styles.filterRowWrapper}>
-                                            <div className={styles.filterRowHeader}>
-                                                <h3>Categorías</h3>
-                                                <div className={styles.rowNavButtons}>
-                                                    <button onClick={() => scrollRow(catRowRef, 'left')} aria-label="Desplazar categorías a la izquierda">
-                                                        <FaChevronLeft />
-                                                    </button>
-                                                    <button onClick={() => scrollRow(catRowRef, 'right')} aria-label="Desplazar categorías a la derecha">
-                                                        <FaChevronRight />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className={styles.categoryScrollRow} ref={catRowRef}>
-                                                <div 
-                                                    className={`${styles.categoryBubble} ${idCatSeleccionada === null ? styles.categoryBubbleActive : ''}`}
-                                                    onClick={() => setIdCatSeleccionada(null)}
-                                                >
-                                                    <div className={styles.bubbleIcon}><FaTags /></div>
-                                                    <span>Todas</span>
-                                                </div>
-                                                {categorias.map(cat => (
-                                                    <div 
-                                                        key={cat.id}
-                                                        className={`${styles.categoryBubble} ${idCatSeleccionada === cat.id ? styles.categoryBubbleActive : ''}`}
-                                                        onClick={() => {
-                                                            setIdCatSeleccionada(cat.id);
-                                                            setIdJuegoSeleccionado(null);
-                                                        }}
-                                                    >
-                                                        <div className={styles.bubbleIcon}>
-                                                            {cat.imagenUrl ? <img src={cat.imagenUrl} alt={cat.nombre} /> : obtenerIconoCategoria(cat.nombre)}
-                                                        </div>
-                                                        <span>{cat.nombre}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {juegos.length > 0 && (
+                                    {/* BURBUJAS (FILTROS RÁPIDOS) - SE OCULTAN AL BUSCAR */}
+                                    {!estaBuscando && (
+                                        <div className={styles.filterSectionContainer}>
                                             <div className={styles.filterRowWrapper}>
                                                 <div className={styles.filterRowHeader}>
-                                                    <h3>Juegos</h3>
+                                                    <h3>Categorías</h3>
                                                     <div className={styles.rowNavButtons}>
-                                                        <button onClick={() => scrollRow(juegoRowRef, 'left')} aria-label="Desplazar juegos a la izquierda">
+                                                        <button onClick={() => scrollRow(catRowRef, 'left')} aria-label="Desplazar categorías a la izquierda">
                                                             <FaChevronLeft />
                                                         </button>
-                                                        <button onClick={() => scrollRow(juegoRowRef, 'right')} aria-label="Desplazar juegos a la derecha">
+                                                        <button onClick={() => scrollRow(catRowRef, 'right')} aria-label="Desplazar categorías a la derecha">
                                                             <FaChevronRight />
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div className={styles.gameScrollRow} ref={juegoRowRef}>
+                                                <div className={styles.categoryScrollRow} ref={catRowRef}>
                                                     <div 
-                                                        className={`${styles.gameBubble} ${idJuegoSeleccionado === null ? styles.gameBubbleActive : ''}`}
-                                                        onClick={() => setIdJuegoSeleccionado(null)}
+                                                        className={`${styles.categoryBubble} ${idCatSeleccionada === null ? styles.categoryBubbleActive : ''}`}
+                                                        onClick={() => setIdCatSeleccionada(null)}
                                                     >
-                                                        <div className={styles.bubbleIcon}><FaGamepad /></div>
-                                                        <span>Todos</span>
+                                                        <div className={styles.bubbleIcon}><FaTags /></div>
+                                                        <span>Todas</span>
                                                     </div>
-                                                    {juegos.map(juego => (
+                                                    {categorias.map(cat => (
                                                         <div 
-                                                            key={juego.id}
-                                                            className={`${styles.gameBubble} ${idJuegoSeleccionado === juego.id ? styles.gameBubbleActive : ''}`}
+                                                            key={cat.id}
+                                                            className={`${styles.categoryBubble} ${idCatSeleccionada === cat.id ? styles.categoryBubbleActive : ''}`}
                                                             onClick={() => {
-                                                                setIdJuegoSeleccionado(juego.id);
-                                                                setIdCatSeleccionada(null);
+                                                                setIdCatSeleccionada(cat.id);
+                                                                setIdJuegoSeleccionado(null);
                                                             }}
                                                         >
                                                             <div className={styles.bubbleIcon}>
-                                                                {juego.imagenUrl ? <img src={juego.imagenUrl} alt={juego.nombre} /> : <FaGamepad />}
+                                                                {cat.imagenUrl ? <img src={cat.imagenUrl} alt={cat.nombre} /> : obtenerIconoCategoria(cat.nombre)}
                                                             </div>
-                                                            <span>{juego.nombre}</span>
+                                                            <span>{cat.nombre}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
+
+                                            {juegos.length > 0 && (
+                                                <div className={styles.filterRowWrapper}>
+                                                    <div className={styles.filterRowHeader}>
+                                                        <h3>Juegos</h3>
+                                                        <div className={styles.rowNavButtons}>
+                                                            <button onClick={() => scrollRow(juegoRowRef, 'left')} aria-label="Desplazar juegos a la izquierda">
+                                                                <FaChevronLeft />
+                                                            </button>
+                                                            <button onClick={() => scrollRow(juegoRowRef, 'right')} aria-label="Desplazar juegos a la derecha">
+                                                                <FaChevronRight />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className={styles.gameScrollRow} ref={juegoRowRef}>
+                                                        <div 
+                                                            className={`${styles.gameBubble} ${idJuegoSeleccionado === null ? styles.gameBubbleActive : ''}`}
+                                                            onClick={() => setIdJuegoSeleccionado(null)}
+                                                        >
+                                                            <div className={styles.bubbleIcon}><FaGamepad /></div>
+                                                            <span>Todos</span>
+                                                        </div>
+                                                        {juegos.map(juego => (
+                                                            <div 
+                                                                key={juego.id}
+                                                                className={`${styles.gameBubble} ${idJuegoSeleccionado === juego.id ? styles.gameBubbleActive : ''}`}
+                                                                onClick={() => {
+                                                                    setIdJuegoSeleccionado(juego.id);
+                                                                    setIdCatSeleccionada(null);
+                                                                }}
+                                                            >
+                                                                <div className={styles.bubbleIcon}>
+                                                                    {juego.imagenUrl ? <img src={juego.imagenUrl} alt={juego.nombre} /> : <FaGamepad />}
+                                                                </div>
+                                                                <span>{juego.nombre}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    {/* ENCABEZADO DE RESULTADOS DE BÚSQUEDA */}
+                                    <div className={styles.productsHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h2 className={styles.productsHeaderTitle}>
+                                            {estaBuscando ? `Resultados para "${busqueda}"` : 'Productos Disponibles'}
+                                        </h2>
+                                        {estaBuscando && (
+                                            <button 
+                                                onClick={limpiarBusqueda}
+                                                style={{
+                                                    background: '#2e004f',
+                                                    color: '#e100ff',
+                                                    border: '1px solid #32003e',
+                                                    borderRadius: '20px',
+                                                    padding: '6px 14px',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px'
+                                                }}
+                                            >
+                                                <FaTimes /> Ver todo el catálogo
+                                            </button>
                                         )}
                                     </div>
                                     
-                                    {/* ENCABEZADO DE PRODUCTOS */}
-                                    <div className={styles.productsHeader}>
-                                        <h2 className={styles.productsHeaderTitle}>
-                                            {busqueda.trim() !== '' ? `Resultados para "${busqueda}"` : 'Productos Destacados'}
-                                        </h2>
-                                    </div>
-                                    
-                                    {/* CUADRÍCULA DE PRODUCTOS FILTRADOS */}
+                                    {/* CUADRÍCULA DE PRODUCTOS */}
                                     {productosFiltrados.length === 0 ? (
-                                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
-                                            <FaSearch size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                                            <p>No se encontraron productos coincidentes.</p>
+                                        <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#94a3b8', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px', border: '1px dashed #334155', margin: '1rem 0' }}>
+                                            <FaSearch size={44} style={{ opacity: 0.3, marginBottom: '1rem', color: '#38bdf8' }} />
+                                            <p style={{ fontSize: '1.1rem', color: '#e2e8f0', margin: '0 0 6px 0' }}>No encontramos coincidencias para "{busqueda}"</p>
+                                            <small style={{ color: '#64748b' }}>Prueba con términos más generales o limpia la búsqueda.</small>
+                                            <div style={{ marginTop: '16px' }}>
+                                                <button 
+                                                    onClick={limpiarBusqueda}
+                                                    style={{ background: '#7a0090', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                                                >
+                                                    Restablecer Catálogo
+                                                </button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className={styles.productsGrid}>
@@ -808,7 +900,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                             {prod.esDigital ? "Digital" : "Físico"}
                                                         </span>
                                                         {prod.imagenUrl ? (
-                                                            <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} />
+                                                            <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} loading="lazy" />
                                                         ) : (
                                                             <div className={styles.noImagePlaceholder}>Nicaplus Tech</div>
                                                         )}
@@ -877,8 +969,57 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 )}
             </main>
 
+            {/* BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES */}
+            <nav className="mobile-bottom-nav">
+                <button 
+                    onClick={() => cambiarSeccion('inicio')} 
+                    className={`mobile-bottom-item ${seccionActiva === 'inicio' ? 'active' : ''}`}
+                >
+                    <FaHome size={18} />
+                    <span>Inicio</span>
+                </button>
+                <button 
+                    onClick={() => cambiarSeccion('productos')} 
+                    className={`mobile-bottom-item ${seccionActiva === 'productos' ? 'active' : ''}`}
+                >
+                    <FaStore size={18} />
+                    <span>Tienda</span>
+                </button>
+                <button 
+                    id="mobile-bottom-cart-btn"
+                    onClick={() => cambiarSeccion('carrito')} 
+                    className={`mobile-bottom-item ${seccionActiva === 'carrito' ? 'active' : ''}`}
+                    style={{ position: 'relative' }}
+                >
+                    <FaShoppingCart size={18} />
+                    {totalCarritoItems > 0 && (
+                        <span style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '25%',
+                            background: '#f43f5e',
+                            color: '#fff',
+                            fontSize: '0.65rem',
+                            fontWeight: 'bold',
+                            padding: '1px 5px',
+                            borderRadius: '10px'
+                        }}>
+                            {totalCarritoItems}
+                        </span>
+                    )}
+                    <span>Carrito</span>
+                </button>
+                <button 
+                    onClick={() => cambiarSeccion('contacto')} 
+                    className={`mobile-bottom-item ${seccionActiva === 'contacto' ? 'active' : ''}`}
+                >
+                    <FaMapMarkerAlt size={18} />
+                    <span>Ubicación</span>
+                </button>
+            </nav>
+
             {/* FOOTER */}
-            <footer className={styles.footer}>
+            <footer className={styles.footer} style={{ paddingBottom: '70px' }}>
                 <div className={styles.footerContainer}>
                     <div className={styles.footerBrandColumn}>
                         <div className={styles.brandText}>Nicaplus Gaming</div>
