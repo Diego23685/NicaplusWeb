@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { 
     FaEdit, 
@@ -43,23 +43,61 @@ export const Reportes: React.FC = () => {
     const [nuevoMetodoPago, setMetodoPago] = useState('');
     const [detallesEditados, setDetallesEditados] = useState<any[]>([]);
 
-    const cargarHistorialVentas = async () => {
-        try {
-            const res = await api.get('/ventas');
-            setVentasHistorial(res.data || []);
-        } catch (err) {
-            console.error("Error al cargar historial de ventas:", err);
-        } finally {
-            setCargandoTabla(false);
-        }
-    };
-
     const formatearLocal = (d: Date) => {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const dia = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${dia}`;
     };
+
+    // Función unificada para resolver el nombre del cliente bajo cualquier esquema de DTO
+    const obtenerNombreCliente = useCallback((v: any, listaClientes: any[] = clientes): string => {
+        if (!v) return 'Mostrador General';
+
+        // 1. Si viene el objeto anidado
+        const objCli = v.cliente || v.Cliente;
+        if (objCli) {
+            const nom = objCli.nombre ?? objCli.Nombre ?? objCli.razonSocial ?? objCli.RazonSocial;
+            if (nom && typeof nom === 'string' && nom.trim() !== '') return nom.trim();
+        }
+
+        // 2. Si viene la propiedad plana en la venta
+        const nomPlano = v.clienteNombre ?? v.ClienteNombre ?? v.nombreCliente ?? v.NombreCliente;
+        if (nomPlano && typeof nomPlano === 'string' && nomPlano.trim() !== '') return nomPlano.trim();
+
+        // 3. Búsqueda por ID relacional en el array maestro de clientes
+        const idCli = v.idCliente ?? v.IdCliente ?? v.clienteId ?? v.ClienteId;
+        if (idCli && Number(idCli) > 0) {
+            const encontrado = listaClientes.find(c => (c.id ?? c.Id) === Number(idCli));
+            if (encontrado) {
+                const nomEnc = encontrado.nombre ?? encontrado.Nombre ?? encontrado.razonSocial ?? encontrado.RazonSocial;
+                if (nomEnc) return nomEnc;
+            }
+        }
+
+        return 'Mostrador General';
+    }, [clientes]);
+
+    // Carga inicial sincronizada para evitar condiciones de carrera
+    const cargarDatosIniciales = useCallback(async () => {
+        setCargandoTabla(true);
+        try {
+            const [resVentas, resClientes, resProd] = await Promise.all([
+                api.get('/ventas'),
+                api.get('/clientes'),
+                api.get('/products')
+            ]);
+
+            const listaCli = resVentas.data ? (resClientes.data || []) : [];
+            setClientes(listaCli);
+            setProductos(resProd.data || []);
+            setVentasHistorial(resVentas.data || []);
+        } catch (err) {
+            console.error("Error sincronizando catálogos de reportes:", err);
+        } finally {
+            setCargandoTabla(false);
+        }
+    }, []);
 
     const perteneceAlRubro = (prod: any, rubro: string) => {
         if (!prod) return false;
@@ -140,8 +178,8 @@ export const Reportes: React.FC = () => {
 
     useEffect(() => {
         aplicarRangoRapido('hoy');
-        cargarHistorialVentas();
-    }, []);
+        cargarDatosIniciales();
+    }, [cargarDatosIniciales]);
 
     useEffect(() => {
         if (desde && hasta) {
@@ -149,20 +187,16 @@ export const Reportes: React.FC = () => {
         }
     }, [desde, hasta]);
 
-    useEffect(() => {
-        api.get('/clientes').then(res => setClientes(res.data || [])).catch(() => {});
-        api.get('/products').then(res => setProductos(res.data || [])).catch(() => {});
-    }, []);
-
     const ventasFiltradas = ventasHistorial.filter(v => {
+        const nombreResuelto = obtenerNombreCliente(v);
         const coincideTexto = v.id.toString().includes(busquedaFactura) || 
-            (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase());
+            nombreResuelto.toLowerCase().includes(busquedaFactura.toLowerCase());
 
         if (!coincideTexto) return false;
 
         if (clienteFiltro) {
-            const idCliVenta = v.idCliente ?? v.IdCliente;
-            if (idCliVenta !== Number(clienteFiltro)) return false;
+            const idCliVenta = v.idCliente ?? v.IdCliente ?? v.clienteId ?? v.ClienteId;
+            if (Number(idCliVenta) !== Number(clienteFiltro)) return false;
         }
 
         if (rubroFiltro && rubroFiltro !== 'Todos') {
@@ -178,9 +212,9 @@ export const Reportes: React.FC = () => {
 
     const abrirEditorVenta = (venta: any) => {
         setVentaAEditar(venta);
-        setMetodoPago(venta.metodoPago);
+        setMetodoPago(venta.metodoPago ?? venta.MetodoPago ?? 'Efectivo');
         
-        const detallesConNombre = venta.detalles.map((d: any) => {
+        const detallesConNombre = (venta.detalles || []).map((d: any) => {
             const prodEncontrado = productos.find(p => (p.id ?? p.Id) === d.idProducto);
             return {
                 ...d,
@@ -198,9 +232,7 @@ export const Reportes: React.FC = () => {
             const res = await api.delete(`/ventas/${id}`);
             alert(res.data?.mensaje || "Venta eliminada e inventarios restaurados.");
             setVentaAEditar(null);
-            setCargandoTabla(true);
-            cargarHistorialVentas();
-            api.get('/products').then(resProd => setProductos(resProd.data || [])).catch(() => {});
+            cargarDatosIniciales();
             if (desde && hasta) ConsultarReporte();
         } catch (err: any) {
             alert(err.response?.data?.mensaje || err.response?.data || "Error al eliminar la venta.");
@@ -289,10 +321,12 @@ export const Reportes: React.FC = () => {
             subTotal: Number(d.subTotal) || 0
         }));
 
+        const idCliVal = Number(ventaAEditar.idCliente ?? ventaAEditar.IdCliente ?? ventaAEditar.clienteId ?? ventaAEditar.ClienteId);
+
         const payload = {
             id: ventaAEditar.id,
-            idUsuario: ventaAEditar.idUsuario,
-            idCliente: ventaAEditar.idCliente === 0 ? null : ventaAEditar.idCliente,
+            idUsuario: ventaAEditar.idUsuario ?? ventaAEditar.IdUsuario ?? 1,
+            idCliente: idCliVal === 0 ? null : idCliVal,
             metodoPago: nuevoMetodoPago,
             detalles: detallesSaneados
         };
@@ -301,17 +335,16 @@ export const Reportes: React.FC = () => {
             await api.put(`/ventas/${ventaAEditar.id}`, payload);
             alert("Factura modificada con éxito. El inventario físico y dinero en caja han sido recalculados.");
             setVentaAEditar(null);
-            setCargandoTabla(true);
-            cargarHistorialVentas();
+            cargarDatosIniciales();
             if (desde && hasta) ConsultarReporte(); 
         } catch (err: any) {
-            alert(err.response?.data || "Error al procesar la auditoría.");
+            alert(err.response?.data?.mensaje || err.response?.data || "Error al procesar la auditoría.");
         }
     };
 
     const obtenerEstructuraVentaNormalizada = (venta: any) => {
-        const idCli = venta.idCliente || venta.IdCliente;
-        const clienteAsociado = venta.cliente || clientes.find(c => (c.id ?? c.Id) === idCli) || null;
+        const idCli = venta.idCliente ?? venta.IdCliente ?? venta.clienteId ?? venta.ClienteId;
+        const clienteAsociado = venta.cliente || venta.Cliente || clientes.find(c => (c.id ?? c.Id) === idCli) || { nombre: obtenerNombreCliente(venta) };
 
         const detallesMapeados = (venta.detalles || []).map((d: any) => {
             const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
@@ -327,8 +360,8 @@ export const Reportes: React.FC = () => {
             detalles: detallesMapeados,
             cliente: clienteAsociado,
             totalCongelado: venta.total ?? detallesMapeados.reduce((acc: number, item: any) => acc + item.subTotal, 0),
-            metodoPagoCongelado: venta.metodoPago,
-            fechaVenta: venta.fechaVenta || venta.fecha
+            metodoPagoCongelado: venta.metodoPago ?? venta.MetodoPago,
+            fechaVenta: venta.fechaVenta || venta.fecha || venta.Fecha
         };
     };
 
@@ -375,35 +408,6 @@ export const Reportes: React.FC = () => {
             if (!fechaRaw) return 'N/A';
             const dateObj = new Date(fechaRaw);
             return isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleDateString();
-        };
-
-        const obtenerClienteCruzado = (transaccionReporte: any) => {
-            if (!transaccionReporte) return 'Mostrador General';
-            if (transaccionReporte.cliente || transaccionReporte.Cliente) {
-                return transaccionReporte.cliente || transaccionReporte.Cliente;
-            }
-            const ventaCompleta = ventasHistorial.find(v => v.id === transaccionReporte.id);
-            if (ventaCompleta) {
-                if (ventaCompleta.cliente) {
-                    const nombreObj = ventaCompleta.cliente.nombre || ventaCompleta.cliente.Nombre;
-                    if (nombreObj) return nombreObj;
-                }
-                const idCli = ventaCompleta.idCliente || ventaCompleta.IdCliente;
-                if (idCli) {
-                    const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idCli);
-                    if (clienteEncontrado) {
-                        return clienteEncontrado.nombre || clienteEncontrado.Nombre || 'Mostrador General';
-                    }
-                }
-            }
-            const idClienteDirecto = transaccionReporte.idCliente || transaccionReporte.IdCliente;
-            if (idClienteDirecto) {
-                const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idClienteDirecto);
-                if (clienteEncontrado) {
-                    return clienteEncontrado.nombre || clienteEncontrado.Nombre || 'Mostrador General';
-                }
-            }
-            return 'Mostrador General';
         };
 
         const totalNeto = transacciones.reduce((acc: number, t: any) => acc + (t.total || 0), 0);
@@ -477,15 +481,18 @@ export const Reportes: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        ${transacciones.map((t: any) => `
-                            <tr>
-                                <td>#000${t?.id}</td>
-                                <td>${formatearFechaSegura(t)}</td>
-                                <td>${obtenerClienteCruzado(t)}</td>
-                                <td>${t?.metodoPago}</td>
-                                <td style="text-align: right;">C$ ${(t?.total ?? 0).toLocaleString()}</td>
-                            </tr>
-                        `).join('')}
+                        ${transacciones.map((t: any) => {
+                            const ventaOrig = ventasHistorial.find(v => v.id === t.id) || t;
+                            return `
+                                <tr>
+                                    <td>#000${t?.id}</td>
+                                    <td>${formatearFechaSegura(t)}</td>
+                                    <td>${obtenerNombreCliente(ventaOrig, clientes)}</td>
+                                    <td>${t?.metodoPago}</td>
+                                    <td style="text-align: right;">C$ ${(t?.total ?? 0).toLocaleString()}</td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
 
@@ -674,18 +681,18 @@ export const Reportes: React.FC = () => {
                             <div className={styles.emptyText}>No se encontraron ventas registradas.</div>
                         ) : (
                             ventasFiltradas.map((v) => {
-                                const clienteNombre = v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General';
+                                const clienteNombre = obtenerNombreCliente(v);
                                 return (
                                     <div key={v.id} className={styles.auditCard}>
                                         <div className={styles.auditCardHeader}>
                                             <div className={styles.orderIdBadge}>#000{v.id}</div>
-                                            <span className={styles.paymentBadge}>{v.metodoPago}</span>
+                                            <span className={styles.paymentBadge}>{v.metodoPago ?? v.MetodoPago}</span>
                                         </div>
 
                                         <div className={styles.cardCustomerRow}>
                                             <strong>👤 {clienteNombre}</strong>
                                             <small className={styles.textMuted}>
-                                                📅 {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
+                                                📅 {v.fechaVenta || v.fecha ? new Date(v.fechaVenta || v.fecha).toLocaleDateString() : 'N/A'}
                                             </small>
                                         </div>
 
@@ -801,9 +808,9 @@ export const Reportes: React.FC = () => {
                                 {ventasFiltradas.map((v) => (
                                     <tr key={v.id}>
                                         <td className={styles.orderIdBadge}>#000{v.id}</td>
-                                        <td>{v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}</td>
-                                        <td>{v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General'}</td>
-                                        <td><span className={styles.paymentBadge}>{v.metodoPago}</span></td>
+                                        <td>{v.fechaVenta || v.fecha ? new Date(v.fechaVenta || v.fecha).toLocaleDateString() : 'N/A'}</td>
+                                        <td><strong>{obtenerNombreCliente(v)}</strong></td>
+                                        <td><span className={styles.paymentBadge}>{v.metodoPago ?? v.MetodoPago}</span></td>
                                         <td className={styles.textMuted}>
                                             {v.detalles?.map((d: any, idx: number) => {
                                                 const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
@@ -903,7 +910,7 @@ export const Reportes: React.FC = () => {
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>Cliente</label>
                                     <select 
-                                        value={ventaAEditar.idCliente || ventaAEditar.IdCliente || 0} 
+                                        value={ventaAEditar.idCliente ?? ventaAEditar.IdCliente ?? ventaAEditar.clienteId ?? ventaAEditar.ClienteId ?? 0} 
                                         onChange={e => setVentaAEditar({...ventaAEditar, idCliente: Number(e.target.value)})} 
                                         className={styles.select}
                                     >
@@ -977,7 +984,7 @@ export const Reportes: React.FC = () => {
                                                     <small className={styles.textRed}>Desc.</small>
                                                     <input 
                                                         type="number" 
-                                                        min={0}
+                                                        min={0} 
                                                         value={det.descuento ?? ''} 
                                                         onChange={e => actualizarDescuentoDetalle(idx, e.target.value)} 
                                                         className={`${styles.touchInput} ${styles.borderRed}`}
@@ -988,7 +995,7 @@ export const Reportes: React.FC = () => {
                                                     <small className={styles.textCyan}>Días</small>
                                                     <input 
                                                         type="number" 
-                                                        min={1}
+                                                        min={1} 
                                                         disabled={!esSuscripcion}
                                                         value={diasActuales ?? ''} 
                                                         onChange={e => actualizarDiasSuscripcion(idx, e.target.value)} 
