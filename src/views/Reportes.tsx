@@ -13,8 +13,7 @@ import {
     FaShoppingCart,
     FaExchangeAlt,
     FaLock,
-    FaTrash,
-    FaFilter
+    FaTrash
 } from 'react-icons/fa';
 import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
 import styles from '../assets/styles/Reportes.module.css';
@@ -50,22 +49,18 @@ export const Reportes: React.FC = () => {
         return `${y}-${m}-${dia}`;
     };
 
-    // Función unificada para resolver el nombre del cliente bajo cualquier esquema de DTO
     const obtenerNombreCliente = useCallback((v: any, listaClientes: any[] = clientes): string => {
         if (!v) return 'Mostrador General';
 
-        // 1. Si viene el objeto anidado
         const objCli = v.cliente || v.Cliente;
         if (objCli) {
             const nom = objCli.nombre ?? objCli.Nombre ?? objCli.razonSocial ?? objCli.RazonSocial;
             if (nom && typeof nom === 'string' && nom.trim() !== '') return nom.trim();
         }
 
-        // 2. Si viene la propiedad plana en la venta
         const nomPlano = v.clienteNombre ?? v.ClienteNombre ?? v.nombreCliente ?? v.NombreCliente;
         if (nomPlano && typeof nomPlano === 'string' && nomPlano.trim() !== '') return nomPlano.trim();
 
-        // 3. Búsqueda por ID relacional en el array maestro de clientes
         const idCli = v.idCliente ?? v.IdCliente ?? v.clienteId ?? v.ClienteId;
         if (idCli && Number(idCli) > 0) {
             const encontrado = listaClientes.find(c => (c.id ?? c.Id) === Number(idCli));
@@ -78,7 +73,6 @@ export const Reportes: React.FC = () => {
         return 'Mostrador General';
     }, [clientes]);
 
-    // Carga inicial sincronizada para evitar condiciones de carrera
     const cargarDatosIniciales = useCallback(async () => {
         setCargandoTabla(true);
         try {
@@ -88,8 +82,7 @@ export const Reportes: React.FC = () => {
                 api.get('/products')
             ]);
 
-            const listaCli = resVentas.data ? (resClientes.data || []) : [];
-            setClientes(listaCli);
+            setClientes(resClientes.data || []);
             setProductos(resProd.data || []);
             setVentasHistorial(resVentas.data || []);
         } catch (err) {
@@ -391,6 +384,7 @@ export const Reportes: React.FC = () => {
         const transacciones = datosReporte?.transacciones || [];
         const comprasProveedores = datosReporte?.comprasProveedores || [];
         const movimientosCaja = datosReporte?.movimientosCaja || [];
+        const listaProductos = datosReporte?.topProductos || [];
 
         const utilidadNeta = datosReporte?.finanzas?.utilidadNeta ?? 0;
         const costoMercancia = datosReporte?.finanzas?.costoMercancia ?? 0;
@@ -415,8 +409,6 @@ export const Reportes: React.FC = () => {
         const transferencia = transacciones.filter((t: any) => t.metodoPago === 'Transferencia').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
         const tarjeta = datosReporte?.finanzas?.tarjeta ?? transacciones.filter((t: any) => t.metodoPago === 'Tarjeta').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
         const credito = transacciones.filter((t: any) => t.metodoPago === 'Crédito').reduce((acc: number, t: any) => acc + (t.total || 0), 0);
-
-        const listaProductos = datosReporte?.topProductos || [];
 
         const htmlDocumento = `
             <!DOCTYPE html>
@@ -473,7 +465,25 @@ export const Reportes: React.FC = () => {
                     <div class="card card-total" style="border-color: #3b82f6; background: #eff6ff;"><small style="color: #1d4ed8;">Utilidad Neta</small><h3 style="color: #1e40af;">C$ ${Number(utilidadNeta).toLocaleString()}</h3></div>
                 </div>
 
-                <div class="seccion-titulo">II. Libro Diario de Ventas</div>
+                ${listaProductos.length > 0 ? `
+                <div class="seccion-titulo">II. Productos / Servicios Más Vendidos</div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Producto</th><th style="text-align: center;">Cantidad</th><th style="text-align: right;">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        ${listaProductos.map((p: any) => `
+                            <tr>
+                                <td>${p.producto}</td>
+                                <td style="text-align: center;">${p.cantidad}</td>
+                                <td style="text-align: right;">C$ ${Number(p.subtotal || 0).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : ''}
+
+                <div class="seccion-titulo">III. Libro Diario de Ventas</div>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -495,6 +505,45 @@ export const Reportes: React.FC = () => {
                         }).join('')}
                     </tbody>
                 </table>
+
+                ${comprasProveedores.length > 0 ? `
+                <div class="seccion-titulo">IV. Compras a Proveedores</div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Orden</th><th>Fecha</th><th>Proveedor</th><th style="text-align: right;">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        ${comprasProveedores.map((c: any) => `
+                            <tr>
+                                <td>#ORD-${c.id}</td>
+                                <td>${c.fecha}</td>
+                                <td>${c.proveedor}</td>
+                                <td style="text-align: right; color: #dc2626;">C$ ${Number(c.totalCompra || 0).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : ''}
+
+                ${movimientosCaja.length > 0 ? `
+                <div class="seccion-titulo">V. Movimientos de Caja</div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Concepto</th><th style="text-align: right;">Monto</th></tr>
+                    </thead>
+                    <tbody>
+                        ${movimientosCaja.map((m: any) => `
+                            <tr>
+                                <td>#${m.id}</td>
+                                <td>${m.fecha}</td>
+                                <td>${m.tipo}</td>
+                                <td>${m.concepto}</td>
+                                <td style="text-align: right;">C$ ${Number(m.monto || 0).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : ''}
 
                 <script>window.onload = function() { window.print(); }</script>
             </body>

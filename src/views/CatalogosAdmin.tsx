@@ -4,11 +4,9 @@ import {
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
     FaBoxes, FaSearch, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory,
-    FaChevronLeft, FaChevronRight
+    FaChevronLeft, FaChevronRight, FaInfoCircle, FaFileInvoiceDollar, FaCheckCircle
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
-
-//despliegue
 
 export interface VariacionProducto {
     id?: number;
@@ -121,17 +119,16 @@ export const CatalogosAdmin: React.FC = () => {
     const [editandoProductoId, setEditandoProductoId] = useState<number | null>(null);
     const [formProducto, setFormProducto] = useState(productoFormInicial);
 
-    // MODAL CRUD DE VARIACIONES
-    const [productoVariacionAbierto, setProductoVariacionAbierto] = useState<Producto | null>(null);
-    const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
-    const [, setFiltroColorVariacion] = useState<string>('Todos');
-    const [variacionEditandoIdx, setVariacionEditandoIdx] = useState<number | null>(null);
-
-    // MODAL DE HISTORIAL DE VENTAS
-    const [productoHistorial, setProductoHistorial] = useState<Producto | null>(null);
+    // MODAL DETALLES & HISTORIAL DE VENTAS UNIFICADO
+    const [productoDetalleModal, setProductoDetalleModal] = useState<Producto | null>(null);
     const [historialVentas, setHistorialVentas] = useState<HistorialVentaItem[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const [busquedaHistorial, setBusquedaHistorial] = useState('');
+
+    // MODAL CRUD DE VARIACIONES
+    const [productoVariacionAbierto, setProductoVariacionAbierto] = useState<Producto | null>(null);
+    const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
+    const [variacionEditandoIdx, setVariacionEditandoIdx] = useState<number | null>(null);
 
     // FORMULARIO RÁPIDO AGREGAR VARIANTE
     const [nuevaVarNombre, setNuevaVarNombre] = useState('');
@@ -217,7 +214,6 @@ export const CatalogosAdmin: React.FC = () => {
         });
     }, [productos, filtroProd, juegoFiltroActivo, categoriaFiltroActiva, rubroAdmin]);
 
-    // Reseteo de página al cambiar filtros
     useEffect(() => {
         setPaginaActual(1);
     }, [filtroProd, juegoFiltroActivo, categoriaFiltroActiva, rubroAdmin]);
@@ -297,15 +293,14 @@ export const CatalogosAdmin: React.FC = () => {
         });
     };
 
-    const abrirHistorialProducto = async (producto: Producto) => {
-        setProductoHistorial(producto);
+    const abrirDetalleCompleto = async (producto: Producto) => {
+        setProductoDetalleModal(producto);
         setBusquedaHistorial('');
         setCargandoHistorial(true);
         try {
             const res = await api.get(`/products/${producto.id}/historial-ventas`);
             setHistorialVentas(res.data || []);
         } catch (err: any) {
-            dispararErrorVisual("Error al Cargar Historial", err.response?.data?.mensaje || "No se pudieron obtener las ventas de este artículo.");
             setHistorialVentas([]);
         } finally {
             setCargandoHistorial(false);
@@ -345,7 +340,7 @@ export const CatalogosAdmin: React.FC = () => {
     };
 
     const removerCuentaCompletaManual = async (accountGroupKey: string) => {
-        if (!window.confirm('⚠️ ¿Desea eliminar la CUENTA COMPLETA (todas sus pantallas) de forma irreversible?')) return;
+        if (!window.confirm('⚠️ ¿Desea eliminar la CUENTA COMPLETA de forma irreversible?')) return;
         try {
             await api.delete(`/perfilescuentas/grupo/${accountGroupKey}`);
             if (productoPerfilAbierto) {
@@ -355,7 +350,7 @@ export const CatalogosAdmin: React.FC = () => {
         } catch (err: any) {
             dispararErrorVisual(
                 "Integridad Bloqueada", 
-                err.response?.data?.message || "Una o más pantallas de esta cuenta están activas en suscripciones vigentes."
+                err.response?.data?.message || "Una o más pantallas están activas en suscripciones vigentes."
             );
         }
     };
@@ -366,7 +361,7 @@ export const CatalogosAdmin: React.FC = () => {
 
             if (perfilEditandoDatos.accountGroupKey) {
                 actualizarTodoElGrupo = window.confirm(
-                    "¿Desea aplicar este Correo y Contraseña a TODAS las pantallas que comparten esta misma cuenta?"
+                    "¿Desea aplicar este Correo y Contraseña a TODAS las pantallas que comparten esta cuenta?"
                 );
             }
 
@@ -382,7 +377,7 @@ export const CatalogosAdmin: React.FC = () => {
                 setPerfilesActuales(res.data || []);
             }
         } catch (err: any) {
-            dispararErrorVisual("Error de Envío", err.response?.data?.message || "Hubo problemas al guardar los datos del perfil o del grupo.");
+            dispararErrorVisual("Error de Envío", err.response?.data?.message || "Hubo problemas al guardar el perfil.");
         }
     };
 
@@ -395,7 +390,7 @@ export const CatalogosAdmin: React.FC = () => {
                 setPerfilesActuales(res.data || []);
             }
         } catch (err: any) {
-            dispararErrorVisual("Error Operacional", err.response?.data?.message || "No se logró desvincular al cliente de la pantalla.");
+            dispararErrorVisual("Error Operacional", err.response?.data?.message || "No se logró desvincular al cliente.");
         }
     };
 
@@ -418,7 +413,7 @@ export const CatalogosAdmin: React.FC = () => {
             setPerfilesActuales(res.data || []);
             setPerfNombre(`Perfil ${(res.data?.length || 0) + 1}`);
         } catch (err: any) {
-            dispararErrorVisual("Fallo de Registro", err.response?.data?.message || "Imposible inyectar perfil.");
+            dispararErrorVisual("Fallo de Registro", err.response?.data?.message || "Imposible registrar perfil.");
         }
     };
 
@@ -432,7 +427,7 @@ export const CatalogosAdmin: React.FC = () => {
                 setPerfNombre(`Perfil ${(res.data?.length || 0) + 1}`);
             }
         } catch (err: any) {
-            dispararErrorVisual("Integridad Bloqueada", err.response?.data?.message || "El perfil se encuentra activo dentro de una suscripción vigente.");
+            dispararErrorVisual("Integridad Bloqueada", err.response?.data?.message || "El perfil se encuentra activo en una suscripción.");
         }
     };
 
@@ -454,7 +449,7 @@ export const CatalogosAdmin: React.FC = () => {
             const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
             setPerfilesActuales(res.data || []);
         } catch (err: any) {
-            dispararErrorVisual("Fallo Multipantalla", err.response?.data?.message || "No se generó el lote completo.");
+            dispararErrorVisual("Fallo Multipantalla", err.response?.data?.message || "No se generó el lote.");
         }
     };
 
@@ -497,7 +492,7 @@ export const CatalogosAdmin: React.FC = () => {
 
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Fallo de Procesamiento", err.response?.data?.message || "Error crítico al guardar la ficha técnica."); 
+            dispararErrorVisual("Fallo de Procesamiento", err.response?.data?.message || "Error al guardar el producto."); 
         }
     };
 
@@ -562,7 +557,7 @@ export const CatalogosAdmin: React.FC = () => {
             await api.delete(`/products/${id}`);
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Acción Denegada", err.response?.data?.message || "Integridad referencial activa: Este producto tiene facturas o perfiles anclados."); 
+            dispararErrorVisual("Acción Denegada", err.response?.data?.message || "Este producto tiene facturas o perfiles anclados."); 
         }
     };
 
@@ -575,7 +570,7 @@ export const CatalogosAdmin: React.FC = () => {
             setNuevoJuego(''); setJuegoImagen(''); setEditandoJuego(null);
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Error", err.response?.data?.message || "No se procesó el título."); 
+            dispararErrorVisual("Error", err.response?.data?.message || "No se procesó el juego."); 
         }
     };
 
@@ -633,7 +628,7 @@ export const CatalogosAdmin: React.FC = () => {
         } catch (err: any) {
             dispararErrorVisual(
                 "Error al Subir Imagen", 
-                err.response?.data?.mensaje || "No se pudo subir la imagen al servidor. Verifique el formato y peso."
+                err.response?.data?.mensaje || "No se pudo subir la imagen al servidor."
             );
         } finally {
             setSubiendoImagen(false);
@@ -644,7 +639,6 @@ export const CatalogosAdmin: React.FC = () => {
     const abrirModalVariaciones = (producto: Producto) => {
         setProductoVariacionAbierto(producto);
         setVariacionesModal(producto.variaciones || []);
-        setFiltroColorVariacion('Todos');
         setVariacionEditandoIdx(null);
         setNuevaVarNombre('');
         setNuevaVarPrecioCosto(producto.precioCosto);
@@ -739,7 +733,7 @@ export const CatalogosAdmin: React.FC = () => {
             <header className={styles.header}>
                 <div>
                     <h3 className={styles.title}>Catálogos Maestros</h3>
-                    <p className={styles.subtitle}>Gestión de productos físicos, digitales y cuentas streaming.</p>
+                    <p className={styles.subtitle}>Gestión simplificada de inventario general.</p>
                 </div>
             </header>
 
@@ -1066,19 +1060,19 @@ export const CatalogosAdmin: React.FC = () => {
 
                 <div className={styles.searchBox}>
                     <FaSearch className={styles.searchIcon} />
-                    <input type="text" placeholder="Buscar por nombre de producto..." value={filtroProd} onChange={e => setFiltroProd(e.target.value)} className={styles.searchInput} />
+                    <input type="text" placeholder="Buscar producto..." value={filtroProd} onChange={e => setFiltroProd(e.target.value)} className={styles.searchInput} />
                     {filtroProd && <button onClick={() => setFiltroProd('')} className={styles.clearSearchBtn}><FaTimes /></button>}
                 </div>
             </div>
 
-            {/* 5. VISTA MÓVIL / TABLET: CARDS */}
+            {/* 5. VISTA MÓVIL / TABLET: FEED DE CARDS CON CLIC PARA EXPEDIENTE */}
             <div className={styles.mobileCardsFeed}>
                 {prodsPaginados.length === 0 ? (
                     <div className={styles.emptyText}>No hay productos coincidentes.</div>
                 ) : (
                     prodsPaginados.map(p => (
                         <div key={p.id} className={styles.productCardTouch}>
-                            <div className={styles.productCardTop}>
+                            <div className={styles.productCardTop} onClick={() => abrirDetalleCompleto(p)} title="Clic para ver ficha técnica completa e historial">
                                 <div className={styles.productImgWrap}>
                                     {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
                                 </div>
@@ -1086,12 +1080,11 @@ export const CatalogosAdmin: React.FC = () => {
                                     <strong className={styles.productTitle}>{p.nombre}</strong>
                                     <div className={styles.productBadgesRow}>
                                         <span className={styles.badgeType}>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : '🎮 Digital') : '📦 Físico'}</span>
-                                        <span className={`${styles.badgeStatus} ${p.estado === 'Activo' ? styles.statusGreen : styles.statusAmber}`}>{p.estado || 'Activo'}</span>
                                         {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
+                                        <span className={styles.badgeHint}><FaInfoCircle size={10} /> Ver Ficha</span>
                                     </div>
                                     <div className={styles.productPricesRow}>
-                                        <span className={styles.priceSale}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</span>
-                                        <small className={styles.priceCost}>Costo: {p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</small>
+                                        <span className={styles.priceSale}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}</span>
                                         <small className={styles.productStockText}>
                                             Stock: {p.tieneVariaciones 
                                                 ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
@@ -1102,7 +1095,6 @@ export const CatalogosAdmin: React.FC = () => {
                             </div>
 
                             <div className={styles.productCardActions}>
-                                <button onClick={() => abrirHistorialProducto(p)} className={styles.btnActionSecondary} title="Ventas"><FaHistory /> Historial</button>
                                 {p.tieneVariaciones && <button onClick={() => abrirModalVariaciones(p)} className={styles.btnActionAmber}><FaPalette /> Variantes ({p.variaciones?.length || 0})</button>}
                                 {p.esSuscripcion && <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnActionTeal}><FaTv /> Pantallas</button>}
                                 <button onClick={() => editarProducto(p)} className={styles.btnActionSecondary} title="Editar"><FaEdit /></button>
@@ -1114,48 +1106,44 @@ export const CatalogosAdmin: React.FC = () => {
                 )}
             </div>
 
-            {/* 6. VISTA ESCRITORIO: TABLA COMPLETA >= 1024px */}
+            {/* 6. VISTA ESCRITORIO SIMPLIFICADA (SIN SCROLL LATERAL) */}
             <div className={styles.desktopTableWrap}>
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th>Foto</th>
-                            <th>Producto</th>
-                            <th>P. Compra</th>
-                            <th>P. Venta</th>
-                            <th>Vigencia</th>
-                            <th>Garantía</th>
-                            <th>Proveedor</th>
-                            <th>Estado</th>
-                            <th>Stock</th>
-                            <th style={{ textAlign: 'center' }}>Acciones</th>
+                            <th style={{ width: '60px' }}>Foto</th>
+                            <th>Producto (Clic para detalles)</th>
+                            <th style={{ width: '130px' }}>P. Venta</th>
+                            <th style={{ width: '110px' }}>Stock</th>
+                            <th style={{ width: '170px', textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {prodsPaginados.map((p) => (
                             <tr key={p.id}>
-                                <td>{p.imagenUrl ? <img src={p.imagenUrl} alt="P" className={styles.tableImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}</td>
-                                <td onClick={() => abrirHistorialProducto(p)} className={styles.tdLink}>
-                                    <strong>{p.nombre}</strong>
-                                    <small className={styles.textMuted}>
-                                        {p.esDigital ? (p.esSuscripcion ? 'Streaming' : 'Digital') : 'Físico'} 
-                                        {p.tieneVariaciones && ' • Variantes'}
+                                <td onClick={() => abrirDetalleCompleto(p)} style={{ cursor: 'pointer' }}>
+                                    {p.imagenUrl ? <img src={p.imagenUrl} alt="P" className={styles.tableImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
+                                </td>
+                                <td onClick={() => abrirDetalleCompleto(p)} className={styles.tdLink}>
+                                    <strong className={styles.textHoverCyan}>{p.nombre}</strong>
+                                    <small className={styles.textMuted} style={{ display: 'flex', gap: '8px', marginTop: '2px', alignItems: 'center' }}>
+                                        <span>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : '🎮 Digital') : '📦 Físico'}</span>
+                                        {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
+                                        <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '3px' }}><FaInfoCircle size={11}/> Ver Ficha Completa</span>
                                     </small>
                                 </td>
-                                <td className={styles.textMuted}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</td>
-                                <td className={styles.textCyan}><strong>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</strong></td>
-                                <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} d` : 'N/A'}</td>
-                                <td>{p.garantiaDias > 0 ? `${p.garantiaDias} d` : 'N/A'}</td>
-                                <td>{p.proveedor || 'N/A'}</td>
-                                <td><span className={`${styles.badgeStatus} ${p.estado === 'Activo' ? styles.statusGreen : styles.statusAmber}`}>{p.estado || 'Activo'}</span></td>
+                                <td className={styles.textCyan}>
+                                    <strong style={{ fontSize: '1.05rem' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}</strong>
+                                </td>
                                 <td>
-                                    {p.tieneVariaciones 
-                                        ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                        : (p.controlaStock ? `${p.stockActual} u.` : 'Inf')}
+                                    <strong style={{ color: '#4ade80' }}>
+                                        {p.tieneVariaciones 
+                                            ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                            : (p.controlaStock ? `${p.stockActual} u.` : 'Infinito')}
+                                    </strong>
                                 </td>
                                 <td style={{ textAlign: 'center' }}>
                                     <div className={styles.tableActionsRow}>
-                                        <button onClick={() => abrirHistorialProducto(p)} className={styles.btnIconAction} title="Historial"><FaHistory /></button>
                                         {p.tieneVariaciones && <button onClick={() => abrirModalVariaciones(p)} className={styles.btnIconAmber} title="Variaciones"><FaPalette /></button>}
                                         {p.esSuscripcion && <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnIconTeal} title="Perfiles"><FaTv /></button>}
                                         <button onClick={() => editarProducto(p)} className={styles.btnIconAction} title="Editar"><FaEdit /></button>
@@ -1171,16 +1159,16 @@ export const CatalogosAdmin: React.FC = () => {
 
             {/* 7. CONTROLES DE PAGINACIÓN */}
             {totalPaginas > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155', marginTop: '8px' }}>
-                    <small style={{ color: '#94a3b8' }}>
-                        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> ({prodsFiltrados.length} productos)
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '12px 16px', borderRadius: '12px', border: '1px solid #334155', marginTop: '10px' }}>
+                    <small style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> ({prodsFiltrados.length} artículos)
                     </small>
                     <div style={{ display: 'flex', gap: '6px' }}>
                         <button 
                             onClick={() => { setPaginaActual(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                             disabled={paginaActual === 1}
                             className={styles.btn}
-                            style={{ background: '#0f172a', border: '1px solid #334155', padding: '6px 12px', opacity: paginaActual === 1 ? 0.4 : 1 }}
+                            style={{ background: '#0f172a', border: '1px solid #334155', padding: '6px 14px', opacity: paginaActual === 1 ? 0.4 : 1, minHeight: '38px', minWidth: '44px', flex: 'none' }}
                         >
                             <FaChevronLeft />
                         </button>
@@ -1188,10 +1176,155 @@ export const CatalogosAdmin: React.FC = () => {
                             onClick={() => { setPaginaActual(prev => Math.min(prev + 1, totalPaginas)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                             disabled={paginaActual === totalPaginas}
                             className={styles.btn}
-                            style={{ background: '#0f172a', border: '1px solid #334155', padding: '6px 12px', opacity: paginaActual === totalPaginas ? 0.4 : 1 }}
+                            style={{ background: '#0f172a', border: '1px solid #334155', padding: '6px 14px', opacity: paginaActual === totalPaginas ? 0.4 : 1, minHeight: '38px', minWidth: '44px', flex: 'none' }}
                         >
                             <FaChevronRight />
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* =========================================================
+               MODAL COMPLETO: FICHA TÉCNICA + HISTORIAL DE VENTAS
+               ========================================================= */}
+            {productoDetalleModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContentWide} style={{ maxWidth: '780px' }}>
+                        
+                        {/* HEADER MODAL */}
+                        <div className={styles.modalHeader}>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {productoDetalleModal.imagenUrl ? <img src={productoDetalleModal.imagenUrl} alt="P" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <FaImage style={{ color: '#475569', fontSize: '1.4rem' }} />}
+                                </div>
+                                <div>
+                                    <h3 className={styles.modalTitle} style={{ margin: 0 }}>{productoDetalleModal.nombre}</h3>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                        {productoDetalleModal.esDigital ? (productoDetalleModal.esSuscripcion ? 'Streaming Recurrente' : 'Digital') : 'Artículo Físico'} • Estado: <strong style={{ color: productoDetalleModal.estado === 'Activo' ? '#4ade80' : '#f59e0b' }}>{productoDetalleModal.estado}</strong>
+                                    </small>
+                                </div>
+                            </div>
+                            <button onClick={() => setProductoDetalleModal(null)} className={styles.modalCloseBtn}><FaTimes /></button>
+                        </div>
+
+                        {/* RESUMEN FINANCIERO & ESPECIFICACIONES */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', background: '#0f172a', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
+                            <div>
+                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO COSTO</small>
+                                <h4 style={{ margin: '2px 0 0 0', color: '#cbd5e1', fontSize: '1.1rem' }}>
+                                    {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioCosto.toLocaleString()}`}
+                                </h4>
+                            </div>
+
+                            <div>
+                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO VENTA</small>
+                                <h4 style={{ margin: '2px 0 0 0', color: '#38bdf8', fontSize: '1.1rem' }}>
+                                    {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioVenta.toLocaleString()}`}
+                                </h4>
+                            </div>
+
+                            {!productoDetalleModal.tieneVariaciones && (
+                                <div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>MARGEN ESTIMADO</small>
+                                    <h4 style={{ margin: '2px 0 0 0', color: '#4ade80', fontSize: '1.1rem' }}>
+                                        C$ {(productoDetalleModal.precioVenta - productoDetalleModal.precioCosto).toLocaleString()}
+                                    </h4>
+                                </div>
+                            )}
+
+                            <div>
+                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>STOCK ACTUAL</small>
+                                <h4 style={{ margin: '2px 0 0 0', color: '#f8fafc', fontSize: '1.1rem' }}>
+                                    {productoDetalleModal.tieneVariaciones 
+                                        ? `${(productoDetalleModal.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                        : (productoDetalleModal.controlaStock ? `${productoDetalleModal.stockActual} u.` : 'Infinito')}
+                                </h4>
+                            </div>
+                        </div>
+
+                        {/* DETALLES DE PROVEEDOR, GARANTÍA Y DESCRIPCIÓN */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', background: '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
+                            <div>
+                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTruck /> PROVEEDOR HOMOLOGADO</small>
+                                <strong style={{ color: '#f8fafc', fontSize: '0.9rem' }}>{productoDetalleModal.proveedor || 'No especificado'}</strong>
+                            </div>
+
+                            <div>
+                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaShieldAlt /> GARANTÍA OFICIAL</small>
+                                <strong style={{ color: '#fb923c', fontSize: '0.9rem' }}>{productoDetalleModal.garantiaDias > 0 ? `${productoDetalleModal.garantiaDias} días` : 'Sin garantía'}</strong>
+                            </div>
+
+                            {productoDetalleModal.esDigital && productoDetalleModal.esSuscripcion && (
+                                <div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTv /> VIGENCIA STREAMING</small>
+                                    <strong style={{ color: '#f43f5e', fontSize: '0.9rem' }}>{productoDetalleModal.diasDuracion} días por ciclo</strong>
+                                </div>
+                            )}
+
+                            <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #334155', paddingTop: '8px' }}>
+                                <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>DESCRIPCIÓN TÉCNICA / NOTAS</small>
+                                <p style={{ margin: '3px 0 0 0', color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                                    {productoDetalleModal.descripcion || 'Sin descripción detallada.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* BUSCADOR DENTRO DEL HISTORIAL */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <FaHistory /> Historial de Ventas ({historialVentas.length})
+                            </h4>
+                        </div>
+
+                        <div className={styles.searchBox} style={{ minHeight: '42px' }}>
+                            <FaSearch className={styles.searchIcon} />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar cliente, cajero o factura #..." 
+                                value={busquedaHistorial} 
+                                onChange={e => setBusquedaHistorial(e.target.value)} 
+                                className={styles.searchInput} 
+                            />
+                            {busquedaHistorial && <button onClick={() => setBusquedaHistorial('')} className={styles.clearSearchBtn}><FaTimes /></button>}
+                        </div>
+
+                        {/* LISTA DE VENTAS */}
+                        <div className={styles.salesListScroll}>
+                            {cargandoHistorial ? (
+                                <div className={styles.loading}>Cargando ventas...</div>
+                            ) : ventasFiltradas.length === 0 ? (
+                                <div className={styles.emptyText}>No hay registros de ventas para este artículo.</div>
+                            ) : (
+                                ventasFiltradas.map((h, i) => (
+                                    <div key={i} className={styles.saleItemCard}>
+                                        <div className={styles.saleItemHeader}>
+                                            <strong>Factura #{h.ventaId}</strong>
+                                            <span className={styles.saleDate}>{h.fecha}</span>
+                                        </div>
+                                        <div className={styles.saleItemDetails}>
+                                            <span>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin teléfono'})</span>
+                                            <div className={styles.salePriceRow}>
+                                                <span>{h.cantidad}x C$ {h.precioUnitario.toLocaleString()}</span>
+                                                <strong className={styles.textCyan}>Total: C$ {h.subTotal.toLocaleString()}</strong>
+                                            </div>
+                                            <small className={styles.textMuted}>Pago: {h.metodoPago} • Cajero: {h.operador}</small>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* BOTÓN CERRAR */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #334155', paddingTop: '10px' }}>
+                            <button 
+                                type="button" 
+                                className={`${styles.btn} ${styles.btnSecondary}`} 
+                                style={{ minHeight: '44px', flex: 'none', padding: '0 20px' }}
+                                onClick={() => setProductoDetalleModal(null)}
+                            >
+                                Cerrar Ficha
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1299,48 +1432,6 @@ export const CatalogosAdmin: React.FC = () => {
                                     </div>
                                 );
                             })}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL HISTORIAL DE VENTAS */}
-            {productoHistorial && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContentWide}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}><FaHistory /> Historial: {productoHistorial.nombre}</h3>
-                            <button onClick={() => setProductoHistorial(null)} className={styles.modalCloseBtn}><FaTimes /></button>
-                        </div>
-
-                        <div className={styles.searchBox}>
-                            <FaSearch className={styles.searchIcon} />
-                            <input type="text" placeholder="Buscar venta, cliente, cajero..." value={busquedaHistorial} onChange={e => setBusquedaHistorial(e.target.value)} className={styles.searchInput} />
-                        </div>
-
-                        <div className={styles.salesListScroll}>
-                            {cargandoHistorial ? (
-                                <div className={styles.loading}>Cargando ventas...</div>
-                            ) : ventasFiltradas.length === 0 ? (
-                                <div className={styles.emptyText}>No hay registros de ventas.</div>
-                            ) : (
-                                ventasFiltradas.map((h, i) => (
-                                    <div key={i} className={styles.saleItemCard}>
-                                        <div className={styles.saleItemHeader}>
-                                            <strong>Factura #{h.ventaId}</strong>
-                                            <span className={styles.saleDate}>{h.fecha}</span>
-                                        </div>
-                                        <div className={styles.saleItemDetails}>
-                                            <span>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin tel'})</span>
-                                            <div className={styles.salePriceRow}>
-                                                <span>{h.cantidad}x C$ {h.precioUnitario}</span>
-                                                <strong className={styles.textCyan}>Total: C$ {h.subTotal}</strong>
-                                            </div>
-                                            <small className={styles.textMuted}>Pago: {h.metodoPago} • Cajero: {h.operador}</small>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
                         </div>
                     </div>
                 </div>
