@@ -3,10 +3,12 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory,
+    FaBoxes, FaSearch, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory,
     FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
+
+//despliegue
 
 export interface VariacionProducto {
     id?: number;
@@ -122,7 +124,7 @@ export const CatalogosAdmin: React.FC = () => {
     // MODAL CRUD DE VARIACIONES
     const [productoVariacionAbierto, setProductoVariacionAbierto] = useState<Producto | null>(null);
     const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
-    const [filtroColorVariacion, setFiltroColorVariacion] = useState<string>('Todos');
+    const [, setFiltroColorVariacion] = useState<string>('Todos');
     const [variacionEditandoIdx, setVariacionEditandoIdx] = useState<number | null>(null);
 
     // MODAL DE HISTORIAL DE VENTAS
