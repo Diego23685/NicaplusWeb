@@ -1,365 +1,774 @@
+/* =========================================================
+   CONTENEDOR BASE
+   ========================================================= */
 .container {
-  color: #ffffff;
-  font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #f1f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
+    min-height: 100vh;
 }
 
-.header h3 {
-  margin: 0;
-  color: #38bdf8;
-  font-size: 1.4rem;
-  font-weight: 700;
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.header p {
-  color: #94a3b8;
-  margin: 2px 0 0 0;
-  font-size: 0.85rem;
+.title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
 }
 
-/* Filtros rápidos */
-.filterContainer {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  flex-wrap: wrap;
+.subtitle {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.countBadge {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #38bdf8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+/* Filtros en barra desplazable horizontal táctil */
+.filterScroll {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.filterScroll::-webkit-scrollbar {
+    display: none;
 }
 
 .filterBtn {
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: bold;
-  transition: all 0.2s;
-  color: #ffffff;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    padding: 0.45rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
-.searchContainer {
-  position: relative;
-  width: 100%;
+.filterBtnActive {
+    background: #581c7e !important;
+    border-color: #a855f7 !important;
+    color: #ffffff !important;
+    font-weight: 700;
 }
 
-.input {
-  width: 100%;
-  padding: 10px 12px;
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
+/* Buscador */
+.searchBox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0 0.6rem;
+    height: 38px;
 }
 
-.input:focus {
-  border-color: #38bdf8;
+.searchIcon {
+    color: #64748b;
+    font-size: 0.85rem;
 }
 
-.textarea {
-  width: 100%;
-  height: 90px;
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  padding: 10px;
-  resize: none;
-  outline: none;
-  box-sizing: border-box;
+.searchInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    padding: 0 0.4rem;
+    font-size: 0.85rem;
 }
 
-.textarea:focus {
-  border-color: #ef4444;
+.clearBtn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0.2rem;
 }
 
-.select {
-  composes: input;
-  cursor: pointer;
+/* =========================================================
+   VISTA MÓVIL (FEED DE CARDS)
+   ========================================================= */
+.mobileCardsFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
-/* ==========================================================================
-   ESTRUCTURA DE TABLA CON SCROLL INTELIGENTE Y HEADERS STICKY
-   ========================================================================== */
+.renewalCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.renewalCard:active {
+    transform: scale(0.98);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+
+.cardTitleWrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cardServiceName {
+    font-size: 0.9rem;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cardClientName {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.cardCreds {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.credIcon {
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.cardMetaGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0;
+}
+
+.metaItem {
+    display: flex;
+    flex-direction: column;
+}
+
+.metaItemRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.costText {
+    color: #38bdf8;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.textRed { color: #ef4444; font-weight: 700; font-size: 0.7rem; }
+.textGreen { color: #10b981; font-weight: 700; font-size: 0.7rem; }
+.textNoRenovar { color: #f59e0b; font-size: 0.7rem; font-weight: 700; }
+
+/* Acciones en Mobile */
+.cardActions {
+    display: flex;
+    gap: 0.4rem;
+    border-top: 1px solid #334155;
+    padding-top: 0.5rem;
+    margin-top: 0.2rem;
+}
+
+.btnActionWhatsapp, .btnActionRenovar, .btnActionSecondary {
+    height: 38px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.btnActionWhatsapp {
+    flex: 1.2;
+    background: #22c55e;
+    color: #ffffff;
+}
+
+.btnActionRenovar {
+    flex: 1.2;
+    background: #0284c7;
+    color: #ffffff;
+}
+
+.btnActionSecondary {
+    width: 38px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+}
+
+.btnDisabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Badges de alerta */
+.badgeAlert {
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: #1e293b;
+    border-radius: 10px;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* =========================================================
+   VISTA ESCRITORIO (TABLA)
+   ========================================================= */
 .tablePanel {
-  background: #1e293b;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  display: flex;
-  flex-direction: column;
+    display: none;
+    background: #1e293b;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    overflow-x: auto;
 }
 
 .tableWrapper {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 70vh;
-  border: 1px solid #233249;
-  border-radius: 8px;
-  background-color: #0f172a;
-  box-sizing: border-box;
+    width: 100%;
 }
 
 .table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
 }
 
-.table thead th {
-  position: sticky;
-  top: 0;
-  background-color: #1e293b;
-  color: #94a3b8;
-  padding: 12px 14px;
-  font-weight: 600;
-  z-index: 10;
-  border-bottom: 2px solid #334155;
-  white-space: nowrap;
-  text-align: left;
+.table th {
+    background: #0f172a;
+    padding: 0.75rem 1rem;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #334155;
 }
 
-.table tbody td {
-  padding: 12px 14px;
-  border-bottom: 1px solid #1e293b;
-  vertical-align: middle;
-  white-space: nowrap;
+.table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    vertical-align: middle;
 }
 
-.table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.01);
+.tableRowClickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.tableRowClickable:hover {
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.rowSelected {
+    background: rgba(56, 189, 248, 0.08) !important;
 }
 
 .subText {
-  display: block;
-  color: #64748b;
+    display: block;
+    font-size: 0.7rem;
+    color: #94a3b8;
 }
 
-.subTextCredenciales {
-  display: block;
-  color: #94a3b8;
-  font-size: 0.75rem;
-  max-width: 250px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.subTextCredencialesTruncate {
+    display: block;
+    font-size: 0.7rem;
+    color: #cbd5e1;
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.textNoRenovarBlock {
+    display: block;
+    color: #f59e0b;
+    margin-top: 4px;
+    font-weight: bold;
+    font-size: 0.7rem;
 }
 
 .actionsCellWrapper {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
 }
 
-/* Botones de celdas */
-.btnAvisar {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #25d366;
-  color: #ffffff;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 0.8rem;
+.btnAvisar, .btnRenovar, .btnCancelarRow, .btnHistorialIcon {
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
-.btnHistorialIcon {
-  background: #334155;
-  color: #ffffff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
+.btnAvisar { background: #22c55e; color: #fff; }
+.btnRenovar { background: #0284c7; color: #fff; }
+.btnCancelarRow { background: #334155; color: #f87171; }
+.btnHistorialIcon { background: #0f172a; border: 1px solid #334155; color: #38bdf8; }
+
+.tableEmptyText {
+    padding: 2.5rem;
+    color: #64748b;
+    font-style: italic;
+    text-align: center;
 }
 
-.btnRenovar {
-  background: #1e293b;
-  color: #ffffff;
-  border: 1px solid #334155;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+/* =========================================================
+   DRAWER / GAVETA ADAPTABLE
+   ========================================================= */
+.drawerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
 }
 
-.btnCancelarRow {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+.drawerContainer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    max-width: 440px;
+    background: #0f172a;
+    border-left: 1px solid #334155;
+    z-index: 110;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
-.btnAvisar:hover, .btnHistorialIcon:hover, .btnRenovar:hover, .btnCancelarRow:hover {
-  opacity: 0.9;
+.drawerHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
 }
 
-/* Badges */
-.badgeAlert {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: bold;
+.drawerHeader h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #fff;
 }
 
-/* ==========================================================================
-   MODALES Y SIDEBARS
-   ========================================================================== */
-.sidebarHistorial {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 380px;
-  height: 100vh;
-  background: #0f172a;
-  border-left: 1px solid #334155;
-  padding: 20px;
-  overflow-y: auto;
-  z-index: 1000;
-  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.4);
-  box-sizing: border-box;
+.drawerSubhead {
+    font-size: 0.7rem;
+    color: #38bdf8;
+    font-weight: 700;
 }
 
-.sidebarHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.btnCloseDrawer {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.3rem;
 }
 
-.sidebarHeader h3 {
-  color: #38bdf8;
-  margin: 0;
+.drawerBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-.btnCloseSidebar {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  padding: 5px 10px;
+.drawerBadgeWrapper {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
 }
 
-.infoCard {
-  background: #1e293b;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 15px;
+.badgeNoRenovar {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
 }
 
-.infoCard strong {
-  display: block;
+.drawerSection h4 {
+    margin: 0 0 0.35rem 0;
+    font-size: 0.8rem;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
-.infoCard small {
-  display: block;
-  color: #94a3b8;
+.drawerSectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+}
+
+.btnVerHistorialDrawer {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #38bdf8;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.drawerCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    font-size: 0.8rem;
+}
+
+.drawerCard p {
+    margin: 0 0 0.3rem 0;
+}
+
+.drawerCard p:last-child {
+    margin-bottom: 0;
+}
+
+.credentialsBox {
+    background: #0b1120;
+    border-left: 3px solid #38bdf8;
+}
+
+.servicioTitle {
+    font-weight: 800;
+    color: #38bdf8;
+    margin-bottom: 0.25rem;
+}
+
+.fullCredentialsText {
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    line-height: 1.4;
+}
+
+.drawerCardGrid {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.montoHighlight {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #38bdf8;
+    margin: 0.15rem 0 0 0;
+}
+
+.historialContainerDrawer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
 .historialCard {
-  background: #1e293b;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.75rem;
 }
 
-.historialCard strong {
-  display: block;
+.historialCardTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.historialCard small {
-  display: block;
+.facturaBadge {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
 }
 
-.historialCard .vencimientoFuturo {
-  display: block;
-  margin-top: 8px;
-  color: #4ade80;
+.vencimientoFuturo {
+    color: #4ade80;
+    font-weight: 700;
 }
 
-.historialCard p {
-  color: #94a3b8;
-  font-size: 0.8rem;
-  margin: 4px 0 0 0;
+.obsText {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.7rem;
+    color: #94a3b8;
 }
 
-/* Modales Centrales */
+.loadingText, .emptyHistorial {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+    padding: 0.5rem 0;
+}
+
+.drawerFooter {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #1e293b;
+    border-top: 1px solid #334155;
+}
+
+.btnAvisarDrawer, .btnRenovarDrawer {
+    flex: 1;
+    height: 42px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.btnAvisarDrawer { background: #22c55e; color: #fff; }
+.btnRenovarDrawer { background: #0284c7; color: #fff; }
+
+/* =========================================================
+   MODALES (PAGO Y CANCELACIÓN)
+   ========================================================= */
 .modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 120;
 }
 
-.modalBox {
-  width: 420px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 25px;
-  color: #ffffff;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
+.modalBox, .modalBoxRed {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 440px;
+    padding: 1.25rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-.modalBox h3 {
-  margin-Top: 0;
+.modalBoxRed { border-top: 4px solid #ef4444; }
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.modalTitle { margin: 0; font-size: 1rem; color: #38bdf8; }
+.modalTitleRed { margin: 0; font-size: 1rem; color: #f87171; }
+.modalCloseBtn { background: none; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; }
+
+.infoCard {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+}
+
+.infoCard strong { color: #38bdf8; }
+.infoCard small { color: #94a3b8; }
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
 }
 
 .label {
-  display: block;
-  margin-bottom: 5px;
-  font-size: 0.85rem;
-  color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    height: 38px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #fff;
+    padding: 0 0.55rem;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.textarea {
+    height: auto;
+    padding: 0.55rem;
+    resize: vertical;
 }
 
 .modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
 }
 
-.btnModalClose {
-  background: #334155;
-  color: #ffffff;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
+.btnModalConfirm, .btnModalClose, .btnModalCancelAction {
+    flex: 1;
+    height: 42px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
-.btnModalConfirm {
-  background: #16a34a;
-  color: #ffffff;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
+.btnModalConfirm { background: #10b981; color: #fff; }
+.btnModalClose { background: #334155; color: #cbd5e1; }
+.btnModalCancelAction { background: #ef4444; color: #fff; }
+
+/* Loader */
+.loadingScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+    gap: 0.75rem;
+    color: #38bdf8;
+    font-size: 0.85rem;
 }
 
-.btnModalCancelAction {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
+.loaderPulse {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #38bdf8;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================================
+   BREAKPOINTS: TABLETS & DESKTOP (>= 768px / >= 1024px)
+   ========================================================= */
+@media (min-width: 768px) {
+    .mobileCardsFeed {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .mobileCardsFeed {
+        display: none;
+    }
+
+    .tablePanel {
+        display: block;
+    }
 }

@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import { FaWhatsapp, FaHistory, FaTimes, FaSearch, FaDollarSign, FaBan, FaCalendarAlt, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { 
+    FaWhatsapp, FaTimes, FaUser, FaKey, FaCalendarAlt, 
+    FaHistory, FaSearch, FaMoneyBillWave, FaBan, FaCheck,
+    FaExclamationCircle, FaShieldAlt
+} from 'react-icons/fa';
+import styles from '../assets/styles/Renovaciones.module.css';
 
 interface Cliente {
     nombre: string;
@@ -26,6 +31,7 @@ interface HistorialRenovacion {
     fechaPago: string;
     nuevaFechaVencimiento: string;
     observacion: string;
+    idVenta?: number;
 }
 
 export const Renovaciones: React.FC = () => {
@@ -34,20 +40,21 @@ export const Renovaciones: React.FC = () => {
     const [busqueda, setBusqueda] = useState<string>('');
     const [cargando, setCargando] = useState<boolean>(true);
 
-    // ESTADO PARA EXPANDIR / COLAPSAR TARJETAS POR ID
-    const [tarjetaExpandidaId, setTarjetaExpandidaId] = useState<number | null>(null);
+    const [registroDrawer, setRegistroDrawer] = useState<Suscripcion | null>(null);
 
     const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(false);
     const [historialRenovaciones, setHistorialRenovaciones] = useState<HistorialRenovacion[]>([]);
-    const [servicioSeleccionado, setServicioSeleccionado] = useState<Suscripcion | null>(null);
     const [cargandoHistorial, setCargandoHistorial] = useState<boolean>(false);
 
+    // Estados de Renovación
     const [mostrarRenovar, setMostrarRenovar] = useState<boolean>(false);
     const [suscripcionRenovar, setSuscripcionRenovar] = useState<Suscripcion | null>(null);
     const [monto, setMonto] = useState<number>(0);
+    const [diasRenovacion, setDiasRenovacion] = useState<number>(30);
     const [metodoPago, setMetodoPago] = useState<string>('Efectivo');
     const [fechaPago, setFechaPago] = useState<string>('');
 
+    // Estados de Cancelación
     const [mostrarCancelar, setMostrarCancelar] = useState<boolean>(false);
     const [motivoCancelacion, setMotivoCancelacion] = useState<string>('');
 
@@ -63,6 +70,11 @@ export const Renovaciones: React.FC = () => {
         try {
             const res = await api.get<Suscripcion[]>('/suscripciones/alertas');
             setSuscripciones(res.data || []);
+            
+            if (registroDrawer) {
+                const actualizado = res.data?.find(s => s.id === registroDrawer.id);
+                if (actualizado) setRegistroDrawer(actualizado);
+            }
         } catch (err) {
             console.error("Error al traer alertas de renovación:", err);
         } finally {
@@ -78,14 +90,29 @@ export const Renovaciones: React.FC = () => {
         const termino = busqueda.toLowerCase();
         return suscripciones.filter(s => {
             const coincideTexto = s.nombreServicio.toLowerCase().includes(termino) || 
-                                  (s.cliente?.nombre?.toLowerCase().includes(termino) ?? false);
+                                  (s.cliente?.nombre?.toLowerCase().includes(termino) ?? false) ||
+                                  s.detallesCredenciales.toLowerCase().includes(termino);
             const coincideAlerta = filtroAlerta === 'Todos' ? true : s.alertaFiltro === filtroAlerta;
             return coincideTexto && coincideAlerta;
         });
     }, [suscripciones, busqueda, filtroAlerta]);
 
-    const toggleExpandirTarjeta = (id: number) => {
-        setTarjetaExpandidaId(prevId => (prevId === id ? null : id));
+    const handleCambioDias = (nuevosDias: number) => {
+        setDiasRenovacion(nuevosDias);
+        if (suscripcionRenovar) {
+            const costoDiario = suscripcionRenovar.costoRenovacion / 30;
+            const nuevoMonto = Math.round(costoDiario * nuevosDias);
+            setMonto(nuevoMonto);
+        }
+    };
+
+    const abrirModalRenovacion = (s: Suscripcion) => {
+        setSuscripcionRenovar(s);
+        setDiasRenovacion(30);
+        setMonto(s.costoRenovacion);
+        setMetodoPago('Efectivo');
+        setFechaPago(obtenerFechaLocalHoy());
+        setMostrarRenovar(true);
     };
 
     const dispararRecordatorioWhatsApp = (item: Suscripcion) => {
@@ -93,26 +120,62 @@ export const Renovaciones: React.FC = () => {
             alert("Este cliente no cuenta con un teléfono registrado.");
             return;
         }
+
         const telefonoLimpio = item.cliente.telefono.replace(/[^0-9]/g, '');
-        const fechaFormateada = new Date(item.fechaVencimiento).toLocaleDateString();
+        const clienteNombre = item.cliente.nombre || 'Cliente';
+        const plataformaPlan = item.nombreServicio;
+        const credenciales = item.detallesCredenciales || 'No especificada';
+        const montoTotal = item.costoRenovacion ?? 0;
 
-        let saludoUrgencia = `vence el ${fechaFormateada}`;
-        if (item.diasRestantes === 0) saludoUrgencia = "*VENCE HOY MISMO*";
-        if (item.diasRestantes < 0) saludoUrgencia = "*SE ENCUENTRA VENCIDO*";
+        const fechaObj = new Date(item.fechaVencimiento);
+        const fechaVencimiento = new Intl.DateTimeFormat('es-ES', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }).format(fechaObj).replace(' de ', ' de ').replace(/ de (\d{4})$/, ' del $1');
 
-        const mensaje = `*NICAPLUS GAMING & TECH*\n` +
-            `Hola ${item.cliente.nombre}, te saludamos de NICAPLUS.\n` +
-            `Te notificamos que tu servicio de *${item.nombreServicio}* ${saludoUrgencia}.\n\n` +
-            `Puedes realizar tu depósito o transferencia para procesar tu renovación y evitar la caída o corte de tu perfil.\n\n` +
-            `¡Gracias por tu preferencia!`;
+        let mensaje = '';
 
-        window.open(`https://wa.me/505${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        if (item.diasRestantes === 0) {
+            mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
+                `Hola, *${clienteNombre}*. 👋\n\n` +
+                `Te saludamos de *NICAPLUS STREAM.*\n\n` +
+                `Te recordamos que tu suscripción de *${plataformaPlan}*\n\n` +
+                `- (${credenciales})\n\n` + 
+                `- *Vence el día de hoy* (${fechaVencimiento}).\n\n` +
+                `- 💳 *Costo de renovación:* C$ ${montoTotal}\n\n` +
+                `Para evitar la suspensión de tu servicio, realiza tu pago y envíanos el comprobante por este mismo chat.\n\n` +
+                `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
+        } else if (item.diasRestantes < 0) {
+            mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
+                `Hola, *${clienteNombre}*. 👋\n\n` +
+                `Te saludamos de *NICAPLUS STREAM.*\n\n` +
+                `Te notificamos que tu suscripción de *${plataformaPlan}* \n\n` +
+                `- (${credenciales})\n\n` + 
+                `- *Se encuentra vencida desde el* ${fechaVencimiento}.\n\n` +
+                `- 💳 *Costo de renovación:* C$ ${montoTotal}\n\n` +
+                `Para renovar tu servicio, realiza tu depósito o transferencia y envíanos el comprobante por este mismo chat.\n\n` +
+                `- ⚠️ *Importante:* Si la renovación no se realiza a tiempo, el perfil podrá ser suspendido o reasignado de acuerdo con la disponibilidad del servicio.\n\n` +
+                `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
+        } else {
+            const diasTexto = item.diasRestantes === 1 ? '1 día' : `${item.diasRestantes} días`;
+            mensaje = `🎬 *NICAPLUS STREAM*\n\n` +
+                `Hola, *${clienteNombre}*. 👋\n\n` +
+                `Te saludamos de *NICAPLUS STREAM.*\n\n` +
+                `Te informamos que tu suscripción de *${plataformaPlan}* (${credenciales})\n\n` +
+                `- *Vence en* ${diasTexto}, el ${fechaVencimiento}.\n\n` +
+                `- 💳 *Costo de renovación:* C$ ${montoTotal}\n\n` +
+                `Te recomendamos estar atento a la fecha de vencimiento para evitar interrupciones en tu servicio.\n\n` +
+                `- 📎 Una vez realizado el pago, envíanos tu comprobante por este mismo chat para procesar tu renovación.\n\n` +
+                `¡Gracias por elegir *NICAPLUS STREAM*! 💙`;
+        }
+
+        window.open(`https://api.whatsapp.com/send/?phone=505${telefonoLimpio}&text=${encodeURIComponent(mensaje)}`, '_blank');
     };
 
     const abrirHistorial = async (suscripcion: Suscripcion) => {
         try {
             setCargandoHistorial(true);
-            setServicioSeleccionado(suscripcion);
             const res = await api.get<HistorialRenovacion[]>(`/renovaciones/suscripcion/${suscripcion.id}`);
             setHistorialRenovaciones(res.data || []);
             setMostrarHistorial(true);
@@ -130,18 +193,27 @@ export const Renovaciones: React.FC = () => {
             alert("Por favor seleccione una fecha válida.");
             return;
         }
+        if (diasRenovacion <= 0) {
+            alert("Ingrese un número válido de días para la renovación.");
+            return;
+        }
+
+        const esCredito = metodoPago === 'Credito';
 
         try {
             const datos = {
                 idSuscripcion: suscripcionRenovar.id,
                 monto: monto,
+                dias: diasRenovacion,
                 metodoPago: metodoPago,
                 fechaPago: fechaPago,
-                observacion: `Renovación ${suscripcionRenovar.nombreServicio}`
+                observacion: esCredito 
+                    ? `[CRÉDITO PENDIENTE] Renovación por ${diasRenovacion} día(s) - ${suscripcionRenovar.nombreServicio}`
+                    : `Renovación por ${diasRenovacion} día(s) - ${suscripcionRenovar.nombreServicio}`
             };
 
             await api.post('/renovaciones', datos);
-            alert("Renovación procesada correctamente.");
+            alert(esCredito ? "Renovación a CRÉDITO registrada correctamente." : "Renovación procesada correctamente.");
             setMostrarRenovar(false);
             setSuscripcionRenovar(null);
             setCargando(true);
@@ -166,7 +238,6 @@ export const Renovaciones: React.FC = () => {
             });
             
             alert(res.data.mensaje || "Operación procesada correctamente."); 
-            
             setMostrarCancelar(false);
             setSuscripcionRenovar(null);
             setMotivoCancelacion("");
@@ -190,300 +261,472 @@ export const Renovaciones: React.FC = () => {
         return estilos[alerta] || estilos['Normal'];
     };
 
-    if (cargando) return (
-        <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>
-            Auditando cronología de vencimientos...
-        </div>
-    );
+    if (cargando) {
+        return (
+            <div className={styles.loadingScreen}>
+                <div className={styles.loaderPulse} />
+                <span>Auditando cronología de vencimientos...</span>
+            </div>
+        );
+    }
 
     return (
-        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
-            
-            {/* ENCABEZADO */}
-            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className={styles.container}>
+            {/* 1. ENCABEZADO */}
+            <header className={styles.header}>
                 <div>
-                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Alertas de Renovación</h3>
-                    <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Monitoreo de cuentas streaming y licencias</small>
+                    <h3 className={styles.title}>Control de Renovaciones</h3>
+                    <p className={styles.subtitle}>Monitoreo preventivo de streaming y cuentas activas.</p>
                 </div>
+                <span className={styles.countBadge}>{suscripcionesFiltradas.length} en radar</span>
+            </header>
 
-                {/* Filtros horizontales por estatus de alerta */}
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-                    {['Todos', 'Vencido', 'Hoy', '1 Dia', '3 Dias', '7 Dias'].map((tipo) => (
-                        <button 
-                            key={tipo}
-                            onClick={() => setFiltroAlerta(tipo)}
-                            style={{
-                                background: filtroAlerta === tipo ? '#38bdf8' : '#0f172a',
-                                color: filtroAlerta === tipo ? '#0f172a' : '#94a3b8',
-                                border: '1px solid #334155',
-                                padding: '6px 12px',
-                                borderRadius: '16px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                whiteSpace: 'nowrap',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            {tipo === 'Todos' ? '👁️ Ver Todas' : tipo === 'Vencido' ? '🛑 Vencidas' : `⏰ ${tipo}`}
-                        </button>
-                    ))}
-                </div>
+            {/* 2. FILTROS EN BARRA SCROLLABLE TOUCH */}
+            <div className={styles.filterScroll}>
+                {['Todos', 'Vencido', 'Hoy', '1 Dia', '3 Dias', '7 Dias'].map((tipo) => (
+                    <button 
+                        key={tipo}
+                        onClick={() => setFiltroAlerta(tipo)}
+                        className={`${styles.filterBtn} ${filtroAlerta === tipo ? styles.filterBtnActive : ''}`}
+                    >
+                        {tipo === 'Todos' ? '👁️ Todas' : tipo === 'Vencido' ? '🛑 Vencidas' : `⏰ ${tipo}`}
+                    </button>
+                ))}
             </div>
 
-            {/* BÚSQUEDA INPUT */}
-            <div style={{ position: 'relative' }}>
-                <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
+            {/* 3. BARRA DE BÚSQUEDA RÁPIDA */}
+            <div className={styles.searchBox}>
+                <FaSearch className={styles.searchIcon} />
                 <input 
                     type="text" 
-                    placeholder="Buscar cliente o servicio..." 
+                    placeholder="Buscar cliente, servicio o credencial..." 
                     value={busqueda} 
                     onChange={e => setBusqueda(e.target.value)} 
-                    style={{
-                        width: '100%',
-                        padding: '10px 12px 10px 38px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '10px',
-                        color: '#fff',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                    }}
+                    className={styles.searchInput} 
                 />
+                {busqueda && (
+                    <button onClick={() => setBusqueda('')} className={styles.clearBtn} aria-label="Limpiar">
+                        <FaTimes />
+                    </button>
+                )}
             </div>
 
-            {/* FEED MÓVIL EN ACORDEÓN COMPACTO */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* 4. VISTA MÓVIL Y TABLET (FEED DE TARJETAS TÁCTILES) */}
+            <div className={styles.mobileCardsFeed}>
                 {suscripcionesFiltradas.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
-                        No hay renovaciones que requieran atención con este criterio.
-                    </div>
+                    <div className={styles.emptyState}>No se registran renovaciones bajo este filtro.</div>
                 ) : (
                     suscripcionesFiltradas.map((s) => {
                         const configBadge = badgeEstilo(s.alertaFiltro);
-                        const estaExpandido = tarjetaExpandidaId === s.id;
-
                         return (
                             <div 
                                 key={s.id} 
-                                style={{ 
-                                    background: '#1e293b', 
-                                    padding: '12px', 
-                                    borderRadius: '12px', 
-                                    border: '1px solid #334155', 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    gap: '8px' 
-                                }}
+                                onClick={() => setRegistroDrawer(s)}
+                                className={styles.renewalCard}
                             >
-                                {/* FILA COMPACTA PRINCIPAL: CLIENTE + INDICADOR + BOTÓN DESPLEGABLE */}
-                                <div 
-                                    onClick={() => toggleExpandirTarjeta(s.id)}
-                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ color: '#38bdf8', fontSize: '0.8rem' }}>
-                                            {estaExpandido ? <FaChevronUp /> : <FaChevronDown />}
-                                        </span>
-                                        <div>
-                                            <strong style={{ color: '#fff', fontSize: '0.9rem', display: 'block' }}>
-                                                {s.cliente?.nombre || 'Cliente Genérico'}
-                                            </strong>
-                                            <small style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                                                📞 {s.cliente?.telefono || 'Sin número'}
-                                            </small>
-                                        </div>
+                                <div className={styles.cardHeader}>
+                                    <div className={styles.cardTitleWrap}>
+                                        <strong className={styles.cardServiceName}>{s.nombreServicio}</strong>
+                                        <span className={styles.cardClientName}>👤 {s.cliente?.nombre || 'Genérico'}</span>
                                     </div>
+                                    <span className={styles.badgeAlert} style={{ background: configBadge.bg, color: configBadge.color }}>
+                                        {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
+                                    </span>
+                                </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ background: configBadge.bg, color: configBadge.color, border: `1px solid ${configBadge.color}`, padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700 }}>
-                                            {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
+                                <div className={styles.cardCreds}>
+                                    <FaKey size={10} className={styles.credIcon} />
+                                    <span>{s.detallesCredenciales}</span>
+                                </div>
+
+                                <div className={styles.cardMetaGrid}>
+                                    <div className={styles.metaItem}>
+                                        <small>Vencimiento:</small>
+                                        <strong>{new Date(s.fechaVencimiento).toLocaleDateString()}</strong>
+                                        <span className={s.diasRestantes < 0 ? styles.textRed : styles.textGreen}>
+                                            {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
                                         </span>
+                                    </div>
+                                    <div className={styles.metaItemRight}>
+                                        <small>Costo Base:</small>
+                                        <strong className={styles.costText}>C$ {s.costoRenovacion}</strong>
+                                        {s.estado === 'NoRenovar' && (
+                                            <span className={styles.textNoRenovar}>🚫 No renovará</span>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* CONTENIDO AMPLIADO / DESPLEGABLE (SOLO SE MUESTRA AL TOCAR LA TARJETA) */}
-                                {estaExpandido && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid #334155', paddingTop: '8px', marginTop: '2px' }}>
-                                        {/* Detalle del producto / servicio a renovar */}
-                                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #38bdf8', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <strong style={{ color: '#38bdf8', fontSize: '0.85rem' }}>📺 {s.nombreServicio}</strong>
-                                                <strong style={{ color: '#10b981', fontSize: '0.82rem' }}>C$ {s.costoRenovacion}</strong>
-                                            </div>
-                                            <small style={{ color: '#cbd5e1', fontSize: '0.72rem', wordBreak: 'break-all' }}>
-                                                {s.detallesCredenciales}
-                                            </small>
-                                        </div>
-
-                                        {/* Fechas de vencimiento y estatus */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                                            <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <FaCalendarAlt size={10} /> Vence: {new Date(s.fechaVencimiento).toLocaleDateString()}
-                                            </span>
-                                            <strong style={{ color: s.diasRestantes < 0 ? '#ef4444' : '#10b981', fontSize: '0.75rem' }}>
-                                                {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* BARRA FIJA DE BOTONES DE ACCIÓN (SIEMPRE VISIBLES) */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px', borderTop: '1px solid #334155', paddingTop: '8px' }}>
+                                {/* ACCIONES RÁPIDAS TOUCH */}
+                                <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); dispararRecordatorioWhatsApp(s); }}
-                                        style={{ background: '#25D366', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
-                                        title="Enviar aviso por WhatsApp"
+                                        onClick={() => dispararRecordatorioWhatsApp(s)} 
+                                        className={styles.btnActionWhatsapp}
+                                        title="Enviar WhatsApp"
                                     >
-                                        <FaWhatsapp /> Avisar
+                                        <FaWhatsapp size={14} /> <span>Avisar</span>
                                     </button>
 
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); abrirHistorial(s); }}
-                                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
-                                        title="Ver historial de pagos"
+                                    <button
+                                        onClick={() => abrirModalRenovacion(s)}
+                                        className={styles.btnActionRenovar}
                                     >
-                                        <FaHistory /> Hist.
+                                        <FaMoneyBillWave size={13} /> <span>Renovar</span>
                                     </button>
 
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSuscripcionRenovar(s);
-                                            setMonto(s.costoRenovacion);
-                                            setFechaPago(obtenerFechaLocalHoy());
-                                            setMostrarRenovar(true);
-                                        }}
-                                        style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                    <button
+                                        onClick={() => { setRegistroDrawer(s); abrirHistorial(s); }}
+                                        className={styles.btnActionSecondary}
+                                        title="Historial"
                                     >
-                                        <FaDollarSign /> Renovar
+                                        <FaHistory size={13} />
                                     </button>
 
-                                    <button 
+                                    <button
                                         disabled={s.estado === 'NoRenovar'}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
+                                        onClick={() => {
                                             setSuscripcionRenovar(s);
                                             setMotivoCancelacion("");
                                             setMostrarCancelar(true);
                                         }}
-                                        style={{ background: s.estado === 'NoRenovar' ? '#334155' : '#ef4444', color: '#fff', border: 'none', padding: '6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', cursor: s.estado === 'NoRenovar' ? 'not-allowed' : 'pointer', opacity: s.estado === 'NoRenovar' ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                        className={`${styles.btnActionSecondary} ${s.estado === 'NoRenovar' ? styles.btnDisabled : ''}`}
+                                        title="Cancelar"
                                     >
-                                        <FaBan /> Cancelar
+                                        <FaBan size={13} />
                                     </button>
                                 </div>
-
                             </div>
                         );
                     })
                 )}
             </div>
 
-            {/* MODAL HISTORIAL SIDEBAR */}
-            {mostrarHistorial && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '80vh', overflowY: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
-                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>📜 Historial de Pagos</h4>
-                            <button onClick={() => setMostrarHistorial(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+            {/* 5. VISTA ESCRITORIO (TABLA TRADICIONAL >= 1024px) */}
+            <div className={styles.tablePanel}>
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Servicio</th>
+                                <th>Vencimiento</th>
+                                <th style={{ textAlign: 'center' }}>Estatus Alerta</th>
+                                <th style={{ textAlign: 'center' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {suscripcionesFiltradas.map((s) => {
+                                const configBadge = badgeEstilo(s.alertaFiltro);
+                                const esSeleccionado = registroDrawer?.id === s.id;
+
+                                return (
+                                    <tr 
+                                        key={s.id} 
+                                        onClick={() => setRegistroDrawer(s)}
+                                        className={`${styles.tableRowClickable} ${esSeleccionado ? styles.rowSelected : ''}`}
+                                    >
+                                        <td>
+                                            <strong>{s.cliente?.nombre || 'Cliente Genérico'}</strong>
+                                            <small className={styles.subText}>📞 {s.cliente?.telefono || 'Sin número'}</small>
+                                        </td>
+                                        <td>
+                                            <strong>{s.nombreServicio}</strong>
+                                            <small className={styles.subTextCredencialesTruncate}>
+                                                {s.detallesCredenciales}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            {new Date(s.fechaVencimiento).toLocaleDateString()}
+                                            <small style={{ display: 'block', color: s.diasRestantes < 0 ? '#ef4444' : '#4ade80', fontWeight: 'bold' }}>
+                                                {s.diasRestantes < 0 ? `Hace ${Math.abs(s.diasRestantes)} días` : s.diasRestantes === 0 ? '¡Vence Hoy!' : `En ${s.diasRestantes} días`}
+                                            </small>
+                                        </td>
+                                        
+                                        <td style={{ textAlign: 'center' }}>
+                                            <span className={styles.badgeAlert} style={{ background: configBadge.bg, color: configBadge.color }}>
+                                                {s.alertaFiltro === 'Normal' ? 'Vigente ✓' : s.alertaFiltro}
+                                            </span>
+                                            {s.estado === 'NoRenovar' && (
+                                                <small className={styles.textNoRenovarBlock}>
+                                                    🚫 No renovará
+                                                </small>
+                                            )}
+                                        </td>
+
+                                        <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                            <div className={styles.actionsCellWrapper}>
+                                                <button onClick={() => dispararRecordatorioWhatsApp(s)} className={styles.btnAvisar}>
+                                                    <FaWhatsapp /> Avisar
+                                                </button>
+
+                                                <button onClick={() => { setRegistroDrawer(s); abrirHistorial(s); }} className={styles.btnHistorialIcon}>
+                                                    <FaHistory />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => abrirModalRenovacion(s)}
+                                                    className={styles.btnRenovar}
+                                                >
+                                                    💵 Renovar
+                                                </button>
+
+                                                <button
+                                                    disabled={s.estado === 'NoRenovar'}
+                                                    onClick={() => {
+                                                        setSuscripcionRenovar(s);
+                                                        setMotivoCancelacion("");
+                                                        setMostrarCancelar(true);
+                                                    }}
+                                                    className={`${styles.btnCancelarRow} ${s.estado === 'NoRenovar' ? styles.btnDisabled : ''}`}
+                                                >
+                                                    {s.estado === 'NoRenovar' ? '🚫' : '❌'}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {suscripcionesFiltradas.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className={styles.tableEmptyText}>
+                                        No se registran renovaciones que requieran atención bajo este criterio.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* 6. DRAWER / GAVETA DESPLEGABLE ADAPTABLE */}
+            {registroDrawer && (
+                <>
+                    <div className={styles.drawerOverlay} onClick={() => setRegistroDrawer(null)} />
+                    <aside className={styles.drawerContainer}>
+                        <div className={styles.drawerHeader}>
+                            <div>
+                                <h3>Detalle del Servicio</h3>
+                                <span className={styles.drawerSubhead}>ID Registro: #{registroDrawer.id}</span>
+                            </div>
+                            <button onClick={() => setRegistroDrawer(null)} className={styles.btnCloseDrawer}>
+                                <FaTimes />
+                            </button>
                         </div>
 
-                        {servicioSeleccionado && (
-                            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.78rem' }}>
-                                <strong style={{ color: '#fff', display: 'block' }}>{servicioSeleccionado.nombreServicio}</strong>
-                                <small style={{ color: '#94a3b8' }}>Cliente: {servicioSeleccionado.cliente?.nombre}</small>
+                        <div className={styles.drawerBody}>
+                            <div className={styles.drawerBadgeWrapper}>
+                                <span className={styles.badgeAlert} style={{ background: badgeEstilo(registroDrawer.alertaFiltro).bg, color: badgeEstilo(registroDrawer.alertaFiltro).color }}>
+                                    Estatus: {registroDrawer.alertaFiltro === 'Normal' ? 'Vigente ✓' : registroDrawer.alertaFiltro}
+                                </span>
+                                {registroDrawer.estado === 'NoRenovar' && (
+                                    <span className={styles.badgeNoRenovar}>🚫 Marcar como No Renovar</span>
+                                )}
                             </div>
-                        )}
 
-                        {cargandoHistorial ? (
-                            <p style={{ color: '#38bdf8', fontSize: '0.8rem', textAlign: 'center' }}>Cargando historial...</p>
-                        ) : historialRenovaciones.length === 0 ? (
-                            <p style={{ color: '#64748b', fontSize: '0.8rem', textAlign: 'center', margin: '14px 0' }}>Esta suscripción todavía no tiene renovaciones.</p>
-                        ) : (
-                            historialRenovaciones.map((r) => (
-                                <div key={r.id} style={{ background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <strong style={{ color: '#10b981' }}>C$ {r.monto}</strong>
-                                        <span style={{ color: '#94a3b8' }}>{r.metodoPago}</span>
-                                    </div>
-                                    <small style={{ color: '#64748b' }}>Pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
-                                    <small style={{ color: '#38bdf8', fontWeight: 700 }}>Nuevo vencimiento: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}</small>
-                                    {r.observacion && <p style={{ margin: '2px 0 0 0', color: '#cbd5e1', fontSize: '0.7rem' }}>{r.observacion}</p>}
+                            <div className={styles.drawerSection}>
+                                <h4><FaUser /> Datos del Cliente</h4>
+                                <div className={styles.drawerCard}>
+                                    <p><strong>Nombre:</strong> {registroDrawer.cliente?.nombre || 'Cliente Genérico'}</p>
+                                    <p><strong>Teléfono:</strong> {registroDrawer.cliente?.telefono || 'Sin número de contacto'}</p>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                            </div>
+
+                            <div className={styles.drawerSection}>
+                                <h4><FaKey /> Credenciales / Detalles</h4>
+                                <div className={`${styles.drawerCard} ${styles.credentialsBox}`}>
+                                    <p className={styles.servicioTitle}>{registroDrawer.nombreServicio}</p>
+                                    <div className={styles.fullCredentialsText}>
+                                        {registroDrawer.detallesCredenciales}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={styles.drawerSection}>
+                                <h4><FaCalendarAlt /> Estado Financiero</h4>
+                                <div className={styles.drawerCardGrid}>
+                                    <div>
+                                        <small>Costo Base Mensual</small>
+                                        <p className={styles.montoHighlight}>C$ {registroDrawer.costoRenovacion}</p>
+                                    </div>
+                                    <div>
+                                        <small>Fecha Vencimiento</small>
+                                        <p>{new Date(registroDrawer.fechaVencimiento).toLocaleDateString()}</p>
+                                        <small style={{ color: registroDrawer.diasRestantes < 0 ? '#ef4444' : '#4ade80', fontWeight: 'bold' }}>
+                                            {registroDrawer.diasRestantes < 0 ? `Vencido hace ${Math.abs(registroDrawer.diasRestantes)} días` : registroDrawer.diasRestantes === 0 ? '¡Vence Hoy!' : `Faltan ${registroDrawer.diasRestantes} días`}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={styles.drawerSection}>
+                                <div className={styles.drawerSectionHeader}>
+                                    <h4><FaHistory /> Historial de Pagos</h4>
+                                    <button 
+                                        onClick={() => abrirHistorial(registroDrawer)} 
+                                        className={styles.btnVerHistorialDrawer}
+                                    >
+                                        {mostrarHistorial ? 'Actualizar' : 'Ver Historial'}
+                                    </button>
+                                </div>
+
+                                {mostrarHistorial && (
+                                    <div className={styles.historialContainerDrawer}>
+                                        {cargandoHistorial ? (
+                                            <p className={styles.loadingText}>Cargando cronología...</p>
+                                        ) : historialRenovaciones.length === 0 ? (
+                                            <p className={styles.emptyHistorial}>Sin renovaciones previas registradas.</p>
+                                        ) : (
+                                            historialRenovaciones.map((r) => (
+                                                <div key={r.id} className={styles.historialCard}>
+                                                    <div className={styles.historialCardTop}>
+                                                        <strong>💰 C$ {r.monto}</strong>
+                                                        {r.idVenta && (
+                                                            <span className={styles.facturaBadge}>
+                                                                Factura #{r.idVenta}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <small>Método: {r.metodoPago}</small>
+                                                    <small>Pago: {new Date(r.fechaPago).toLocaleDateString()}</small>
+                                                    <small className={styles.vencimientoFuturo}>
+                                                        Nuevo Venc.: {new Date(r.nuevaFechaVencimiento).toLocaleDateString()}
+                                                    </small>
+                                                    {r.observacion && <p className={styles.obsText}>{r.observacion}</p>}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={styles.drawerFooter}>
+                            <button 
+                                onClick={() => dispararRecordatorioWhatsApp(registroDrawer)} 
+                                className={styles.btnAvisarDrawer}
+                            >
+                                <FaWhatsapp size={16} /> WhatsApp
+                            </button>
+                            <button
+                                onClick={() => abrirModalRenovacion(registroDrawer)}
+                                className={styles.btnRenovarDrawer}
+                            >
+                                💵 Renovar
+                            </button>
+                        </div>
+                    </aside>
+                </>
             )}
 
-            {/* MODAL PROCESAR RENOVACIÓN PAGO */}
+            {/* 7. MODAL PROCESAR PAGO */}
             {mostrarRenovar && suscripcionRenovar && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>💵 Procesar Renovación</h4>
-                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalBox}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>💵 Procesar Renovación</h3>
+                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} className={styles.modalCloseBtn}>
+                                <FaTimes />
+                            </button>
                         </div>
 
-                        <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.75rem' }}>
-                            <strong style={{ color: '#fff', display: 'block' }}>{suscripcionRenovar.nombreServicio}</strong>
-                            <small style={{ color: '#94a3b8', display: 'block' }}>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
-                            <small style={{ color: '#f59e0b', display: 'block' }}>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
+                        <div className={styles.infoCard}>
+                            <strong>{suscripcionRenovar.nombreServicio}</strong>
+                            <small>Cliente: {suscripcionRenovar.cliente?.nombre || 'Genérico'}</small>
+                            <small>Vencimiento actual: {new Date(suscripcionRenovar.fechaVencimiento).toLocaleDateString()}</small>
                         </div>
 
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Fecha de Pago</label>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Duración (Días)</label>
+                            <input 
+                                type="number"
+                                min={1}
+                                value={diasRenovacion} 
+                                onChange={e => handleCambioDias(Number(e.target.value))} 
+                                className={styles.input} 
+                                placeholder="Ej. 30, 60, 90..."
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Fecha de Pago</label>
                             <input 
                                 type="date" 
                                 value={fechaPago} 
                                 onChange={e => setFechaPago(e.target.value)} 
-                                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} 
+                                className={styles.input}
                             />
                         </div>
 
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Monto (C$)</label>
-                            <input type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Monto Total (C$)</label>
+                            <input 
+                                type="number" 
+                                value={monto} 
+                                onChange={e => setMonto(Number(e.target.value))} 
+                                className={styles.input} 
+                            />
                         </div>
 
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Método de Pago</label>
-                            <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Método de Pago</label>
+                            <select 
+                                value={metodoPago} 
+                                onChange={e => setMetodoPago(e.target.value)} 
+                                className={styles.select} 
+                            >
                                 <option value="Efectivo">Efectivo</option>
                                 <option value="Transferencia">Transferencia</option>
                                 <option value="Tarjeta">Tarjeta</option>
+                                <option value="Credito">🔴 Crédito (Pendiente)</option>
                             </select>
                         </div>
 
-                        <button onClick={procesarRenovacion} style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
-                            Confirmar Pago
-                        </button>
+                        <div className={styles.modalActions}>
+                            <button onClick={() => { setMostrarRenovar(false); setSuscripcionRenovar(null); }} className={styles.btnModalClose}>
+                                Cancelar
+                            </button>
+                            <button onClick={procesarRenovacion} className={styles.btnModalConfirm}>
+                                Confirmar Pago
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL CANCELAR SERVICIO */}
+            {/* 8. MODAL CANCELAR */}
             {mostrarCancelar && suscripcionRenovar && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ margin: 0, color: '#f87171', fontSize: '0.95rem' }}>❌ Cancelar Servicio</h4>
-                            <button onClick={() => setMostrarCancelar(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalBoxRed}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitleRed}>❌ Cancelar Servicio</h3>
+                            <button onClick={() => setMostrarCancelar(false)} className={styles.modalCloseBtn}>
+                                <FaTimes />
+                            </button>
                         </div>
 
-                        <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', fontSize: '0.75rem' }}>
-                            <strong style={{ color: '#fff', display: 'block' }}>{suscripcionRenovar.nombreServicio}</strong>
-                            <small style={{ color: '#94a3b8' }}>Cliente: {suscripcionRenovar.cliente?.nombre}</small>
+                        <div className={styles.infoCard}>
+                            <strong>{suscripcionRenovar.nombreServicio}</strong>
+                            <small>Cliente: {suscripcionRenovar.cliente?.nombre || 'Genérico'}</small>
                         </div>
 
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Motivo de Cancelación</label>
-                            <textarea value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)} rows={2} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} />
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Motivo de la cancelación *</label>
+                            <textarea 
+                                value={motivoCancelacion} 
+                                onChange={e => setMotivoCancelacion(e.target.value)} 
+                                className={styles.textarea} 
+                                placeholder="Escriba la razón de la suspensión..."
+                                rows={3}
+                            />
                         </div>
 
-                        <button onClick={procesarCancelacion} style={{ width: '100%', padding: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
-                            Confirmar Cancelación
-                        </button>
+                        <div className={styles.modalActions}>
+                            <button onClick={() => setMostrarCancelar(false)} className={styles.btnModalClose}>
+                                Volver
+                            </button>
+                            <button onClick={procesarCancelacion} className={styles.btnModalCancelAction}>
+                                Confirmar Cancelación
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

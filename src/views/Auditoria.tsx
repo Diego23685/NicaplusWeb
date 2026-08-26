@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../services/api';
+import styles from '../assets/styles/Auditoria.module.css';
 import { 
     FaSearch, FaFilter, FaHistory, FaSync, 
-    FaChevronLeft, FaChevronRight, FaPlusCircle, 
-    FaEdit, FaTrashAlt, FaInfoCircle 
+    FaChevronLeft, FaChevronRight, FaTimes,
+    FaUser, FaLayerGroup, FaClock
 } from 'react-icons/fa';
 
 interface Log {
@@ -18,14 +19,13 @@ interface Log {
 
 interface FormattedLog extends Log {
     accionEspanol: string;
-    colorTipo: string;
-    iconTipo: React.ReactNode;
+    badgeClass: string;
     detalleLimpio: string;
     tablaLimpia: string;
     usuarioDisplay: string;
 }
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 15;
 
 const MAPA_TABLAS: Record<string, string> = {
     cliente: 'Clientes',
@@ -69,15 +69,13 @@ export const Auditoria: React.FC = () => {
     const [cargando, setCargando] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Filtros y Paginación
     const [busqueda, setBusqueda] = useState<string>('');
     const [filtroTabla, setFiltroTabla] = useState<string>('todas');
     const [paginaActual, setPaginaActual] = useState<number>(1);
 
     const formatLog = useCallback((log: Log): FormattedLog => {
         let accionEspanol = log.accion;
-        let colorTipo = '#38bdf8';
-        let iconTipo = <FaInfoCircle />;
+        let badgeClass = styles.badgeDefault;
         let detalleLimpio = log.detalles;
         let usuarioNombre = log.nombreUsuario || `Usuario #${log.idUsuario}`;
 
@@ -95,8 +93,7 @@ export const Auditoria: React.FC = () => {
                     case 'insert':
                     case 'creacion':
                         accionEspanol = 'Creación';
-                        colorTipo = '#10b981';
-                        iconTipo = <FaPlusCircle />;
+                        badgeClass = styles.badgeAdded;
                         detalleLimpio = `El usuario ${usuarioNombre} registró en ${tablaLimpia}: "${destino}".`;
                         break;
 
@@ -104,8 +101,7 @@ export const Auditoria: React.FC = () => {
                     case 'update':
                     case 'modificacion':
                         accionEspanol = 'Modificación';
-                        colorTipo = '#f59e0b';
-                        iconTipo = <FaEdit />;
+                        badgeClass = styles.badgeModified;
                         detalleLimpio = `El usuario ${usuarioNombre} actualizó la información de "${destino}".`;
                         break;
 
@@ -113,8 +109,7 @@ export const Auditoria: React.FC = () => {
                     case 'delete':
                     case 'eliminacion':
                         accionEspanol = 'Eliminación';
-                        colorTipo = '#ef4444';
-                        iconTipo = <FaTrashAlt />;
+                        badgeClass = styles.badgeDeleted;
                         detalleLimpio = `El usuario ${usuarioNombre} eliminó el registro "${destino}".`;
                         break;
 
@@ -124,21 +119,9 @@ export const Auditoria: React.FC = () => {
                 }
             } else {
                 switch (log.accion.toLowerCase()) {
-                    case 'added': 
-                        accionEspanol = 'Creación'; 
-                        colorTipo = '#10b981'; 
-                        iconTipo = <FaPlusCircle />;
-                        break;
-                    case 'modified': 
-                        accionEspanol = 'Modificación'; 
-                        colorTipo = '#f59e0b'; 
-                        iconTipo = <FaEdit />;
-                        break;
-                    case 'deleted': 
-                        accionEspanol = 'Eliminación'; 
-                        colorTipo = '#ef4444'; 
-                        iconTipo = <FaTrashAlt />;
-                        break;
+                    case 'added': accionEspanol = 'Creación'; badgeClass = styles.badgeAdded; break;
+                    case 'modified': accionEspanol = 'Modificación'; badgeClass = styles.badgeModified; break;
+                    case 'deleted': accionEspanol = 'Eliminación'; badgeClass = styles.badgeDeleted; break;
                 }
             }
         } catch {
@@ -148,8 +131,7 @@ export const Auditoria: React.FC = () => {
         return {
             ...log,
             accionEspanol,
-            colorTipo,
-            iconTipo,
+            badgeClass,
             detalleLimpio,
             tablaLimpia,
             usuarioDisplay: usuarioNombre
@@ -165,7 +147,7 @@ export const Auditoria: React.FC = () => {
             setLogs(logsFormateados);
         } catch (err: any) {
             console.error("Error al cargar auditoría:", err);
-            setError("No se pudo obtener el historial de auditoría.");
+            setError("No se pudo obtener el historial de auditoría desde el servidor.");
         } finally {
             setCargando(false);
         }
@@ -198,147 +180,187 @@ export const Auditoria: React.FC = () => {
     const cambiarPagina = (nuevaPagina: number) => {
         if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
             setPaginaActual(nuevaPagina);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
     return (
-        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', boxSizing: 'border-box', paddingBottom: '24px' }}>
-            
-            {/* 1. ENCABEZADO Y CONTROLES */}
-            <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ color: '#38bdf8', margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-                    <FaHistory /> Auditoría y Movimientos
-                </h3>
+        <div className={styles.container}>
+            {/* 1. ENCABEZADO */}
+            <header className={styles.header}>
+                <div className={styles.titleWrap}>
+                    <h2 className={styles.title}>
+                        <FaHistory /> Auditoría
+                    </h2>
+                    <span className={styles.totalBadge}>{logsFiltrados.length} eventos</span>
+                </div>
                 <button 
                     onClick={fetchLogs} 
                     disabled={cargando}
-                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}
+                    className={styles.refreshBtn}
+                    aria-label="Refrescar auditoría"
                 >
-                    <FaSync className={cargando ? 'spin' : ''} /> Refrescar
+                    <FaSync className={cargando ? styles.spin : ''} /> 
+                    <span>Actualizar</span>
                 </button>
-            </div>
+            </header>
 
-            {/* 2. FILTROS Y BÚSQUEDA TÁCTIL */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
-                {/* Input Búsqueda */}
-                <div style={{ display: 'flex', alignItems: 'center', background: '#0f172a', padding: '0 12px', borderRadius: '8px', border: '1px solid #334155' }}>
-                    <FaSearch style={{ color: '#64748b', marginRight: '8px', fontSize: '0.85rem' }} />
+            {/* 2. FILTROS Y BÚSQUEDA */}
+            <section className={styles.filterSection}>
+                <div className={styles.searchBox}>
+                    <FaSearch className={styles.searchIcon} />
                     <input 
                         type="text" 
-                        placeholder="Buscar movimiento, usuario o detalle..." 
+                        placeholder="Buscar por usuario, acción, detalle..." 
                         value={busqueda}
                         onChange={(e) => { setBusqueda(e.target.value); setPaginaActual(1); }}
-                        style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', padding: '10px 0', outline: 'none', fontSize: '0.85rem' }}
+                        className={styles.searchInput}
                     />
+                    {busqueda && (
+                        <button 
+                            onClick={() => { setBusqueda(''); setPaginaActual(1); }} 
+                            className={styles.clearSearchBtn}
+                            aria-label="Limpiar búsqueda"
+                        >
+                            <FaTimes />
+                        </button>
+                    )}
                 </div>
 
-                {/* Filtro por Módulo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0f172a', padding: '8px 12px', borderRadius: '8px', border: '1px solid #334155' }}>
-                    <FaFilter style={{ color: '#38bdf8', fontSize: '0.8rem' }} />
+                <div className={styles.filterSelectBox}>
+                    <FaFilter className={styles.filterIcon} />
                     <select 
                         value={filtroTabla} 
                         onChange={(e) => { setFiltroTabla(e.target.value); setPaginaActual(1); }}
-                        style={{ width: '100%', background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                        className={styles.filterSelect}
                     >
-                        <option value="todas" style={{ background: '#1e293b' }}>Todos los Módulos</option>
-                        <option value="Clientes" style={{ background: '#1e293b' }}>Clientes</option>
-                        <option value="Ventas" style={{ background: '#1e293b' }}>Ventas</option>
-                        <option value="Productos" style={{ background: '#1e293b' }}>Productos</option>
-                        <option value="Suscripciones" style={{ background: '#1e293b' }}>Suscripciones</option>
-                        <option value="Caja y Gastos" style={{ background: '#1e293b' }}>Caja y Gastos</option>
-                        <option value="Soporte" style={{ background: '#1e293b' }}>Soporte</option>
-                        <option value="Usuarios" style={{ background: '#1e293b' }}>Usuarios</option>
+                        <option value="todas">Todos los Módulos</option>
+                        <option value="Clientes">Clientes</option>
+                        <option value="Ventas">Ventas</option>
+                        <option value="Productos">Productos</option>
+                        <option value="Suscripciones">Suscripciones</option>
+                        <option value="Caja y Gastos">Caja y Gastos</option>
+                        <option value="Soporte">Soporte</option>
+                        <option value="Usuarios">Usuarios</option>
                     </select>
                 </div>
-            </div>
+            </section>
 
-            {/* ESTADOS DE CARGA Y ERROR */}
+            {/* 3. ESTADOS DE CARGA Y ERROR */}
             {cargando && (
-                <div style={{ color: '#38bdf8', padding: '24px', textAlign: 'center', background: '#1e293b', borderRadius: '12px', fontSize: '0.85rem' }}>
-                    <FaSync className="spin" style={{ fontSize: '1.2rem', marginBottom: '8px' }} />
-                    <div>Cargando trazabilidad del sistema...</div>
+                <div className={styles.loadingBox}>
+                    <FaSync className={`${styles.spin} ${styles.loadingIcon}`} />
+                    <span>Cargando trazabilidad del sistema...</span>
                 </div>
             )}
 
             {error && (
-                <div style={{ color: '#f43f5e', padding: '12px', background: '#1e293b', borderRadius: '12px', border: '1px solid #f43f5e', fontSize: '0.85rem', textAlign: 'center' }}>
+                <div className={styles.errorBox}>
                     {error}
                 </div>
             )}
 
-            {/* 3. FEED / TIMELINE VERTICAL DE AUDITORÍA */}
+            {/* 4. RESULTADOS */}
             {!cargando && !error && (
                 <>
                     {logsPaginados.length === 0 ? (
-                        <div style={{ padding: '30px', textAlign: 'center', background: '#1e293b', borderRadius: '12px', color: '#94a3b8', fontSize: '0.85rem' }}>
-                            Sin registros coincidentes.
+                        <div className={styles.emptyState}>
+                            No se encontraron registros de auditoría que coincidan con la búsqueda.
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {logsPaginados.map(log => (
-                                <div 
-                                    key={log.id} 
-                                    style={{ 
-                                        background: '#1e293b', 
-                                        padding: '12px', 
-                                        borderRadius: '10px', 
-                                        borderLeft: `4px solid ${log.colorTipo}`, 
-                                        borderTop: '1px solid #334155',
-                                        borderRight: '1px solid #334155',
-                                        borderBottom: '1px solid #334155',
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        gap: '6px' 
-                                    }}
-                                >
-                                    {/* Encabezado del log */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: log.colorTipo, fontSize: '0.75rem', fontWeight: 700 }}>
-                                            {log.iconTipo} {log.accionEspanol.toUpperCase()} — {log.tablaLimpia}
+                        <>
+                            {/* VISTA MÓVIL / TABLET (FEED DE TARJETAS) */}
+                            <div className={styles.mobileContainer}>
+                                {logsPaginados.map(log => (
+                                    <article key={log.id} className={styles.card}>
+                                        <div className={styles.cardHeader}>
+                                            <span className={`${styles.badge} ${log.badgeClass}`}>
+                                                {log.accionEspanol}
+                                            </span>
+                                            <span className={styles.cardDate}>
+                                                <FaClock size={10} /> {formatearFechaServidor(log.fechaRegistro)}
+                                            </span>
                                         </div>
-                                        <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                                            {formatearFechaServidor(log.fechaRegistro)}
-                                        </span>
-                                    </div>
 
-                                    {/* Detalle principal */}
-                                    <div style={{ color: '#f8fafc', fontSize: '0.82rem', lineHeight: '1.3' }}>
-                                        {log.detalleLimpio}
-                                    </div>
+                                        <div className={styles.cardMeta}>
+                                            <span className={styles.cardUser}>
+                                                <FaUser size={10} /> {log.usuarioDisplay}
+                                            </span>
+                                            <span className={styles.cardModule}>
+                                                <FaLayerGroup size={10} /> {log.tablaLimpia}
+                                            </span>
+                                        </div>
 
-                                    {/* Footer / Usuario */}
-                                    <div style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'flex', gap: '4px', marginTop: '2px' }}>
-                                        <span>Ejecutado por:</span>
-                                        <strong style={{ color: '#38bdf8' }}>{log.usuarioDisplay}</strong>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* 4. PAGINADOR COMPACTO MÓVIL */}
-                    {logsFiltrados.length > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#1e293b', borderRadius: '10px', border: '1px solid #334155', marginTop: '4px' }}>
-                            <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
-                                Pág. {paginaActual} de {totalPaginas} ({logsFiltrados.length} reg.)
-                            </small>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button 
-                                    onClick={() => cambiarPagina(paginaActual - 1)}
-                                    disabled={paginaActual === 1}
-                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: paginaActual === 1 ? 'not-allowed' : 'pointer', opacity: paginaActual === 1 ? 0.4 : 1, fontSize: '0.8rem' }}
-                                >
-                                    <FaChevronLeft />
-                                </button>
-                                <button 
-                                    onClick={() => cambiarPagina(paginaActual + 1)}
-                                    disabled={paginaActual === totalPaginas}
-                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 12px', borderRadius: '6px', cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer', opacity: paginaActual === totalPaginas ? 0.4 : 1, fontSize: '0.8rem' }}
-                                >
-                                    <FaChevronRight />
-                                </button>
+                                        <p className={styles.cardDetails}>
+                                            {log.detalleLimpio}
+                                        </p>
+                                    </article>
+                                ))}
                             </div>
-                        </div>
+
+                            {/* VISTA DESKTOP (TABLA DE ALTA DENSIDAD) */}
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table}>
+                                    <thead className={styles.thead}>
+                                        <tr>
+                                            <th className={styles.th}>Fecha y Hora</th>
+                                            <th className={styles.th}>Usuario</th>
+                                            <th className={styles.th}>Operación</th>
+                                            <th className={styles.th}>Módulo</th>
+                                            <th className={styles.th}>Descripción de Actividad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {logsPaginados.map(log => (
+                                            <tr key={log.id} className={styles.tr}>
+                                                <td className={`${styles.td} ${styles.tdDate}`}>
+                                                    {formatearFechaServidor(log.fechaRegistro)}
+                                                </td>
+                                                <td className={`${styles.td} ${styles.tdUser}`}>
+                                                    <strong>{log.usuarioDisplay}</strong>
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <span className={`${styles.badge} ${log.badgeClass}`}>
+                                                        {log.accionEspanol}
+                                                    </span>
+                                                </td>
+                                                <td className={`${styles.td} ${styles.tdModule}`}>
+                                                    {log.tablaLimpia}
+                                                </td>
+                                                <td className={`${styles.td} ${styles.tdDetails}`}>
+                                                    {log.detalleLimpio}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* 5. CONTROLES DE PAGINACIÓN */}
+                            <footer className={styles.paginationFooter}>
+                                <small className={styles.paginationInfo}>
+                                    Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong>
+                                </small>
+                                <div className={styles.paginationActions}>
+                                    <button 
+                                        onClick={() => cambiarPagina(paginaActual - 1)}
+                                        disabled={paginaActual === 1}
+                                        className={styles.pageBtn}
+                                        aria-label="Página anterior"
+                                    >
+                                        <FaChevronLeft />
+                                    </button>
+                                    <button 
+                                        onClick={() => cambiarPagina(paginaActual + 1)}
+                                        disabled={paginaActual === totalPaginas}
+                                        className={styles.pageBtn}
+                                        aria-label="Página siguiente"
+                                    >
+                                        <FaChevronRight />
+                                    </button>
+                                </div>
+                            </footer>
+                        </>
                     )}
                 </>
             )}

@@ -1,855 +1,779 @@
-/* ClientesCRM.module.css */
-
+/* =========================================================
+   CONTENEDOR BASE
+   ========================================================= */
 .crmContainer {
-  display: flex;
-  gap: 20px;
-  width: 100%;
-  min-height: 100%;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  color: #ffffff;
-  box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #f1f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
+    min-height: 100vh;
 }
 
-/* ================= PANEL IZQUIERDO: DIRECTORIO ================= */
+/* =========================================================
+   1. DIRECTORIO (SIDEBAR)
+   ========================================================= */
 .crmSidebar {
-  width: 320px;
-  min-width: 320px;
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #334155;
-  height: calc(100vh - 130px);
-  box-sizing: border-box;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    box-sizing: border-box;
+}
+
+.sidebarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebarTitleWrap {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 
 .sidebarTitle {
-  margin: 0 0 12px 0;
-  color: #38bdf8;
-  font-size: 1.2rem;
-  font-weight: 700;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f8fafc;
 }
 
+.totalBadge {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #38bdf8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+}
+
+.btnNuevoCliente {
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* Buscador */
 .searchWrapper {
-  position: relative;
-  margin-bottom: 16px;
-}
-
-.searchInput {
-  width: 100%;
-  padding: 10px 12px 10px 36px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  color: #ffffff;
-  box-sizing: border-box;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.searchInput:focus {
-  border-color: #38bdf8;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0 0.6rem;
+    height: 38px;
 }
 
 .searchIcon {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  color: #64748b;
+    color: #64748b;
+    font-size: 0.85rem;
 }
 
-/* Lista de clientes scrollable */
+.searchInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    padding: 0 0.4rem;
+    font-size: 0.85rem;
+}
+
+.clearSearchBtn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0.2rem;
+}
+
+/* Lista de clientes */
 .clientList {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Scrollbar personalizado para el listado */
-.clientList::-webkit-scrollbar {
-  width: 6px;
-}
-.clientList::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 190px);
+    padding-right: 0.2rem;
 }
 
 .clientItem {
-  padding: 12px;
-  background: #0f172a;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid #334155;
-  transition: all 0.2s ease;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.15s ease;
 }
 
-.clientItem:hover {
-  border-color: #64748b;
-  background: #131d31;
+.clientItem:active {
+    transform: scale(0.98);
 }
 
 .clientItemActive {
-  background: #581c7e;
-  border-color: #a855f7;
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.08);
 }
 
-.clientItemActive:hover {
-  background: #581c7e;
+.clientItemTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .clientName {
-  font-weight: 700;
-  font-size: 0.95rem;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 75%;
 }
 
+.clientActions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.btnIconEdit, .btnIconDelete {
+    background: none;
+    border: none;
+    padding: 0.3rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+}
+
+.btnIconEdit { color: #f59e0b; }
+.btnIconDelete { color: #ef4444; }
+
 .clientMetaRow {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  font-size: 0.8rem;
-  color: #94a3b8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.clientPhone {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
 .sidebarTag {
-  background: #3b82f6;
-  color: #ffffff;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
 }
 
+.emptyList {
+    text-align: center;
+    padding: 2rem 0.5rem;
+    font-size: 0.8rem;
+    color: #64748b;
+}
 
-/* ================= PANEL DERECHO: EXPEDIENTE ================= */
+/* =========================================================
+   2. PANEL EXPEDIENTE (MAIN CONTENT)
+   ========================================================= */
 .crmMainContent {
-  flex: 1;
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 24px;
-  border: 1px solid #334155;
-  height: calc(100vh - 130px);
-  overflow-y: auto;
-  box-sizing: border-box;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
-/* Estado vacío */
-.emptyState {
-  height: 100%;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-  text-align: center;
+.mobileBackHeader {
+    margin-bottom: 0.5rem;
 }
 
-.emptyStateText {
-  margin: 0;
-  font-size: 0.95rem;
+.btnBackMobile {
+    background: none;
+    border: none;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
 }
 
-.loadingState {
-  color: #38bdf8;
-  text-align: center;
-  margin-top: 40px;
-  font-weight: 700;
-}
-
-/* Cabecera del expediente */
 .crmHeaderActions {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 16px;
-  margin-bottom: 20px;
-  gap: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.6rem;
+}
+
+.headerInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
 }
 
 .clientTitle {
-  margin: 0;
-  color: #ffffff;
-  font-size: 1.5rem;
-  font-weight: 700;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #f8fafc;
 }
 
 .registerDate {
-  color: #94a3b8;
-  margin: 4px 0 0 0;
-  font-size: 0.9rem;
+    margin: 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
 }
 
 .tagContainer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
 }
 
 .tag {
-  background: #ef4444;
-  color: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .noTags {
-  color: #64748b;
-  font-size: 0.8rem;
+    font-size: 0.7rem;
+    color: #64748b;
 }
 
-/* Botón de WhatsApp */
 .btnWhatsapp {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #25d366;
-  color: #ffffff;
-  padding: 10px 16px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 0.9rem;
-  width: 100%;
-  box-sizing: border-box;
-  transition: background-color 0.2s;
+    background: #22c55e;
+    color: #fff;
+    text-decoration: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    touch-action: manipulation;
 }
 
-.btnWhatsapp:hover {
-  background: #1ebd59;
-}
-
-
-/* ================= REJILLA KPI ================= */
+/* Grid de KPIs */
 .crmKpiGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
 }
 
-/* La clase base común para todas las tarjetas */
 .kpiCard {
-  background: #0f172a;
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid transparent; /* Base por defecto */
-}
-
-/* Modificadores nativos sin usar composes */
-.kpiCardInvertido {
-  border-left-color: #10b981;
-}
-
-.kpiCardActivo {
-  border-left-color: #38bdf8;
-}
-
-.kpiCardVencido {
-  border-left-color: #ef4444;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
 }
 
 .kpiLabel {
-  color: #94a3b8;
-  font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
 }
 
 .kpiValue {
-  margin: 6px 0 0 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
 }
 
-.valueInvertido {
-  color: #10b981;
-}
+.valueInvertido { color: #38bdf8; }
+.valueActivo { color: #10b981; }
+.valueVencido { color: #f87171; }
+.valueClub { color: #f59e0b; display: flex; align-items: center; gap: 0.3rem; }
 
-.valueActivo {
-  color: #38bdf8;
-}
-
-.valueVencido {
-  color: #ef4444;
-}
-
-
-/* ================= SECCIÓN DE OBSERVACIONES ================= */
+/* Observaciones */
 .observacionesBox {
-  background: #0f172a;
-  padding: 14px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  border: 1px solid #334155;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    margin-bottom: 0.6rem;
 }
 
 .observacionesTitle {
-  margin: 0 0 6px 0;
-  color: #f59e0b;
-  font-size: 0.9rem;
-  font-weight: 700;
+    margin: 0 0 0.3rem 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #38bdf8;
 }
 
 .observacionesContent {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #cbd5e1;
-  line-height: 1.4;
+    margin: 0;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    line-height: 1.35;
 }
 
-
-/* ================= SECCIONES DE HISTORIAL ================= */
+/* Grilla Historial */
 .crmHistoryGrid {
-  display: flex;
-  gap: 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
 }
 
 .crmHistoryColumn {
-  flex: 1;
-  min-width: 0;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-.columnHeaderCompras {
-  border-bottom: 1px solid #334155;
-  padding-bottom: 8px;
-  color: #38bdf8;
-  margin-top: 0;
-  font-weight: 700;
+.columnHeaderCompras, .columnHeaderServicios {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
-.columnHeaderServicios {
-  border-bottom: 1px solid #334155;
-  padding-bottom: 8px;
-  color: #a855f7;
-  margin-top: 0;
-  font-weight: 700;
-}
+.columnHeaderCompras { color: #38bdf8; }
+.columnHeaderServicios { color: #a855f7; }
 
 .listWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 0.2rem;
 }
 
-/* Tarjetas de compras */
 .compraItem {
-  background: #0f172a;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .compraInfo {
-  min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .compraTitle {
-  display: block;
-  font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+    font-size: 0.8rem;
+    color: #f8fafc;
 }
 
 .compraSub {
-  color: #64748b;
-  font-size: 0.75rem;
+    font-size: 0.7rem;
+    color: #94a3b8;
 }
 
 .compraPrice {
-  font-weight: 700;
-  color: #10b981;
-  white-space: nowrap;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #38bdf8;
 }
 
-.emptyText {
-  color: #64748b;
-  font-size: 0.8rem;
-  font-style: italic;
-}
-
-
-/* ================= SUB-ESTADOS DE SERVICIOS ================= */
 .sectionSubTitle {
-  color: #94a3b8;
-  font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  margin-top: 8px;
-  margin-bottom: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #94a3b8;
+    margin: 0.3rem 0 0.1rem 0;
+    letter-spacing: 0.5px;
 }
 
+/* Tarjetas de servicios */
 .serviceCard {
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
+    border-radius: 6px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border: 1px solid #334155;
 }
 
-/* Taller en revisión (Activo verde) */
-.serviceTallerAct {
-  background: #142820;
-  border-left: 3px solid #10b981;
+.serviceTallerAct { background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8; }
+.serviceSuscripAct { background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; }
+.serviceTallerHist { background: #1e293b; border-left: 3px solid #64748b; }
+.serviceSuscripExp { background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; }
+
+.serviceHeaderRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.serviceTallerActHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.serviceTallerActTitle {
-  color: #a7f3d0;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.serviceTitle {
+    font-size: 0.8rem;
+    color: #f8fafc;
 }
 
 .badgeService {
-  background: #06b6d4;
-  color: #ffffff;
-  font-size: 0.65rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
+    background: #0f172a;
+    color: #38bdf8;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
 }
 
-.serviceTallerActDesc {
-  color: #cbd5e1;
-  font-size: 0.8rem;
-  margin-top: 4px;
+.serviceDesc {
+    font-size: 0.75rem;
+    color: #cbd5e1;
 }
 
-.serviceDateMeta {
-  color: #64748b;
-  display: block;
-  margin-top: 4px;
-  font-size: 0.75rem;
+.serviceDate {
+    font-size: 0.65rem;
+    color: #94a3b8;
 }
 
-/* Suscripciones vigentes (Azul) */
-.serviceSuscripAct {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-left: 3px solid #38bdf8;
+.serviceDateActive {
+    font-size: 0.65rem;
+    color: #34d399;
+    font-weight: 700;
 }
 
-.serviceSuscripActTitle {
-  color: #ffffff;
-  display: block;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.serviceSuscripActSub {
-  color: #94a3b8;
-  font-size: 0.75rem;
-  margin-top: 2px;
-}
-
-.dateActiveMeta {
-  color: #38bdf8;
-  display: block;
-  margin-top: 4px;
-  font-weight: 700;
-  font-size: 0.75rem;
-}
-
-/* Taller entregado (Gris) */
-.serviceTallerHist {
-  background: #0f172a;
-  border: 1px solid #1e293b;
-  border-left: 3px solid #64748b;
-}
-
-.serviceTallerHistTitle {
-  font-weight: 700;
-  color: #94a3b8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.serviceTallerHistDesc {
-  color: #64748b;
-  font-size: 0.75rem;
-  margin-top: 4px;
-  font-style: italic;
-}
-
-/* Suscripciones expiradas (Rojo oscuro) */
-.serviceSuscripExp {
-  background: #2d1e24;
-  border-left: 3px solid #ef4444;
-}
-
-.serviceSuscripExpTitle {
-  color: #fca5a5;
-  display: block;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.serviceSuscripExpSub {
-  color: #ef4444;
-  font-size: 0.75rem;
-  margin-top: 2px;
-}
-
-
-/* ================= ESTADO DE DEUDAS ================= */
+/* Cuentas por cobrar */
 .deudaSection {
-  background: #0f172a;
-  padding: 14px;
-  border-radius: 8px;
-  margin-top: 16px;
-  margin-bottom: 24px;
-  border: 1px solid #334155;
+    margin-top: 0.4rem;
+    border-top: 1px solid #334155;
+    padding-top: 0.4rem;
 }
 
 .deudaTitle {
-  margin: 0 0 10px 0;
-  color: #ef4444;
-  font-size: 0.9rem;
-  font-weight: 700;
+    margin: 0 0 0.4rem 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #f87171;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.deudaList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .deudaCard {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #1e293b;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ef4444;
-  margin-bottom: 8px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    padding: 0.45rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.deudaCard:last-child {
-  margin-bottom: 0;
+.deudaInfo {
+    display: flex;
+    flex-direction: column;
 }
 
 .deudaCode {
-  font-size: 0.85rem;
-  font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fca5a5;
 }
 
 .deudaDate {
-  display: block;
-  color: #94a3b8;
-  font-size: 0.75rem;
+    font-size: 0.65rem;
+    color: #94a3b8;
 }
 
 .deudaMonto {
-  color: #ef4444;
-  font-weight: 700;
-}
-
-.noDeudaText {
-  color: #10b981;
-  font-size: 0.8rem;
-}
-
-
-/* ================= MEDIA QUERIES (RESPONSIVE) ================= */
-
-/* TABLETS (PANTALLAS MEDIANAS) */
-@media (max-width: 1024px) {
-  .crmContainer {
-    flex-direction: column;
-  }
-  .crmSidebar {
-    width: 100%;
-    min-width: 100%;
-    height: 280px;
-  }
-  .crmMainContent {
-    width: 100%;
-    height: auto;
-    overflow-y: visible;
-  }
-}
-
-/* CELULARES (PANTALLAS CHICAS) */
-@media (max-width: 640px) {
-  .crmHeaderActions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .crmKpiGrid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .crmHistoryGrid {
-    flex-direction: column;
-    gap: 24px;
-  }
-  .crmMainContent {
-    padding: 16px;
-  }
-}
-
-/* ================= NUEVOS ESTILOS INTEGRADOS (MODAL Y COMPONENTES CRM) ================= */
-
-/* Tarjeta KPI específica para Puntos Club en el Grid */
-.kpiCardClub {
-  background: #0f172a;
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid #a855f7; /* Púrpura para fidelización */
-  transition: transform 0.2s ease;
-}
-
-.kpiCardClub:hover {
-  transform: translateY(-2px);
-}
-
-.valueClub {
-  color: #a855f7;
-}
-
-/* Modales e Inputs de la interfaz enriquecida */
-.modalOverlay {
-  backdrop-filter: blur(4px); /* Suaviza el fondo oscuro del layout */
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Estilos para inputs y áreas de texto dentro del formulario modal */
-.modalOverlay input[type="text"],
-.modalOverlay input[type="email"],
-.modalOverlay input[type="number"],
-.modalOverlay textarea {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-}
-
-.modalOverlay input:focus,
-.modalOverlay textarea:focus {
-  outline: none;
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
-}
-
-/* Ajuste responsivo para botones del modal */
-.modalOverlay button {
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.modalOverlay button:active {
-  transform: scale(0.98);
-}
-
-/* Ajustes de espaciado y acoples para elementos de lista dinámica */
-.sidebarTag {
-  max-width: 90px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* Consistencia adaptativa para pantallas móviles */
-@media (max-width: 640px) {
-  .modalOverlay > div {
-    width: 90% !important;
-    margin: 20px;
-    padding: 18px !important;
-  }
-}
-
-/* Estilos para el botón Nuevo dentro del Sidebar */
-.btnNuevoCliente {
-    background: #2563eb; /* Azul corporativo limpio */
-    color: #ffffff;
-    border: none;
-    padding: 6px 12px;
     font-size: 0.85rem;
-    font-weight: 600;
-    border-radius: 6px;
+    font-weight: 800;
+    color: #ef4444;
+}
+
+.emptyText, .noDeudaText {
+    font-size: 0.75rem;
+    color: #64748b;
+    padding: 0.5rem 0;
+}
+
+/* Estados Vacíos y Cargas */
+.emptyState {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    transition: background 0.2s ease;
+    justify-content: center;
+    padding: 4rem 1rem;
+    color: #64748b;
+    text-align: center;
 }
 
-.btnNuevoCliente:hover {
-    background: #1d4ed8;
+.emptyStateIcon { color: #475569; }
+.emptyStateText { font-size: 0.85rem; max-width: 320px; margin: 0; }
+
+.loadingState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1rem;
+    gap: 0.75rem;
+    color: #38bdf8;
+    font-size: 0.85rem;
 }
 
-/* MODAL OVERLAY REAL */
+.loaderPulse {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #38bdf8;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================================
+   MODALES (REGISTRO & INTEGRIDAD)
+   ========================================================= */
 .modalOverlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(15, 23, 42, 0.75); /* Fondo oscuro semitransparente */
-    backdrop-filter: blur(4px); /* Efecto difuminado profesional */
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999; /* Por encima de todo el ERP */
-    animation: fadeIn 0.2s ease-out;
+    padding: 1rem;
+    z-index: 100;
 }
 
-.modalContent {
-    background: #1e293b; /* Color oscuro integrado con Nicaplus */
+.modalContent, .modalContentIntegridad {
+    background: #1e293b;
     border: 1px solid #334155;
-    width: 100%;
-    max-width: 480px;
     border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 440px;
+    padding: 1.25rem;
+    box-sizing: border-box;
+}
+
+.modalContentIntegridad {
+    border-top: 4px solid #ef4444;
 }
 
 .modalHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 0.6rem;
 }
 
-.modalTitle {
-    margin: 0;
-    color: #38bdf8;
-    font-size: 1.2rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.modalCloseBtn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.modalCloseBtn:hover {
-    color: #f1f5f9;
-}
+.modalTitle { margin: 0; font-size: 1rem; color: #fff; display: flex; align-items: center; gap: 0.4rem; }
+.modalTitleRed { margin: 0; font-size: 1rem; color: #f87171; display: flex; align-items: center; gap: 0.4rem; }
+.modalCloseBtn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1rem; }
 
 .modalForm {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 0.5rem;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 0.2rem;
 }
 
 .formGroup label {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: #94a3b8;
-    font-weight: 600;
 }
 
-.formGroup input, 
-.formGroup textarea {
+.formGroup input, .formGroup textarea {
+    width: 100%;
     background: #0f172a;
     border: 1px solid #334155;
-    color: #fff;
-    padding: 10px;
     border-radius: 6px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s;
-}
-
-.formGroup input:focus, 
-.formGroup textarea:focus {
+    color: #fff;
+    padding: 0.55rem;
+    font-size: 0.85rem;
+    box-sizing: border-box;
     outline: none;
-    border-color: #8800dd;
 }
 
-.formGroup textarea {
-    resize: none;
-    font-family: inherit;
-}
+.formGroup textarea { resize: vertical; }
 
 .modalActions {
     display: flex;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
-.btnGuardar {
+.btnGuardar, .btnCancelar, .btnEntendido {
     flex: 1;
-    background: #38bdf8;
-    color: #0f172a;
-    border: none;
-    padding: 11px;
-    border-radius: 6px;
+    height: 42px;
+    border-radius: 8px;
+    font-size: 0.85rem;
     font-weight: 700;
+    border: none;
     cursor: pointer;
+    touch-action: manipulation;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    transition: background 0.2s;
+    gap: 0.35rem;
 }
 
-.btnGuardar:hover {
-    background: #0ea5e9;
+.btnGuardar { background: #0284c7; color: #fff; }
+.btnCancelar { background: #334155; color: #cbd5e1; }
+.btnEntendido { background: #334155; color: #fff; }
+
+.modalActionsEnd {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.6rem;
 }
 
-.btnCancelar {
-    background: #334155;
-    color: #fff;
-    border: none;
-    padding: 11px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s;
+.integridadBody {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    line-height: 1.4;
+    padding: 0.5rem 0;
 }
 
-.btnCancelar:hover {
-    background: #475569;
+.integridadText { margin: 0 0 0.75rem 0; }
+
+.motivosBox {
+    background: #0f172a;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.motivosTitle {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.motivoItem {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+}
+
+.iconRed { color: #ef4444; }
+.iconGreen { color: #10b981; }
+.textRed { color: #f87171; }
+.textMuted { color: #64748b; }
+
+/* =========================================================
+   BREAKPOINTS: MÓVIL vs TABLETS & DESKTOP
+   ========================================================= */
+
+/* Comportamiento móvil (< 1024px) */
+@media (max-width: 1023px) {
+    .sidebarHiddenMobile {
+        display: none !important;
+    }
+
+    .mainHiddenMobile {
+        display: none !important;
+    }
+}
+
+/* Tablets en adelante (>= 768px) */
+@media (min-width: 768px) {
+    .crmKpiGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Escritorio (>= 1024px) */
+@media (min-width: 1024px) {
+    .crmContainer {
+        flex-direction: row;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .crmSidebar {
+        width: 340px;
+        flex-shrink: 0;
+    }
+
+    .crmMainContent {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sidebarHiddenMobile, .mainHiddenMobile {
+        display: flex !important;
+    }
+
+    .mobileBackHeader {
+        display: none;
+    }
+
+    .crmHistoryGrid {
+        grid-template-columns: 1fr 1fr;
+    }
 }

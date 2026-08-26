@@ -1,14 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
-    FaSearch, FaUser, FaTv, FaTimes,
-    FaCalendarDay, FaCalendarTimes,
-    FaMoneyBillWave, FaChevronDown, FaChevronUp
+    FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
+    FaChartLine, FaPercentage, FaExclamationTriangle, 
+    FaCalendarDay, FaCalendarTimes, FaClipboardList,
+    FaSearch, FaUser, FaTv, FaLock, FaTimes,
+    FaReceipt, FaUsers, FaTools, FaCheckCircle
 } from 'react-icons/fa';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { 
+    Chart as ChartJS, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    LineElement, 
+    BarElement, 
+    Title, 
+    Tooltip, 
+    Legend, 
+    Filler 
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+import styles from '../assets/styles/InicioDashboard.module.css';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
 interface InicioDashboardProps {
     setVistaActiva: (vista: any) => void;
@@ -31,10 +45,9 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
         alertas: []
     });
     const [cargando, setCargando] = useState(true);
-    const [periodoKPI, setPeriodoKPI] = useState<'dia' | 'semana' | 'mes'>('dia');
-    const [mostrarGrafica, setMostrarGrafica] = useState(false);
+    const [indicadores, setIndicadores] = useState<any>(null);
 
-    // Buscador Universal
+    // Búsqueda Universal
     const [query, setQuery] = useState('');
     const [resultados, setResultados] = useState<any>(null);
     const [buscando, setBuscando] = useState(false);
@@ -42,8 +55,9 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                const [resResumen] = await Promise.all([
-                    api.get('/reportes/resumen-dashboard')
+                const [resResumen, resIndicadores] = await Promise.all([
+                    api.get('/reportes/resumen-dashboard'),
+                    api.get('/reportes/indicadores')
                 ]);
 
                 setResumen({
@@ -61,8 +75,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     ultimosClientes: resResumen.data.ultimosClientes ?? [],
                     alertas: resResumen.data.alertas ?? []
                 });
+
+                setIndicadores(resIndicadores.data);
             } catch (err) {
-                console.error("Error al sincronizar dashboard:", err);
+                console.error("Error al sincronizar métricas del dashboard:", err);
             } finally {
                 setCargando(false);
             }
@@ -82,209 +98,323 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
             const res = await api.get(`/busqueda/universal?query=${valorQuery}`);
             setResultados(res.data);
         } catch (err) {
-            console.error("Error en búsqueda:", err);
+            console.error("Error en búsqueda universal:", err);
         }
     };
 
-    const ventasActuales = 
-        periodoKPI === 'dia' ? resumen.ventasDia :
-        periodoKPI === 'semana' ? resumen.ventasSemana : resumen.ventasMes;
+    const limpiarBuscador = () => {
+        setQuery('');
+        setResultados(null);
+        setBuscando(false);
+    };
+
+    const porcentajeMargen = resumen.ventasMes > 0 
+        ? ((resumen.utilidadMes / resumen.ventasMes) * 100).toFixed(1) 
+        : "0";
+
+    const tasaRenovacion = indicadores 
+        ? ((indicadores.renovacionesExitosas / (indicadores.renovacionesExitosas + indicadores.renovacionesPerdidas || 1)) * 100).toFixed(0)
+        : "0";
 
     const datosGraficaLinea = {
         labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
         datasets: [{
+            label: 'Ingresos (C$)',
             data: resumen.semanaFlujo,
             borderColor: '#38bdf8',
-            backgroundColor: 'rgba(56, 189, 248, 0.1)',
-            tension: 0.4,
+            backgroundColor: 'rgba(56, 189, 248, 0.08)',
+            tension: 0.35,
             fill: true,
-            pointRadius: 3
+            pointBackgroundColor: '#38bdf8',
+            pointHoverRadius: 6,
         }]
+    };
+
+    const datosGraficaBarra = {
+        labels: ['Prod', 'Dig', 'Sop'],
+        datasets: [{
+            label: 'Ventas (C$)',
+            data: resumen.rubros,
+            backgroundColor: ['#a855f7', '#10b981', '#38bdf8'],
+            borderRadius: 4,
+            borderSkipped: false,
+        }]
+    };
+
+    const opcionesComunes = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { 
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1e293b',
+                titleColor: '#38bdf8',
+                bodyColor: '#fff',
+                borderColor: '#334155',
+                borderWidth: 1,
+                padding: 8,
+                displayColors: false
+            }
+        },
+        scales: {
+            y: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 9 } } },
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+        }
     };
 
     if (cargando) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#94a3b8' }}>
-                <span>Cargando resumen...</span>
+            <div className={styles.loadingScreen}>
+                <div className={styles.loaderPulse} />
+                <span>Sincronizando cuadro de mando...</span>
             </div>
         );
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '30px' }}>
-            
-            {/* 1. BUSCADOR RÁPIDO UNIVERSAL */}
-            <div style={{ position: 'relative' }}>
-                <FaSearch style={{ position: 'absolute', left: '14px', top: '14px', color: '#64748b' }} />
+        <div className={styles.dashboardContainer}>
+            {/* 1. ENCABEZADO Y ACCESOS RÁPIDOS OPERATIVOS */}
+            <header className={styles.dashboardHeader}>
+                <div className={styles.headerInfo}>
+                    <h3 className={styles.headerTitle}>Panel de Control</h3>
+                    <span className={styles.liveBadge}>● ACTIVO</span>
+                </div>
+
+                <div className={styles.quickActionsGrid}>
+                    <button onClick={() => setVistaActiva('caja')} className={styles.btnActionPrimary}>
+                        <FaReceipt /> <span>Venta</span>
+                    </button>
+                    <button onClick={() => setVistaActiva('renovaciones')} className={styles.btnActionWarning}>
+                        <FaMoneyBillWave /> <span>Cobrar</span>
+                    </button>
+                    <button onClick={() => setVistaActiva('crm')} className={styles.btnActionSecondary}>
+                        <FaUsers /> <span>Clientes</span>
+                    </button>
+                    <button onClick={() => setVistaActiva('taller')} className={styles.btnActionSecondary}>
+                        <FaTools /> <span>Taller ({resumen.ticketsAbiertos})</span>
+                    </button>
+                </div>
+            </header>
+
+            {/* 2. BÚSQUEDA UNIVERSAL */}
+            <div className={styles.searchSection}>
+                <FaSearch className={styles.searchIcon} />
                 <input 
                     type="text" 
-                    placeholder="Buscar cliente, servicio o PIN..." 
+                    placeholder="Buscar cliente, número, cuenta o pin..." 
                     value={query}
                     onChange={e => ejecutarBusqueda(e.target.value)}
-                    style={{
-                        width: '100%',
-                        padding: '12px 36px 12px 42px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '12px',
-                        color: '#fff',
-                        fontSize: '0.9rem',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                    }}
+                    className={styles.searchInput}
                 />
                 {query && (
-                    <FaTimes 
-                        onClick={() => { setQuery(''); setBuscando(false); }} 
-                        style={{ position: 'absolute', right: '14px', top: '14px', color: '#64748b', cursor: 'pointer' }} 
-                    />
+                    <button onClick={limpiarBuscador} className={styles.searchClearBtn} aria-label="Limpiar búsqueda">
+                        <FaTimes />
+                    </button>
                 )}
             </div>
 
-            {/* VISTA DE RESULTADOS DE BÚSQUEDA */}
+            {/* 3. RESULTADOS DINÁMICOS O CUADRO COMPLETO */}
             {buscando ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {resultados?.clientes?.map((c: any, idx: number) => (
-                        <div key={idx} style={{ background: '#1e293b', padding: '12px', borderRadius: '10px', borderLeft: '4px solid #38bdf8' }}>
-                            <div style={{ color: '#fff', fontWeight: 600 }}><FaUser size={12} /> {c.nombre}</div>
-                            <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '4px' }}>📱 {c.telefono}</div>
-                        </div>
-                    ))}
-                    {resultados?.cuentas?.map((cu: any, idx: number) => (
-                        <div key={idx} style={{ background: '#1e293b', padding: '12px', borderRadius: '10px', borderLeft: cu.ocupado ? '4px solid #ef4444' : '4px solid #10b981' }}>
-                            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem' }}><FaTv size={12} /> {cu.servicio} — {cu.nombrePerfil}</div>
-                            <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '4px' }}>PIN: {cu.pin} | Clave: {cu.clave}</div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <>
-                    {/* 2. CARD CONSOLIDADA DE INGRESOS */}
-                    <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: '16px', padding: '18px', border: '1px solid #334155' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <span style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ingresos Registrados</span>
-                            {/* Selector de Periodo con llaves JSX corregidas */}
-                            <div style={{ display: 'flex', background: '#0f172a', borderRadius: '8px', padding: '2px', border: '1px solid #334155' }}>
-                                {(['dia', 'semana', 'mes'] as const).map(p => (
-                                    <button 
-                                        key={p} 
-                                        onClick={() => setPeriodoKPI(p)}
-                                        style={{
-                                            background: periodoKPI === p ? '#38bdf8' : 'transparent',
-                                            color: periodoKPI === p ? '#0f172a' : '#94a3b8',
-                                            border: 'none',
-                                            padding: '4px 8px',
-                                            borderRadius: '6px',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 700,
-                                            textTransform: 'capitalize',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {p}
-                                    </button>
+                <div className={styles.searchResultsWrapper}>
+                    {resultados?.clientes?.length > 0 && (
+                        <div className={styles.resultsCard}>
+                            <h4 className={styles.resultsTitle}><FaUser className={styles.textCyan} /> Clientes</h4>
+                            <div className={styles.resultsList}>
+                                {resultados.clientes.map((c: any, idx: number) => (
+                                    <div key={idx} className={styles.resultItem}>
+                                        <div className={styles.resultMain}>
+                                            <strong>{c.nombre}</strong>
+                                            <small>{c.telefono || 'Sin teléfono'}</small>
+                                        </div>
+                                        <div className={styles.resultTags}>
+                                            <span className={styles.badgeGreen}>Fac: {c.historialCompras?.length || 0}</span>
+                                            <span className={styles.badgePurple}>Act: {c.serviciosActivos?.length || 0}</span>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
+                    )}
 
-                        <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 800, marginBottom: '8px' }}>
-                            C$ {ventasActuales.toLocaleString('es-NI')}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', borderTop: '1px solid #334155', paddingTop: '12px', marginTop: '12px' }}>
-                            <div style={{ color: '#10b981' }}>
-                                <small style={{ color: '#64748b', display: 'block' }}>Utilidad Mes</small>
-                                <strong>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</strong>
-                            </div>
-                            <div style={{ color: '#38bdf8' }}>
-                                <small style={{ color: '#64748b', display: 'block' }}>Clientes Nuevos</small>
-                                <strong>+{resumen.cantidadClientesNuevos}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 3. ACCIONES Y COBROS URGENTES */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div 
-                            onClick={() => setVistaActiva('renovaciones')}
-                            style={{ background: '#1e293b', border: '1px solid #059669', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>
-                                <FaCalendarDay /> RENOVACIONES HOY
-                            </div>
-                            <div style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, marginTop: '4px' }}>
-                                {resumen.renovacionesHoy}
+                    {resultados?.cuentas?.length > 0 && (
+                        <div className={styles.resultsCard}>
+                            <h4 className={styles.resultsTitle}><FaTv className={styles.textPurple} /> Cuentas y Perfiles</h4>
+                            <div className={styles.resultsList}>
+                                {resultados.cuentas.map((cu: any, idx: number) => (
+                                    <div key={idx} className={`${styles.resultItem} ${cu.ocupado ? styles.borderRed : styles.borderGreen}`}>
+                                        <div className={styles.resultMain}>
+                                            <strong>{cu.servicio} — {cu.nombrePerfil}</strong>
+                                            <small>{cu.correoCuenta}</small>
+                                            <div className={styles.cryptoText}>
+                                                <span><FaLock size={10} /> PIN: <strong>{cu.pin}</strong></span>
+                                                <span>Pass: <strong>{cu.clave}</strong></span>
+                                            </div>
+                                        </div>
+                                        <span className={cu.ocupado ? styles.badgeRed : styles.badgeGreen}>
+                                            {cu.ocupado ? 'Ocupado' : 'LIBRE'}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
+                    )}
 
-                        <div 
-                            onClick={() => setVistaActiva('renovaciones')}
-                            style={{ background: '#1e293b', border: '1px solid #dc2626', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontSize: '0.75rem', fontWeight: 700 }}>
-                                <FaCalendarTimes /> VENCIDAS (COBRAR)
+                    {resultados?.clientes?.length === 0 && resultados?.cuentas?.length === 0 && (
+                        <div className={styles.noResultsCard}>No se encontraron registros.</div>
+                    )}
+                </div>
+            ) : (
+                <>
+                    {/* 4. HERO KPI (VENTAS DE HOY) + KPIS SECUNDARIOS EN SCROLL/GRID */}
+                    <div className={styles.heroKpiCard}>
+                        <div className={styles.heroKpiHeader}>
+                            <small>VENTAS DE HOY</small>
+                            <FaMoneyBillWave className={styles.textGreen} />
+                        </div>
+                        <h2 className={styles.heroKpiAmount}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h2>
+                        <div className={styles.heroActionsRow}>
+                            <div onClick={() => setVistaActiva('renovaciones')} className={styles.chipUrgent}>
+                                <FaCalendarTimes />
+                                <span>{resumen.renovacionesVencidas} Vencidas</span>
                             </div>
-                            <div style={{ color: '#ef4444', fontSize: '1.4rem', fontWeight: 800, marginTop: '4px' }}>
-                                {resumen.renovacionesVencidas}
+                            <div onClick={() => setVistaActiva('renovaciones')} className={styles.chipNeutral}>
+                                <FaCalendarDay />
+                                <span>{resumen.renovacionesHoy} Hoy</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* 4. BOTONES DE ACCIÓN DIRECTA */}
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button 
-                            onClick={() => setVistaActiva('caja')}
-                            style={{ flex: 1, padding: '14px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
-                        >
-                            <FaMoneyBillWave /> Ir a Caja POS
-                        </button>
-                        <button 
-                            onClick={() => setVistaActiva('taller')}
-                            style={{ flex: 1, padding: '14px', background: '#334155', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
-                        >
-                            Taller ({resumen.ticketsAbiertos})
-                        </button>
-                    </div>
-
-                    {/* 5. ACORDEÓN DESPLEGABLE PARA GRÁFICAS */}
-                    <div style={{ background: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
-                        <button 
-                            onClick={() => setMostrarGrafica(!mostrarGrafica)}
-                            style={{ width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                        >
-                            <span>Tendencia de Flujo Semanal</span>
-                            {mostrarGrafica ? <FaChevronUp /> : <FaChevronDown />}
-                        </button>
-                        
-                        {mostrarGrafica && (
-                            <div style={{ padding: '0 16px 16px 16px', height: '160px' }}>
-                                <Line 
-                                    data={datosGraficaLinea} 
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: { legend: { display: false } },
-                                        scales: { x: { grid: { display: false } }, y: { display: false } }
-                                    }} 
-                                />
+                    {/* 5. GRID DE KPIS OPERATIVOS */}
+                    <section className={styles.kpiGrid}>
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiHeader}>
+                                <small>SEMANAL</small>
+                                <FaChartLine className={styles.textCyan} />
                             </div>
-                        )}
-                    </div>
-
-                    {/* 6. LISTA COMPACTA DE PRODUCTOS */}
-                    <div style={{ background: '#1e293b', borderRadius: '12px', padding: '14px', border: '1px solid #334155' }}>
-                        <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px' }}>Top Vendidos del Mes</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {resumen.productosMasVendidos.slice(0, 3).map((p: any, idx: number) => (
-                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #334155', paddingBottom: '6px' }}>
-                                    <span style={{ color: '#94a3b8' }}>{p.nombre}</span>
-                                    <strong style={{ color: '#38bdf8' }}>{p.cantidad} und.</strong>
-                                </div>
-                            ))}
+                            <span className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</span>
                         </div>
-                    </div>
+
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiHeader}>
+                                <small>MES (INGRESOS)</small>
+                                <FaPercentage className={styles.textPurple} />
+                            </div>
+                            <span className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</span>
+                            <small className={styles.kpiSub}>Margen: {porcentajeMargen}%</small>
+                        </div>
+
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiHeader}>
+                                <small>UTILIDAD MES</small>
+                                <FaChartLine className={styles.textOrange} />
+                            </div>
+                            <span className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</span>
+                        </div>
+
+                        <div className={styles.kpiCard}>
+                            <div className={styles.kpiHeader}>
+                                <small>CLIENTES NUEVOS</small>
+                                <FaUserPlus className={styles.textBlue} />
+                            </div>
+                            <span className={styles.kpiValue}>{resumen.cantidadClientesNuevos}</span>
+                        </div>
+                    </section>
+
+                    {/* 6. INDICADORES RÁPIDOS DE NEGOCIO */}
+                    {indicadores && (
+                        <section className={styles.indicatorBar}>
+                            <div className={styles.indicatorTag}>
+                                <span>Clientes:</span>
+                                <strong className={styles.textGreen}>{indicadores.clientesActivos} Act</strong>
+                                <span className={styles.slash}>/</span>
+                                <strong className={styles.textRed}>{indicadores.clientesInactivos} Inact</strong>
+                            </div>
+                            <div className={styles.indicatorTag}>
+                                <span>Tasa Renov:</span>
+                                <strong className={styles.textGreen}>{tasaRenovacion}%</strong>
+                            </div>
+                            <div className={styles.indicatorTag}>
+                                <span>Top Prov:</span>
+                                <strong className={styles.textCyan}>{indicadores.proveedorConMayorMargen || 'N/A'}</strong>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* 7. GRÁFICAS ADAPTABLES */}
+                    <section className={styles.chartsGrid}>
+                        <div className={styles.chartCard}>
+                            <span className={styles.sectionTitle}>Flujo Semanal</span>
+                            <div className={styles.chartWrapper}>
+                                <Line data={datosGraficaLinea} options={opcionesComunes} />
+                            </div>
+                        </div>
+                        <div className={styles.chartCard}>
+                            <span className={styles.sectionTitle}>Venta por Rubro</span>
+                            <div className={styles.chartWrapper}>
+                                <Bar data={datosGraficaBarra} options={opcionesComunes} />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 8. LISTAS OPERATIVAS (ALERTAS, TOP PRODUCTOS, ÚLTIMOS CLIENTES) */}
+                    <section className={styles.operationalGrid}>
+                        {/* Alertas */}
+                        <div className={styles.detailsCard}>
+                            <span className={`${styles.sectionTitle} ${styles.textRed}`}>
+                                <FaExclamationTriangle /> Alertas del Sistema
+                            </span>
+                            <div className={styles.listContent}>
+                                {resumen.alertas.length > 0 ? (
+                                    resumen.alertas.map((alerta: string, idx: number) => (
+                                        <div key={idx} className={styles.alertCardRed}>{alerta}</div>
+                                    ))
+                                ) : (
+                                    <div className={styles.alertCardGreen}>
+                                        <FaCheckCircle /> Sin alertas pendientes.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Top Productos */}
+                        <div className={styles.detailsCard}>
+                            <span className={styles.sectionTitle}><FaBoxOpen /> Más Vendidos</span>
+                            <div className={styles.listContent}>
+                                {resumen.productosMasVendidos.map((p: any, idx: number) => (
+                                    <div key={idx} className={styles.listItem}>
+                                        <span className={styles.ellipsis}>{p.nombre}</span>
+                                        <strong className={styles.textCyan}>{p.cantidad} u</strong>
+                                    </div>
+                                ))}
+                                {resumen.productosMasVendidos.length === 0 && (
+                                    <small className={styles.emptyText}>Sin ventas registradas.</small>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Últimos Clientes */}
+                        <div className={styles.detailsCard}>
+                            <span className={styles.sectionTitle}><FaUserPlus /> Recientes</span>
+                            <div className={styles.listContent}>
+                                {resumen.ultimosClientes.map((c: any) => (
+                                    <div key={c.id} className={styles.listItem}>
+                                        <span className={styles.ellipsis}>{c.nombre}</span>
+                                        <small className={styles.textMuted}>{c.telefono || 'Sin tel'}</small>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
                 </>
             )}
+
+            {/* 9. BARRA DE NAVEGACIÓN RÁPIDA FIJA EN MÓVIL */}
+            <nav className={styles.bottomNav}>
+                <button onClick={() => setVistaActiva('inicio')} className={styles.navBtnActive}>Inicio</button>
+                <button onClick={() => setVistaActiva('caja')} className={styles.navBtn}>Caja</button>
+                <button onClick={() => setVistaActiva('renovaciones')} className={styles.navBtn}>Cobros</button>
+                <button onClick={() => setVistaActiva('taller')} className={styles.navBtn}>Taller</button>
+            </nav>
         </div>
     );
 };

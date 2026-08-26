@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.nicaplus.admin',
-  appName: 'NicaplusAdmin',
+  appId: 'online.nicaplusgaming.erp',
+  appName: 'Nicaplus ERP',
   webDir: 'dist'
 };
 

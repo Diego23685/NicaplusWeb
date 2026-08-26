@@ -1,524 +1,706 @@
-/* Taller.module.css */
-
-/* Contenedor principal */
+/* =========================================================
+   CONTENEDOR BASE & PESTAÑAS PRINCIPALES
+   ========================================================= */
 .tallerContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  color: #f1f5f9;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    color: #f1f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 
-@media (max-width: 768px) {
-  .tallerContainer {
-    padding: 12px;
-  }
+.mainTabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #0f172a;
+    padding: 0.35rem;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 
-/* ================= FORMULARIO DE INGRESO ================= */
+.tabBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.65rem 0.5rem;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.2s ease;
+}
+
+.tabBtnActive {
+    background: #581c7e;
+    color: #fff;
+}
+
+/* =========================================================
+   FORMULARIO ACCORDION DE INGRESO
+   ========================================================= */
+.formAccordion {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.accordionToggleBtn {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #1e293b;
+    border: none;
+    color: #38bdf8;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.accordionTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .formIngreso {
-  background: #1e293b;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 0.75rem 1rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    border-top: 1px solid #334155;
 }
 
-.formTitle {
-  margin: 0 0 20px 0;
-  color: #38bdf8;
-  font-size: 1.3rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.formCollapsed {
+    display: none;
 }
 
 .formGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+}
+
+.formGroupCol {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
 .formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.labelWrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.formRowDual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
 }
 
 .label {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
-.btnCambiarModo {
-  background: #581c7e;
-  border: none;
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: background 0.2s ease;
+.modoClienteGroup {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
 }
 
-.btnCambiarModo:hover {
-  background: #4c1d95;
+.modoBtn, .modoBtnDanger {
+    flex: 1;
+    padding: 0.45rem;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
 }
 
-/* Inputs, Textareas y Selects unificados */
-.input, .select, .textarea {
-  width: 100%;
-  padding: 10px 12px;
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  box-sizing: border-box;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.modoBtnActive {
+    background: #581c7e;
+    color: #fff;
+    border-color: #a855f7;
 }
 
-.input:focus, .select:focus, .textarea:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+.modoBtnDanger {
+    background: #dc2626;
+    color: #fff;
+    border-color: #ef4444;
 }
 
-.select {
-  cursor: pointer;
-}
-
-.textarea {
-  height: 80px;
-  resize: none;
+.clienteSelectorWrap, .nuevoClienteInputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
 .inputIconWrapper {
-  position: relative;
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .inputIcon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #64748b;
-  font-size: 0.85rem;
+    position: absolute;
+    left: 0.6rem;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 0.55rem;
+    box-sizing: border-box;
+    outline: none;
 }
 
 .inputWithIcon {
-  padding-left: 36px !important;
-}
-
-.btnSubmit {
-  padding: 12px 24px;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.2s;
-  width: 100%;
-  max-width: 320px;
-}
-
-.btnSubmit:hover {
-  background: #059669;
-}
-
-/* ================= TABLERO KANBAN ================= */
-.kanbanTablero {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(280px, 1fr));
-  gap: 16px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.kanbanColumna {
-  background: #1e293b;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  max-height: 550px;
-  overflow-y: auto;
-}
-
-.columnHeader {
-  margin: 0 0 14px 0;
-  border-bottom: 2px solid #334155;
-  padding-bottom: 10px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.colRecibido {
-  color: #f59e0b;
-}
-
-.colRevision {
-  color: #38bdf8;
-}
-
-.colListo {
-  color: #10b981;
-}
-
-.cardsContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-}
-
-.card {
-  background: #0f172a;
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid #334155;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: transform 0.2s, border-color 0.2s;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  border-color: #475569;
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.cardTitle {
-  font-size: 0.9rem;
-  color: #fff;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  max-width: 80%;
-}
-
-.cardBadge {
-  font-size: 0.7rem;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-}
-
-.cardDesc {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #94a3b8;
-  line-height: 1.4;
-}
-
-.cardDivider {
-  border-top: 1px solid #1e293b;
-  padding-top: 8px;
-  margin-top: 2px;
-}
-
-.cardClientName {
-  color: #cbd5e1;
-  font-weight: 600;
-  display: block;
-}
-
-.cardClientPhone {
-  color: #64748b;
-  display: block;
-  margin-top: 1px;
-}
-
-.cardActions {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.btnAvanzar {
-  flex: 1;
-  padding: 8px;
-  background: #581c7e;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: background 0.2s;
-}
-
-.btnAvanzar:hover {
-  background: #4c1d95;
-}
-
-.btnWhatsAppQuick {
-  padding: 8px 12px;
-  background: #25d366;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s;
-}
-
-.btnWhatsAppQuick:hover {
-  opacity: 0.9;
-}
-
-.emptyColumnText {
-  font-size: 0.8rem;
-  color: #64748b;
-  text-align: center;
-  padding: 30px 0;
-  margin: auto;
-}
-
-@media (max-width: 1024px) {
-  .kanbanTablero {
-    grid-template-columns: repeat(3, minmax(240px, 1fr));
-    overflow-x: auto;
-    padding-bottom: 12px;
-  }
-}
-
-@media (max-width: 768px) {
-  .kanbanTablero {
-    grid-template-columns: 1fr;
-  }
-  .kanbanColumna {
-    max-height: 400px;
-  }
-}
-
-/* ================= MODALES ================= */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-Index: 9999;
-  backdrop-filter: blur(4px);
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-.modalContent {
-  background: #1e293b;
-  padding: 24px;
-  border-radius: 12px;
-  max-width: 500px;
-  width: 100%;
-  border: 1px solid #334155;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
-}
-
-.modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 12px;
-}
-
-.modalTitle {
-  margin: 0;
-  color: #38bdf8;
-  font-size: 1.2rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btnCloseModal {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  transition: color 0.2s;
-}
-
-.btnCloseModal:hover {
-  color: #ef4444;
-}
-
-.modalForm {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.infoRow {
-  background: #0f172a;
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #334155;
-  font-size: 0.9rem;
-}
-
-.infoRowLabel {
-  color: #94a3b8;
-  display: block;
-  font-size: 0.8rem;
-  margin-bottom: 4px;
+    padding-left: 1.8rem;
 }
 
 .inputCosto {
-  font-size: 1.1rem !important;
-  font-weight: 700 !important;
-  color: #10b981 !important;
+    color: #4ade80;
+    font-weight: 700;
+}
+
+.textarea {
+    resize: vertical;
+}
+
+.infoBannerWarning {
+    padding: 0.5rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 6px;
+    color: #fbbf24;
+    font-size: 0.75rem;
+}
+
+.btnSubmit {
+    background: #581c7e;
+    color: #fff;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* =========================================================
+   SELECTOR KANBAN EN MÓVIL
+   ========================================================= */
+.mobileKanbanTabs {
+    display: flex;
+    gap: 0.35rem;
+    background: #1e293b;
+    padding: 0.35rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.mobileTabCol {
+    flex: 1;
+    padding: 0.5rem 0.2rem;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.colRecibidoActive { background: #854d0e; color: #fff; }
+.colRevisionActive { background: #1e3a8a; color: #fff; }
+.colListoActive { background: #065f46; color: #fff; }
+
+/* =========================================================
+   TABLERO KANBAN
+   ========================================================= */
+.kanbanTablero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.kanbanColumna {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.columnHeader {
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.colBadge {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+}
+
+.colRecibido { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-left: 3px solid #f59e0b; }
+.colRevision { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-left: 3px solid #38bdf8; }
+.colListo { background: rgba(16, 185, 129, 0.15); color: #34d399; border-left: 3px solid #10b981; }
+
+.cardsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
+}
+
+.card {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cardTitle {
+    font-size: 0.85rem;
+    color: #f8fafc;
+}
+
+.cardHeaderRight {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btnCardEdit {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.2rem;
+}
+
+.cardBadge {
+    font-size: 0.7rem;
+    background: #1e293b;
+    color: #38bdf8;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.cardDesc {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    line-height: 1.3;
+}
+
+.cardCostRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #4ade80;
+    background: rgba(16, 185, 129, 0.08);
+    padding: 0.25rem 0.45rem;
+    border-radius: 4px;
+}
+
+.cardDivider {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    padding-top: 0.35rem;
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+.cardActions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
+}
+
+.btnAvanzar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btnWhatsAppQuick {
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emptyColumnText {
+    text-align: center;
+    padding: 1.5rem 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* =========================================================
+   HISTORIAL (MÓVIL FEED & ESCRITORIO TABLA)
+   ========================================================= */
+.historialContainer {
+    background: #1e293b;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.historialHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.historialTitle { margin: 0; font-size: 1rem; color: #fff; }
+.historialSubtitle { margin: 0; font-size: 0.75rem; color: #94a3b8; }
+
+.mobileHistoryFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.historyCard {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.historyCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.historyOrderNumber { color: #38bdf8; font-size: 0.85rem; }
+
+.statusBadge {
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.status_Recibido { background: #854d0e; color: #fff; }
+.status_EnRevisión { background: #1e3a8a; color: #fff; }
+.status_Listo { background: #065f46; color: #fff; }
+.status_Entregado { background: #334155; color: #94a3b8; }
+
+.historyDevice { font-size: 0.8rem; color: #fff; }
+.historyCustomer { font-size: 0.7rem; color: #94a3b8; }
+.historyDiag { margin: 0; font-size: 0.75rem; color: #cbd5e1; }
+
+.historyCardFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #334155;
+    padding-top: 0.35rem;
+}
+
+.historyPrice { color: #4ade80; font-size: 0.85rem; }
+
+.historyActions, .tableActionsRow {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.btnActionEdit, .btnActionPrint {
+    border: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #fff;
+    display: flex;
+    align-items: center;
+}
+
+.btnActionEdit { background: #581c7e; }
+.btnActionPrint { background: #2563eb; }
+
+.desktopHistoryTable {
+    display: none;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+}
+
+.table th {
+    background: #0f172a;
+    padding: 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid #334155;
+    color: #94a3b8;
+}
+
+.table td {
+    padding: 0.6rem;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+.tdOrder { color: #38bdf8; font-weight: 700; }
+.tdDiag { max-width: 200px; }
+.tdCost { color: #4ade80; font-weight: 700; }
+.tableEmpty { text-align: center; padding: 2rem; color: #64748b; }
+.textMuted { font-size: 0.7rem; color: #64748b; }
+
+/* =========================================================
+   MODALES (EDICIÓN, ENTREGA, ACCIÓN)
+   ========================================================= */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 100;
+}
+
+.modalContent, .modalSuccessContent {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 440px;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+}
+
+.modalTitle { margin: 0; font-size: 0.95rem; color: #fff; }
+.btnCloseModal { background: none; border: none; color: #94a3b8; cursor: pointer; }
+
+.modalForm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.infoRow {
+    background: #0f172a;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    display: flex;
+    justify-content: space-between;
 }
 
 .modalActions {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
-.btnModalConfirm {
-  flex: 1;
-  padding: 12px;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
+.btnModalConfirm, .btnModalCancel {
+    flex: 1;
+    padding: 0.65rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
 }
 
-.btnModalConfirm:hover {
-  background: #059669;
-}
+.btnModalConfirm { background: #10b981; color: #fff; }
+.btnModalCancel { background: #334155; color: #cbd5e1; }
 
-.btnModalCancel {
-  padding: 12px 20px;
-  background: #475569;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.btnModalCancel:hover {
-  background: #334155;
-}
-
-/* Modal comercial / Éxito */
-.modalSuccessContent {
-  max-width: 460px;
-  text-align: center;
-  padding: 30px 24px;
-}
-
-.successIcon {
-  color: #10b981;
-  margin-bottom: 16px;
-}
-
-.successTitle {
-  margin: 0 0 8px 0;
-  font-size: 1.4rem;
-  color: #f8fafc;
-  font-weight: 700;
-}
-
-.successDesc {
-  color: #94a3b8;
-  font-size: 0.9rem;
-  margin: 0 0 24px 0;
-  line-height: 1.5;
-}
+.successIcon { color: #10b981; display: block; margin: 0 auto 0.5rem auto; }
+.successTitle { margin: 0; font-size: 1rem; color: #fff; text-align: center; }
+.successDesc { font-size: 0.8rem; color: #94a3b8; text-align: center; margin: 0.35rem 0 0.75rem 0; }
 
 .actionButtonsContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.btnActionWhatsApp {
-  background: #25d366;
-}
-
-.btnActionPrint {
-  background: #3b82f6;
-}
-
-.btnActionReturn {
-  background: #475569;
-  margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
 }
 
 .btnActionBase {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  color: #fff;
-  transition: opacity 0.2s;
+    width: 100%;
+    padding: 0.7rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
-.btnActionBase:hover {
-  opacity: 0.9;
+.btnActionWhatsApp { background: #22c55e; color: #fff; }
+.btnActionPrint { background: #3b82f6; color: #fff; }
+.btnActionContract { background: #2563eb; color: #fff; }
+.btnActionReturn { background: #334155; color: #fff; }
+
+.toast {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.toast_exito { background: #10b981; }
+.toast_warning { background: #f59e0b; }
+.toast_error { background: #ef4444; }
+
+/* =========================================================
+   BREAKPOINTS: TABLET Y ESCRITORIO
+   ========================================================= */
+@media (max-width: 1023px) {
+    .hideMobileCol {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .formGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .toast {
+        left: auto;
+        max-width: 380px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .mobileKanbanTabs {
+        display: none !important;
+    }
+
+    .hideMobileCol {
+        display: flex !important;
+    }
+
+    .kanbanTablero {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .formAccordion {
+        display: block;
+    }
+
+    .accordionToggleBtn {
+        cursor: default;
+    }
+
+    .formCollapsed {
+        display: flex !important;
+    }
+
+    .mobileHistoryFeed {
+        display: none;
+    }
+
+    .desktopHistoryTable {
+        display: block;
+    }
 }

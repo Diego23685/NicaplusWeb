@@ -12,15 +12,21 @@ import {
     FaChevronRight,
     FaShoppingCart,
     FaExchangeAlt,
-    FaLock
+    FaLock,
+    FaTrash,
+    FaFilter
 } from 'react-icons/fa';
 import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
+import styles from '../assets/styles/Reportes.module.css';
 
 export const Reportes: React.FC = () => {
     const [desde, setDesde] = useState('');
     const [hasta, setHasta] = useState('');
     const [datosReporte, setDatosReporte] = useState<any>(null);
     const [cargandoReporte, setCargandoReporte] = useState(false);
+
+    const [clienteFiltro, setClienteFiltro] = useState<string>('');
+    const [rubroFiltro, setRubroFiltro] = useState<string>('Todos');
 
     const [fechaReferenciaMes, setFechaReferenciaMes] = useState<Date>(new Date());
 
@@ -31,7 +37,6 @@ export const Reportes: React.FC = () => {
     const [busquedaFactura, setBusquedaFactura] = useState('');
     const [cargandoTabla, setCargandoTabla] = useState(true);
 
-    // Estado para conmutar las vistas de auditoría
     const [tabAuditoria, setTabAuditoria] = useState<'ventas' | 'compras' | 'caja'>('ventas');
 
     const [ventaAEditar, setVentaAEditar] = useState<any | null>(null);
@@ -54,6 +59,24 @@ export const Reportes: React.FC = () => {
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const dia = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${dia}`;
+    };
+
+    const perteneceAlRubro = (prod: any, rubro: string) => {
+        if (!prod) return false;
+        const esJuego = (prod.juegoId ?? prod.JuegoId) != null;
+        const esSuscripcion = prod.esSuscripcion ?? prod.EsSuscripcion ?? false;
+        const esDigital = prod.esDigital ?? prod.EsDigital ?? false;
+
+        switch (rubro.toLowerCase()) {
+            case 'videojuegos':
+                return esJuego;
+            case 'streaming':
+                return (esSuscripcion || esDigital) && !esJuego;
+            case 'tienda':
+                return !esSuscripcion && !esDigital && !esJuego;
+            default:
+                return true;
+        }
     };
 
     const aplicarRangoRapido = (tipo: 'hoy' | 'semana' | 'mes' | 'mesPasado' | 'ano') => {
@@ -102,9 +125,13 @@ export const Reportes: React.FC = () => {
         }
         setCargandoReporte(true);
         try {
-            const res = await api.get(`/reportes/personalizado?desde=${desde}&hasta=${hasta}`);
+            let url = `/reportes/personalizado?desde=${desde}&hasta=${hasta}`;
+            if (clienteFiltro) url += `&idCliente=${clienteFiltro}`;
+            if (rubroFiltro && rubroFiltro !== 'Todos') url += `&rubro=${rubroFiltro}`;
+
+            const res = await api.get(url);
             setDatosReporte(res.data);
-        } catch (err) {
+        } catch {
             alert("Error al generar el reporte.");
         } finally {
             setCargandoReporte(false);
@@ -117,20 +144,43 @@ export const Reportes: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        if (desde && hasta) {
+            ConsultarReporte();
+        }
+    }, [desde, hasta]);
+
+    useEffect(() => {
         api.get('/clientes').then(res => setClientes(res.data || [])).catch(() => {});
         api.get('/products').then(res => setProductos(res.data || [])).catch(() => {});
     }, []);
 
-    const ventasFiltradas = ventasHistorial.filter(v => 
-        v.id.toString().includes(busquedaFactura) || 
-        (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase())
-    );
+    const ventasFiltradas = ventasHistorial.filter(v => {
+        const coincideTexto = v.id.toString().includes(busquedaFactura) || 
+            (v.cliente?.nombre || v.cliente?.Nombre || 'mostrador').toLowerCase().includes(busquedaFactura.toLowerCase());
+
+        if (!coincideTexto) return false;
+
+        if (clienteFiltro) {
+            const idCliVenta = v.idCliente ?? v.IdCliente;
+            if (idCliVenta !== Number(clienteFiltro)) return false;
+        }
+
+        if (rubroFiltro && rubroFiltro !== 'Todos') {
+            const contieneProductoDelRubro = v.detalles?.some((d: any) => {
+                const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                return perteneceAlRubro(prod, rubroFiltro);
+            });
+            if (!contieneProductoDelRubro) return false;
+        }
+
+        return true;
+    });
 
     const abrirEditorVenta = (venta: any) => {
         setVentaAEditar(venta);
         setMetodoPago(venta.metodoPago);
         
-        const detallesConNombre = (venta.detalles || []).map((d: any) => {
+        const detallesConNombre = venta.detalles.map((d: any) => {
             const prodEncontrado = productos.find(p => (p.id ?? p.Id) === d.idProducto);
             return {
                 ...d,
@@ -142,17 +192,18 @@ export const Reportes: React.FC = () => {
     };
 
     const eliminarVentaCompleta = async (id: number) => {
-        if (!window.confirm(`¿Está completamente seguro de ELIMINAR la factura #000${id}? Esta acción revertirá inventarios y eliminará el ingreso de caja.`)) return;
+        if (!window.confirm(`¿Está completamente seguro de ELIMINAR la factura #000${id}? Esta acción revertirá inventarios y eliminará el ingreso de caja de forma permanente.`)) return;
         
         try {
-            await api.delete(`/ventas/${id}`);
-            alert("Venta eliminada e inventarios restaurados.");
+            const res = await api.delete(`/ventas/${id}`);
+            alert(res.data?.mensaje || "Venta eliminada e inventarios restaurados.");
             setVentaAEditar(null);
             setCargandoTabla(true);
             cargarHistorialVentas();
+            api.get('/products').then(resProd => setProductos(resProd.data || [])).catch(() => {});
             if (desde && hasta) ConsultarReporte();
         } catch (err: any) {
-            alert(err.response?.data || "Error al eliminar la venta.");
+            alert(err.response?.data?.mensaje || err.response?.data || "Error al eliminar la venta.");
         }
     };
 
@@ -161,38 +212,55 @@ export const Reportes: React.FC = () => {
         if (!prodSeleccionado) return;
 
         const copia = [...detallesEditados];
+        const nuevoPrecio = prodSeleccionado.precio ?? prodSeleccionado.Precio ?? prodSeleccionado.precioVenta ?? 0;
         copia[index].idProducto = idProd;
         copia[index].nombre = prodSeleccionado.nombre ?? prodSeleccionado.Nombre; 
-        copia[index].precioUnitario = prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0; 
-        copia[index].subTotal = (copia[index].cantidad * (prodSeleccionado.precio ?? prodSeleccionado.Precio ?? 0)) - (copia[index].descuento || 0);
+        copia[index].precioUnitario = nuevoPrecio; 
+        
+        const cant = Number(copia[index].cantidad) || 0;
+        const desc = Number(copia[index].descuento) || 0;
+        copia[index].subTotal = (cant * nuevoPrecio) - desc;
         setDetallesEditados(copia);
     };
 
-    const actualizarPrecioDetalle = (index: number, nuevoPrecio: number) => {
+    const actualizarPrecioDetalle = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        copia[index].precioUnitario = nuevoPrecio;
-        copia[index].subTotal = (copia[index].cantidad * nuevoPrecio) - (copia[index].descuento || 0);
+        const nuevoPrecio = valStr === '' ? 0 : Number(valStr);
+        copia[index].precioUnitario = valStr === '' ? '' : nuevoPrecio;
+        
+        const cant = Number(copia[index].cantidad) || 0;
+        const desc = Number(copia[index].descuento) || 0;
+        copia[index].subTotal = (cant * nuevoPrecio) - desc;
         setDetallesEditados(copia);
     };
 
-    const actualizarCantidadDetalle = (index: number, nuevaCantidad: number) => {
-        if (nuevaCantidad < 1) return;
+    const actualizarCantidadDetalle = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        copia[index].cantidad = nuevaCantidad;
-        copia[index].subTotal = (nuevaCantidad * copia[index].precioUnitario) - (copia[index].descuento || 0);
+        const nuevaCantidad = valStr === '' ? 0 : Number(valStr);
+        copia[index].cantidad = valStr === '' ? '' : nuevaCantidad;
+        
+        const precio = Number(copia[index].precioUnitario) || 0;
+        const desc = Number(copia[index].descuento) || 0;
+        copia[index].subTotal = (nuevaCantidad * precio) - desc;
         setDetallesEditados(copia);
     };
 
-    const actualizarDescuentoDetalle = (index: number, nuevoDescuento: number) => {
+    const actualizarDescuentoDetalle = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        copia[index].descuento = nuevoDescuento < 0 ? 0 : nuevoDescuento;
-        copia[index].subTotal = (copia[index].cantidad * copia[index].precioUnitario) - copia[index].descuento;
+        const nuevoDescuento = valStr === '' ? 0 : Math.max(0, Number(valStr));
+        copia[index].descuento = valStr === '' ? '' : nuevoDescuento;
+        
+        const cant = Number(copia[index].cantidad) || 0;
+        const precio = Number(copia[index].precioUnitario) || 0;
+        copia[index].subTotal = (cant * precio) - nuevoDescuento;
         setDetallesEditados(copia);
     };
 
-    const actualizarDiasSuscripcion = (index: number, nuevosDias: number) => {
+    const actualizarDiasSuscripcion = (index: number, valStr: string) => {
         const copia = [...detallesEditados];
-        const diasValidos = nuevosDias > 0 ? nuevosDias : 30;
+        const diasNum = valStr === '' ? '' : Number(valStr);
+        const diasValidos = typeof diasNum === 'number' && diasNum > 0 ? diasNum : 30;
+        
         let metaActual = copia[index].metadataDigital || '';
         
         if (metaActual.startsWith("DIAS:")) {
@@ -205,6 +273,7 @@ export const Reportes: React.FC = () => {
                 : `DIAS:${diasValidos}`;
         }
         
+        copia[index].diasTemporales = diasNum;
         setDetallesEditados(copia);
     };
 
@@ -212,17 +281,25 @@ export const Reportes: React.FC = () => {
         e.preventDefault();
         if (!ventaAEditar) return;
 
+        const detallesSaneados = detallesEditados.map(d => ({
+            ...d,
+            cantidad: Number(d.cantidad) || 1,
+            precioUnitario: Number(d.precioUnitario) || 0,
+            descuento: Number(d.descuento) || 0,
+            subTotal: Number(d.subTotal) || 0
+        }));
+
         const payload = {
             id: ventaAEditar.id,
             idUsuario: ventaAEditar.idUsuario,
             idCliente: ventaAEditar.idCliente === 0 ? null : ventaAEditar.idCliente,
             metodoPago: nuevoMetodoPago,
-            detalles: detallesEditados
+            detalles: detallesSaneados
         };
 
         try {
             await api.put(`/ventas/${ventaAEditar.id}`, payload);
-            alert("Factura modificada con éxito.");
+            alert("Factura modificada con éxito. El inventario físico y dinero en caja han sido recalculados.");
             setVentaAEditar(null);
             setCargandoTabla(true);
             cargarHistorialVentas();
@@ -279,12 +356,20 @@ export const Reportes: React.FC = () => {
 
         const rangoPeriodo = datosReporte?.rango || 'Periodo no especificado';
         const transacciones = datosReporte?.transacciones || [];
+        const comprasProveedores = datosReporte?.comprasProveedores || [];
+        const movimientosCaja = datosReporte?.movimientosCaja || [];
 
         const utilidadNeta = datosReporte?.finanzas?.utilidadNeta ?? 0;
         const costoMercancia = datosReporte?.finanzas?.costoMercancia ?? 0;
         const gastosOperativos = datosReporte?.finanzas?.gastosOperativos ?? 0;
         const inversionCompras = datosReporte?.finanzas?.inversionCompras ?? 0;
         
+        const clienteNombreFiltro = clienteFiltro 
+            ? (clientes.find(c => (c.id ?? c.Id) === Number(clienteFiltro))?.nombre || 'Cliente Específico')
+            : 'Todos los Clientes';
+
+        const rubroNombreFiltro = rubroFiltro === 'Todos' ? 'Todos los Rubros' : rubroFiltro;
+
         const formatearFechaSegura = (t: any) => {
             const fechaRaw = t?.fechaVenta || t?.fecha || t?.Fecha || t?.fecha_venta || t?.createdAt || t?.created_at;
             if (!fechaRaw) return 'N/A';
@@ -294,18 +379,15 @@ export const Reportes: React.FC = () => {
 
         const obtenerClienteCruzado = (transaccionReporte: any) => {
             if (!transaccionReporte) return 'Mostrador General';
-
             if (transaccionReporte.cliente || transaccionReporte.Cliente) {
                 return transaccionReporte.cliente || transaccionReporte.Cliente;
             }
-
             const ventaCompleta = ventasHistorial.find(v => v.id === transaccionReporte.id);
             if (ventaCompleta) {
                 if (ventaCompleta.cliente) {
                     const nombreObj = ventaCompleta.cliente.nombre || ventaCompleta.cliente.Nombre;
                     if (nombreObj) return nombreObj;
                 }
-
                 const idCli = ventaCompleta.idCliente || ventaCompleta.IdCliente;
                 if (idCli) {
                     const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idCli);
@@ -314,7 +396,6 @@ export const Reportes: React.FC = () => {
                     }
                 }
             }
-
             const idClienteDirecto = transaccionReporte.idCliente || transaccionReporte.IdCliente;
             if (idClienteDirecto) {
                 const clienteEncontrado = clientes.find(c => (c.id ?? c.Id) === idClienteDirecto);
@@ -322,7 +403,6 @@ export const Reportes: React.FC = () => {
                     return clienteEncontrado.nombre || clienteEncontrado.Nombre || 'Mostrador General';
                 }
             }
-
             return 'Mostrador General';
         };
 
@@ -341,19 +421,21 @@ export const Reportes: React.FC = () => {
                 <meta charset="UTF-8">
                 <title>Reporte_Auditoria_${rangoPeriodo.replace(/[^a-zA-Z0-9]/g, '_')}</title>
                 <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 30px; color: #1e293b; background: #ffffff; line-height: 1.4; font-size: 12px; }
-                    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    .logo-text { font-size: 22px; font-weight: 800; color: #0f172a; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; color: #1e293b; background: #ffffff; line-height: 1.4; }
+                    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                    .logo-text { font-size: 24px; font-weight: 800; color: #0f172a; }
                     .logo-sub { color: #8b00d0; }
-                    .titulo-reporte { text-align: right; font-size: 11px; color: #64748b; }
-                    .grid-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-                    .card { border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; background: #f8fafc; }
+                    .titulo-reporte { text-align: right; font-size: 11px; color: #64748b; line-height: 1.5; }
+                    .grid-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 25px; }
+                    .card { border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; background: #f8fafc; }
                     .card small { color: #64748b; font-weight: bold; font-size: 9px; text-transform: uppercase; }
-                    .card h3 { margin: 4px 0 0 0; color: #0f172a; font-size: 15px; }
-                    table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
-                    table.data-table th { background: #0f172a; color: white; padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; }
-                    table.data-table td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 10px; color: #334155; }
-                    .seccion-titulo { font-size: 12px; color: #0f172a; border-bottom: 2px solid #8b00d0; padding-bottom: 4px; margin-top: 20px; font-weight: bold; text-transform: uppercase; }
+                    .card h3 { margin: 4px 0 0 0; color: #0f172a; font-size: 16px; }
+                    .card-total { border: 1px solid #10b981; background: #f0fdf4; }
+                    .card-total h3 { color: #16a34a; }
+                    table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 25px; }
+                    table.data-table th { background: #0f172a; color: white; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+                    table.data-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
+                    .seccion-titulo { font-size: 13px; color: #0f172a; border-bottom: 2px solid #8b00d0; padding-bottom: 4px; margin-top: 25px; font-weight: bold; text-transform: uppercase; }
                 </style>
             </head>
             <body>
@@ -365,6 +447,7 @@ export const Reportes: React.FC = () => {
                         <td class="titulo-reporte">
                             <strong>REPORTE DE AUDITORÍA INTERNA POS</strong><br>
                             <strong>Período:</strong> ${rangoPeriodo}<br>
+                            <strong>Rubro:</strong> ${rubroNombreFiltro} | <strong>Cliente:</strong> ${clienteNombreFiltro}<br>
                             <strong>Generado:</strong> ${new Date().toLocaleString()}
                         </td>
                     </tr>
@@ -376,44 +459,36 @@ export const Reportes: React.FC = () => {
                     <div class="card"><small>Efectivo</small><h3>C$ ${Number(efectivo).toLocaleString()}</h3></div>
                     <div class="card"><small>Transferencias</small><h3>C$ ${Number(transferencia).toLocaleString()}</h3></div>
                     <div class="card"><small>Tarjeta / Créditos</small><h3>C$ ${Number(tarjeta + credito).toLocaleString()}</h3></div>
-                    <div class="card" style="border-color: #10b981; background: #f0fdf4;"><small style="color: #166534;">Total Neto</small><h3 style="color: #16a34a;">C$ ${Number(totalNeto).toLocaleString()}</h3></div>
+                    <div class="card card-total"><small>Total Recaudado</small><h3>C$ ${Number(totalNeto).toLocaleString()}</h3></div>
                 </div>
 
                 <div class="grid-cards">
-                    <div class="card"><small>Costo Mercancía</small><h3>C$ ${Number(costoMercancia).toLocaleString()}</h3></div>
-                    <div class="card"><small>Inversión Compras</small><h3 style="color: #a855f7;">C$ ${Number(inversionCompras).toLocaleString()}</h3></div>
+                    <div class="card"><small>Costo Mercancía (CMV)</small><h3>C$ ${Number(costoMercancia).toLocaleString()}</h3></div>
+                    <div class="card"><small>Inversión en Compras</small><h3 style="color: #a855f7;">C$ ${Number(inversionCompras).toLocaleString()}</h3></div>
                     <div class="card"><small>Gastos Operativos</small><h3>C$ ${Number(gastosOperativos).toLocaleString()}</h3></div>
-                    <div class="card" style="border-color: #3b82f6; background: #eff6ff;"><small style="color: #1d4ed8;">Utilidad Neta</small><h3 style="color: #1e40af;">C$ ${Number(utilidadNeta).toLocaleString()}</h3></div>
+                    <div class="card card-total" style="border-color: #3b82f6; background: #eff6ff;"><small style="color: #1d4ed8;">Utilidad Neta</small><h3 style="color: #1e40af;">C$ ${Number(utilidadNeta).toLocaleString()}</h3></div>
                 </div>
 
-                <div class="seccion-titulo">II. Rendimiento de Productos (Top)</div>
+                <div class="seccion-titulo">II. Libro Diario de Ventas</div>
                 <table class="data-table">
-                    <thead><tr><th>Producto</th><th style="text-align: center;">Cantidad</th><th style="text-align: right;">Total</th></tr></thead>
-                    <tbody>
-                        ${listaProductos.map((p: any) => `
-                            <tr>
-                                <td>${p?.producto || 'Servicio General'}</td>
-                                <td style="text-align: center;"><strong>${p?.cantidad ?? 0}</strong></td>
-                                <td style="text-align: right;">C$ ${(p?.subtotal ?? 0).toLocaleString()}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-
-                <div class="seccion-titulo">III. Libro Diario de Ventas</div>
-                <table class="data-table">
-                    <thead><tr><th>N° Factura</th><th>Fecha</th><th>Cliente</th><th style="text-align: right;">Monto</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Factura</th><th>Fecha</th><th>Cliente</th><th>Método</th><th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         ${transacciones.map((t: any) => `
                             <tr>
-                                <td><strong>#000${t?.id}</strong></td>
+                                <td>#000${t?.id}</td>
                                 <td>${formatearFechaSegura(t)}</td>
                                 <td>${obtenerClienteCruzado(t)}</td>
+                                <td>${t?.metodoPago}</td>
                                 <td style="text-align: right;">C$ ${(t?.total ?? 0).toLocaleString()}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
+
                 <script>window.onload = function() { window.print(); }</script>
             </body>
             </html>
@@ -424,328 +499,531 @@ export const Reportes: React.FC = () => {
     };
 
     return (
-        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
-            
-            {/* ENCABEZADO Y FILTROS RÁPIDOS */}
-            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div>
-                    <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Reportes y Auditoría POS</h3>
-                    <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Consolidado financiero y corrección de libros</small>
-                </div>
+        <div className={styles.container}>
+            {/* 1. HEADER */}
+            <header className={styles.header}>
+                <h3 className={styles.title}>Reportes y Auditoría Contable</h3>
+                <p className={styles.subtitle}>Análisis de cierres, control de márgenes y corrección de facturas.</p>
+            </header>
 
-                {/* Botones de Rango de Fecha Rápidos */}
-                <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
-                    <button onClick={() => aplicarRangoRapido('hoy')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Hoy</button>
-                    <button onClick={() => aplicarRangoRapido('semana')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Esta Semana</button>
-                    <button onClick={() => aplicarRangoRapido('mes')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Este Mes</button>
-                    <button onClick={() => aplicarRangoRapido('mesPasado')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Mes Pasado</button>
-                    <button onClick={() => aplicarRangoRapido('ano')} style={{ background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', padding: '6px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Año</button>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#0f172a', padding: '2px 6px', borderRadius: '6px', border: '1px solid #334155', marginLeft: 'auto' }}>
-                        <button onClick={() => cambiarMesRelativo(-1)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer' }}><FaChevronLeft size={10} /></button>
-                        <span style={{ fontSize: '0.68rem', color: '#fff', fontWeight: 700 }}>
-                            {fechaReferenciaMes.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }).toUpperCase()}
+            {/* 2. FILTROS RÁPIDOS Y TEMPORALES */}
+            <div className={styles.filtersCard}>
+                <div className={styles.quickPillsScroll}>
+                    <button onClick={() => aplicarRangoRapido('hoy')} className={styles.btnPill}>Hoy</button>
+                    <button onClick={() => aplicarRangoRapido('semana')} className={styles.btnPill}>Semana</button>
+                    <button onClick={() => aplicarRangoRapido('mes')} className={styles.btnPill}>Este Mes</button>
+                    <button onClick={() => aplicarRangoRapido('mesPasado')} className={styles.btnPill}>Mes Pasado</button>
+                    <button onClick={() => aplicarRangoRapido('ano')} className={styles.btnPill}>Año</button>
+
+                    <div className={styles.monthNavBox}>
+                        <button onClick={() => cambiarMesRelativo(-1)} className={styles.btnNavMonth} title="Mes Anterior">
+                            <FaChevronLeft size={10} />
+                        </button>
+                        <span className={styles.monthText}>
+                            {fechaReferenciaMes.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase()}
                         </span>
-                        <button onClick={() => cambiarMesRelativo(1)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer' }}><FaChevronRight size={10} /></button>
+                        <button onClick={() => cambiarMesRelativo(1)} className={styles.btnNavMonth} title="Mes Siguiente">
+                            <FaChevronRight size={10} />
+                        </button>
                     </div>
                 </div>
 
-                {/* Selección Desde / Hasta */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem', boxSizing: 'border-box' }} />
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>a</span>
-                    <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem', boxSizing: 'border-box' }} />
-                    <button onClick={ConsultarReporte} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>
-                        {cargandoReporte ? '...' : 'Generar'}
-                    </button>
+                <div className={styles.formFiltersGrid}>
+                    <div className={styles.formGroupDate}>
+                        <label className={styles.label}>Desde:</label>
+                        <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className={styles.input} />
+                    </div>
+
+                    <div className={styles.formGroupDate}>
+                        <label className={styles.label}>Hasta:</label>
+                        <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className={styles.input} />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}>Rubro:</label>
+                        <select value={rubroFiltro} onChange={e => setRubroFiltro(e.target.value)} className={styles.select}>
+                            <option value="Todos">🌐 Todos los Rubros</option>
+                            <option value="Tienda">🛍️ Tienda Físico</option>
+                            <option value="Streaming">📺 Streaming / Cuentas</option>
+                            <option value="Videojuegos">🎮 Videojuegos</option>
+                        </select>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}>Cliente:</label>
+                        <select value={clienteFiltro} onChange={e => setClienteFiltro(e.target.value)} className={styles.select}>
+                            <option value="">👤 Todos los Clientes</option>
+                            {clientes.map(c => (
+                                <option key={c.id ?? c.Id} value={c.id ?? c.Id}>
+                                    {c.nombre ?? c.Nombre}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
+
+                <button onClick={ConsultarReporte} className={styles.btnConsultar}>
+                    {cargandoReporte ? 'Calculando balances...' : 'Generar Reporte'}
+                </button>
             </div>
 
-            {/* VISTA DE KPIS CALCULADOS Y PDF */}
+            {/* 3. KPIS FINANCIEROS DEL PERÍODO */}
             {datosReporte && (
-                <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Período: <strong>{datosReporte.rango}</strong></small>
-                        <button onClick={exportarAPDF} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <FaFilePdf /> Imprimir PDF
+                <div className={styles.reportSummaryWrap}>
+                    <div className={styles.periodHeaderRow}>
+                        <h4 className={styles.periodTitle}>Período: <strong>{datosReporte.rango}</strong></h4>
+                        <button onClick={exportarAPDF} className={styles.btnExportPdf}>
+                            <FaFilePdf /> <span>Exportar PDF</span>
                         </button>
                     </div>
 
-                    {/* Grid de Balances Financiales */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #10b981' }}>
-                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>BALANCE CAJA REAL</small>
-                            <strong style={{ color: '#10b981', fontSize: '0.95rem' }}>C$ {(datosReporte?.finanzas?.balanceCajaReal ?? 0).toLocaleString()}</strong>
+                    <div className={styles.kpiGrid}>
+                        <div className={`${styles.kpiCard} ${styles.kpiCajaReal}`}>
+                            <small className={styles.kpiLabel}>Balance Neto (Caja Real)</small>
+                            <h3 className={styles.textGreen}>
+                                C$ {(datosReporte?.finanzas?.balanceCajaReal ?? 0).toLocaleString()}
+                            </h3>
                         </div>
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #38bdf8' }}>
-                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>TOTAL FACTURADO</small>
-                            <strong style={{ color: '#38bdf8', fontSize: '0.95rem' }}>C$ {(datosReporte?.finanzas?.totalFacturado ?? 0).toLocaleString()}</strong>
+
+                        <div className={`${styles.kpiCard} ${styles.kpiFacturado}`}>
+                            <small className={styles.kpiLabel}>Total Facturado</small>
+                            <h3 className={styles.textCyan}>
+                                C$ {(datosReporte?.finanzas?.totalFacturado ?? 0).toLocaleString()}
+                            </h3>
                         </div>
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #f59e0b' }}>
-                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>VENTAS AL CRÉDITO</small>
-                            <strong style={{ color: '#f59e0b', fontSize: '0.95rem' }}>C$ {(datosReporte?.finanzas?.credito ?? 0).toLocaleString()}</strong>
+
+                        <div className={`${styles.kpiCard} ${styles.kpiCredito}`}>
+                            <small className={styles.kpiLabel}>Ventas al Crédito</small>
+                            <h3 className={styles.textAmber}>
+                                C$ {(datosReporte?.finanzas?.credito ?? 0).toLocaleString()}
+                            </h3>
                         </div>
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #a855f7' }}>
-                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>INVERSIÓN COMPRAS</small>
-                            <strong style={{ color: '#a855f7', fontSize: '0.95rem' }}>C$ {(datosReporte?.finanzas?.inversionCompras ?? 0).toLocaleString()}</strong>
+
+                        <div className={`${styles.kpiCard} ${styles.kpiInversion}`}>
+                            <small className={styles.kpiLabel}>Inversión Compras</small>
+                            <h3 className={styles.textPurple}>
+                                C$ {(datosReporte?.finanzas?.inversionCompras ?? 0).toLocaleString()}
+                            </h3>
                         </div>
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #ef4444' }}>
-                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>GASTOS OPERATIVOS</small>
-                            <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>C$ {(datosReporte?.finanzas?.gastosOperativos ?? 0).toLocaleString()}</strong>
+
+                        <div className={`${styles.kpiCard} ${styles.kpiGastos}`}>
+                            <small className={styles.kpiLabel}>Gastos Operativos</small>
+                            <h3 className={styles.textRed}>
+                                C$ {(datosReporte?.finanzas?.gastosOperativos ?? 0).toLocaleString()}
+                            </h3>
                         </div>
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #10b981' }}>
-                            <small style={{ color: '#64748b', fontSize: '0.65rem', display: 'block' }}>UTILIDAD NETA REAL</small>
-                            <strong style={{ color: '#10b981', fontSize: '0.95rem' }}>C$ {(datosReporte?.finanzas?.utilidadNeta ?? 0).toLocaleString()}</strong>
+
+                        <div className={`${styles.kpiCard} ${styles.kpiUtilidad}`}>
+                            <small className={styles.kpiLabel}>Utilidad Neta Real</small>
+                            <h3 className={styles.textGreen}>
+                                C$ {(datosReporte?.finanzas?.utilidadNeta ?? 0).toLocaleString()}
+                            </h3>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* SECCIÓN DE AUDITORÍA Y LIBROS DIARIOS */}
-            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                
-                {/* Conmutador de Libros */}
-                <div style={{ display: 'flex', gap: '4px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155', overflowX: 'auto' }}>
-                    <button 
-                        onClick={() => setTabAuditoria('ventas')}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: 'none', background: tabAuditoria === 'ventas' ? '#38bdf8' : 'transparent', color: tabAuditoria === 'ventas' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                        <FaCalendarAlt /> Ventas POS
-                    </button>
-                    <button 
-                        onClick={() => setTabAuditoria('compras')}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: 'none', background: tabAuditoria === 'compras' ? '#38bdf8' : 'transparent', color: tabAuditoria === 'compras' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                        <FaShoppingCart /> Compras
-                    </button>
-                    <button 
-                        onClick={() => setTabAuditoria('caja')}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: 'none', background: tabAuditoria === 'caja' ? '#38bdf8' : 'transparent', color: tabAuditoria === 'caja' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                        <FaExchangeAlt /> Libro Caja
-                    </button>
+            {/* 4. TABS DE AUDITORÍA Y SUB-MÓDULOS */}
+            <div className={styles.auditSection}>
+                <div className={styles.auditHeader}>
+                    <div className={styles.auditTabsRow}>
+                        <button 
+                            onClick={() => setTabAuditoria('ventas')} 
+                            className={`${styles.tabBtn} ${tabAuditoria === 'ventas' ? styles.tabBtnActive : ''}`}
+                        >
+                            <FaCalendarAlt /> Ventas ({ventasFiltradas.length})
+                        </button>
+                        <button 
+                            onClick={() => setTabAuditoria('compras')} 
+                            className={`${styles.tabBtn} ${tabAuditoria === 'compras' ? styles.tabBtnActive : ''}`}
+                        >
+                            <FaShoppingCart /> Compras
+                        </button>
+                        <button 
+                            onClick={() => setTabAuditoria('caja')} 
+                            className={`${styles.tabBtn} ${tabAuditoria === 'caja' ? styles.tabBtnActive : ''}`}
+                        >
+                            <FaExchangeAlt /> Libro Diario
+                        </button>
+                    </div>
+
+                    {tabAuditoria === 'ventas' && (
+                        <div className={styles.searchBox}>
+                            <FaSearch className={styles.searchIcon} />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar factura # o cliente..." 
+                                value={busquedaFactura} 
+                                onChange={e => setBusquedaFactura(e.target.value)} 
+                                className={styles.searchInput} 
+                            />
+                            {busquedaFactura && (
+                                <button onClick={() => setBusquedaFactura('')} className={styles.clearBtn}><FaTimes /></button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Búsqueda de facturas */}
-                {tabAuditoria === 'ventas' && (
-                    <div style={{ position: 'relative' }}>
-                        <FaSearch style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }} />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar por factura o cliente..." 
-                            value={busquedaFactura} 
-                            onChange={e => setBusquedaFactura(e.target.value)} 
-                            style={{ width: '100%', padding: '8px 10px 8px 32px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                    </div>
-                )}
-
-                {/* VISTA 1: FEED MÓVIL DE VENTAS POS */}
-                {tabAuditoria === 'ventas' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {cargandoTabla ? (
-                            <div style={{ color: '#38bdf8', textAlign: 'center', padding: '15px', fontSize: '0.8rem' }}>Sincronizando transacciones...</div>
+                {/* 5. VISTA MÓVIL (FEEDS TÁCTILES) */}
+                <div className={styles.mobileFeed}>
+                    {/* FEED VENTAS */}
+                    {tabAuditoria === 'ventas' && (
+                        cargandoTabla ? (
+                            <div className={styles.emptyText}>Sincronizando transacciones...</div>
                         ) : ventasFiltradas.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '0.8rem' }}>No se encontraron transacciones registradas.</div>
+                            <div className={styles.emptyText}>No se encontraron ventas registradas.</div>
                         ) : (
-                            ventasFiltradas.map((v) => (
-                                <div key={v.id} style={{ background: '#0f172a', padding: '10px', borderRadius: '10px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <strong style={{ color: '#38bdf8', fontSize: '0.85rem' }}>#000{v.id}</strong>
-                                        <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>C$ {(v.total ?? 0).toLocaleString()}</strong>
-                                    </div>
+                            ventasFiltradas.map((v) => {
+                                const clienteNombre = v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General';
+                                return (
+                                    <div key={v.id} className={styles.auditCard}>
+                                        <div className={styles.auditCardHeader}>
+                                            <div className={styles.orderIdBadge}>#000{v.id}</div>
+                                            <span className={styles.paymentBadge}>{v.metodoPago}</span>
+                                        </div>
 
-                                    <div style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>
-                                        👤 {(() => {
-                                            if (v.cliente?.nombre || v.cliente?.Nombre) return v.cliente.nombre || v.cliente.Nombre;
-                                            const idCli = v.idCliente || v.IdCliente;
-                                            if (idCli) {
-                                                const cli = clientes.find(c => (c.id ?? c.Id) === idCli);
-                                                if (cli) return cli.nombre || cli.Nombre;
-                                            }
-                                            return 'Mostrador General';
-                                        })()}
-                                    </div>
+                                        <div className={styles.cardCustomerRow}>
+                                            <strong>👤 {clienteNombre}</strong>
+                                            <small className={styles.textMuted}>
+                                                📅 {v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}
+                                            </small>
+                                        </div>
 
-                                    <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
-                                        {v.detalles?.map((d: any, idx: number) => {
-                                            const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
-                                            return (
-                                                <div key={idx}>• {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}</div>
-                                            );
-                                        })}
-                                    </div>
+                                        <div className={styles.itemsDesgloseBox}>
+                                            {v.detalles?.map((d: any, idx: number) => {
+                                                const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                                                return (
+                                                    <div key={idx} className={styles.itemDesgloseLine}>
+                                                        • {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '6px', marginTop: '2px' }}>
-                                        <span style={{ background: '#1e293b', border: '1px solid #334155', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 600 }}>{v.metodoPago}</span>
-                                        
-                                        <div style={{ display: 'flex', gap: '4px' }}>
-                                            <button onClick={() => abrirEditorVenta(v)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }} title="Editar Venta"><FaEdit /></button>
-                                            <button onClick={() => reimprimirTicket(v)} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }} title="Reimprimir Ticket"><FaPrint /></button>
-                                            <button onClick={() => reordenarEnviarWhatsApp(v)} style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }} title="Reenviar por WhatsApp"><FaWhatsapp /></button>
+                                        <div className={styles.cardFooterRow}>
+                                            <strong className={styles.totalText}>C$ {(v.total ?? 0).toLocaleString()}</strong>
+                                            <div className={styles.actionsGroup}>
+                                                <button onClick={() => abrirEditorVenta(v)} className={styles.btnActionEdit} title="Editar">
+                                                    <FaEdit size={13} />
+                                                </button>
+                                                <button onClick={() => reimprimirTicket(v)} className={styles.btnActionPrint} title="Imprimir Ticket">
+                                                    <FaPrint size={13} />
+                                                </button>
+                                                <button onClick={() => reordenarEnviarWhatsApp(v)} className={styles.btnActionWhatsapp} title="WhatsApp">
+                                                    <FaWhatsapp size={14} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
+                                );
+                            })
+                        )
+                    )}
 
-                {/* VISTA 2: COMPRAS PROVEEDORES */}
-                {tabAuditoria === 'compras' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {!datosReporte?.comprasProveedores || datosReporte.comprasProveedores.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '0.8rem' }}>No hay compras registradas en este rango. Genera un reporte.</div>
+                    {/* FEED COMPRAS */}
+                    {tabAuditoria === 'compras' && (
+                        !datosReporte?.comprasProveedores || datosReporte.comprasProveedores.length === 0 ? (
+                            <div className={styles.emptyText}>No hay compras a proveedores registradas en este período.</div>
                         ) : (
                             datosReporte.comprasProveedores.map((c: any) => (
-                                <div key={c.id} style={{ background: '#0f172a', padding: '10px', borderRadius: '10px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <strong style={{ color: '#38bdf8', fontSize: '0.85rem' }}>#Orden {c.id} — {c.proveedor}</strong>
-                                        <strong style={{ color: '#ef4444', fontSize: '0.88rem' }}>C$ {Number(c.totalCompra).toLocaleString()}</strong>
+                                <div key={c.id} className={styles.auditCard}>
+                                    <div className={styles.auditCardHeader}>
+                                        <div className={styles.orderIdBadge}>#ORD-{c.id}</div>
+                                        <small className={styles.textMuted}>📅 {c.fecha}</small>
                                     </div>
-                                    <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                    <div><strong>Proveedor: {c.proveedor}</strong></div>
+                                    <div className={styles.itemsDesgloseBox}>
                                         {(c.items || []).map((item: any, idx: number) => (
-                                            <div key={idx}>• {item.cantidad}x {item.producto} (a C$ {item.costoUnitario})</div>
+                                            <div key={idx} className={styles.itemDesgloseLine}>
+                                                • {item.cantidad}x {item.producto} (a C$ {item.costoUnitario})
+                                            </div>
                                         ))}
                                     </div>
-                                    <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Fecha: {c.fecha} • {c.observaciones || 'Sin notas'}</small>
+                                    {c.observaciones && <small className={styles.textAmber}>📝 {c.observaciones}</small>}
+                                    <div className={styles.cardFooterRow}>
+                                        <span className={styles.textMuted}>Total Compra:</span>
+                                        <strong className={styles.textRed}>C$ {Number(c.totalCompra).toLocaleString()}</strong>
+                                    </div>
                                 </div>
                             ))
-                        )}
-                    </div>
-                )}
+                        )
+                    )}
 
-                {/* VISTA 3: ARQUEO DE CAJA */}
-                {tabAuditoria === 'caja' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {!datosReporte?.movimientosCaja || datosReporte.movimientosCaja.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '0.8rem' }}>No hay movimientos de caja en este rango. Genera un reporte.</div>
+                    {/* FEED LIBRO DIARIO */}
+                    {tabAuditoria === 'caja' && (
+                        !datosReporte?.movimientosCaja || datosReporte.movimientosCaja.length === 0 ? (
+                            <div className={styles.emptyText}>No hay movimientos de caja en este rango.</div>
                         ) : (
                             datosReporte.movimientosCaja.map((m: any) => {
                                 const esIngreso = m.tipo === 'Ingreso';
                                 return (
-                                    <div key={m.id} style={{ background: '#0f172a', padding: '10px', borderRadius: '10px', borderLeft: `4px solid ${esIngreso ? '#10b981' : '#ef4444'}`, borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <strong style={{ color: '#fff', fontSize: '0.82rem' }}>
-                                                {(m.idVenta || m.idCompraProveedor) && <FaLock size={10} style={{ color: '#f59e0b', marginRight: '4px' }} title="Automático" />}
-                                                {m.concepto}
-                                            </strong>
-                                            <strong style={{ color: esIngreso ? '#10b981' : '#ef4444', fontSize: '0.85rem' }}>
+                                    <div key={m.id} className={`${styles.auditCard} ${esIngreso ? styles.borderGreen : styles.borderRed}`}>
+                                        <div className={styles.auditCardHeader}>
+                                            <span className={`${styles.paymentBadge} ${esIngreso ? styles.bgGreen : styles.bgRed}`}>
+                                                {m.tipo}
+                                            </span>
+                                            <small className={styles.textMuted}>📅 {m.fecha}</small>
+                                        </div>
+                                        <div className={styles.movementConceptRow}>
+                                            <strong>{m.concepto}</strong>
+                                            {(m.idVenta || m.idCompraProveedor) && <FaLock size={10} className={styles.textAmber} />}
+                                        </div>
+                                        <p className={styles.movementDetail}>{m.detalle || 'Sin descripción'}</p>
+                                        <div className={styles.cardFooterRow}>
+                                            <span className={styles.textMuted}>Monto:</span>
+                                            <strong className={esIngreso ? styles.textGreen : styles.textRed}>
                                                 {esIngreso ? '+' : '-'} C$ {Number(m.monto).toLocaleString()}
                                             </strong>
                                         </div>
-                                        <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{m.detalle || 'N/A'}</small>
                                     </div>
                                 );
                             })
-                        )}
-                    </div>
-                )}
+                        )
+                    )}
+                </div>
+
+                {/* 6. VISTA ESCRITORIO (TABLAS COMPLETAS >= 1024px) */}
+                <div className={styles.desktopTableWrap}>
+                    {tabAuditoria === 'ventas' && (
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>Factura</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Método</th>
+                                    <th>Desglose Items</th>
+                                    <th style={{ textAlign: 'right' }}>Monto</th>
+                                    <th style={{ textAlign: 'center' }}>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ventasFiltradas.map((v) => (
+                                    <tr key={v.id}>
+                                        <td className={styles.orderIdBadge}>#000{v.id}</td>
+                                        <td>{v.fechaVenta ? new Date(v.fechaVenta).toLocaleDateString() : 'N/A'}</td>
+                                        <td>{v.cliente?.nombre || v.cliente?.Nombre || 'Mostrador General'}</td>
+                                        <td><span className={styles.paymentBadge}>{v.metodoPago}</span></td>
+                                        <td className={styles.textMuted}>
+                                            {v.detalles?.map((d: any, idx: number) => {
+                                                const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+                                                return <div key={idx}>• {d.cantidad}x {prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`)}</div>;
+                                            })}
+                                        </td>
+                                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>C$ {(v.total ?? 0).toLocaleString()}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div className={styles.actionsGroupCenter}>
+                                                <button onClick={() => abrirEditorVenta(v)} className={styles.btnActionEdit} title="Editar"><FaEdit /></button>
+                                                <button onClick={() => reimprimirTicket(v)} className={styles.btnActionPrint} title="Imprimir"><FaPrint /></button>
+                                                <button onClick={() => reordenarEnviarWhatsApp(v)} className={styles.btnActionWhatsapp} title="WhatsApp"><FaWhatsapp /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+
+                    {tabAuditoria === 'compras' && (
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>N° Orden</th>
+                                    <th>Fecha</th>
+                                    <th>Proveedor</th>
+                                    <th>Detalle Items</th>
+                                    <th>Notas</th>
+                                    <th style={{ textAlign: 'right' }}>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(datosReporte?.comprasProveedores || []).map((c: any) => (
+                                    <tr key={c.id}>
+                                        <td className={styles.orderIdBadge}>#ORD-{c.id}</td>
+                                        <td>{c.fecha}</td>
+                                        <td><strong>{c.proveedor}</strong></td>
+                                        <td className={styles.textMuted}>
+                                            {(c.items || []).map((item: any, idx: number) => (
+                                                <div key={idx}>• {item.cantidad}x {item.producto} (a C$ {item.costoUnitario})</div>
+                                            ))}
+                                        </td>
+                                        <td>{c.observaciones || 'Sin notas'}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#f87171' }}>C$ {Number(c.totalCompra).toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+
+                    {tabAuditoria === 'caja' && (
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Concepto</th>
+                                    <th>Detalle</th>
+                                    <th style={{ textAlign: 'right' }}>Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(datosReporte?.movimientosCaja || []).map((m: any) => {
+                                    const esIngreso = m.tipo === 'Ingreso';
+                                    return (
+                                        <tr key={m.id}>
+                                            <td className={styles.orderIdBadge}>#{m.id}</td>
+                                            <td>{m.fecha}</td>
+                                            <td><span className={`${styles.paymentBadge} ${esIngreso ? styles.bgGreen : styles.bgRed}`}>{m.tipo}</span></td>
+                                            <td><strong>{m.concepto}</strong></td>
+                                            <td className={styles.textMuted}>{m.detalle || 'N/A'}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 'bold', color: esIngreso ? '#10b981' : '#f87171' }}>
+                                                {esIngreso ? '+' : '-'} C$ {Number(m.monto).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             </div>
 
-            {/* MODAL EDITAR VENTA AUDITORÍA */}
+            {/* 7. MODAL DE EDICIÓN / AUDITORÍA DE FACTURA */}
             {ventaAEditar && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '85vh', overflowY: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>🛠️ Auditoría Factura #000{ventaAEditar.id}</h4>
-                            <button onClick={() => setVentaAEditar(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalBox}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>🛠️ Auditoría: Factura #000{ventaAEditar.id}</h3>
+                            <button onClick={() => setVentaAEditar(null)} className={styles.modalCloseBtn}><FaTimes /></button>
                         </div>
 
-                        <form onSubmit={procesarAuditoriaVenta} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Cliente</label>
-                                <select 
-                                    value={ventaAEditar.idCliente || ventaAEditar.IdCliente || 0} 
-                                    onChange={e => setVentaAEditar({...ventaAEditar, idCliente: Number(e.target.value)})} 
-                                    style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
-                                >
-                                    <option value={0}>Mostrador General</option>
-                                    {clientes.map(c => {
-                                        const cId = c.id ?? c.Id;
-                                        const cNombre = c.nombre ?? c.Nombre;
-                                        return <option key={cId} value={cId}>{cNombre}</option>;
-                                    })}
-                                </select>
+                        <form onSubmit={procesarAuditoriaVenta} className={styles.modalForm}>
+                            <div className={styles.formRowDual}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Cliente</label>
+                                    <select 
+                                        value={ventaAEditar.idCliente || ventaAEditar.IdCliente || 0} 
+                                        onChange={e => setVentaAEditar({...ventaAEditar, idCliente: Number(e.target.value)})} 
+                                        className={styles.select}
+                                    >
+                                        <option value={0}>Mostrador General</option>
+                                        {clientes.map(c => (
+                                            <option key={c.id ?? c.Id} value={c.id ?? c.Id}>{c.nombre ?? c.Nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Método de Pago</label>
+                                    <select value={nuevoMetodoPago} onChange={e => setMetodoPago(e.target.value)} className={styles.select}>
+                                        <option value="Efectivo">💵 Efectivo</option>
+                                        <option value="Transferencia">🏦 Transferencia</option>
+                                        <option value="Tarjeta">💳 Tarjeta</option>
+                                        <option value="Crédito">⚠️ Crédito</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Método de Pago</label>
-                                <select value={nuevoMetodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}>
-                                    <option value="Efectivo">💵 Efectivo</option>
-                                    <option value="Transferencia">🏦 Transferencia</option>
-                                    <option value="Tarjeta">💳 Tarjeta</option>
-                                    <option value="Crédito">⚠️ Crédito</option>
-                                </select>
-                            </div>
-
-                            {/* Detalle de ítems editables */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                                <label style={{ color: '#38bdf8', fontSize: '0.7rem', fontWeight: 700 }}>Artículos Facturados</label>
+                            <div className={styles.itemsAuditContainer}>
+                                <label className={styles.label}>Desglose de Ítems y Precios:</label>
                                 {detallesEditados.map((det, idx) => {
                                     const prodAsociado = productos.find(p => (p.id ?? p.Id) === det.idProducto);
                                     const esSuscripcion = prodAsociado?.esSuscripcion || prodAsociado?.EsSuscripcion;
                                     
-                                    let diasActuales = prodAsociado?.diasDuracion || 30;
-                                    if (det.metadataDigital && det.metadataDigital.startsWith("DIAS:")) {
+                                    let diasActuales: any = det.diasTemporales ?? prodAsociado?.diasDuracion ?? 30;
+                                    if (det.diasTemporales === undefined && det.metadataDigital && det.metadataDigital.startsWith("DIAS:")) {
                                         const extraidos = parseInt(det.metadataDigital.split('|')[0].replace("DIAS:", ""));
                                         if (!isNaN(extraidos)) diasActuales = extraidos;
                                     }
 
                                     return (
-                                        <div key={idx} style={{ background: '#0f172a', padding: '8px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <select 
-                                                value={Number(det.idProducto)} 
-                                                onChange={e => cambiarProductoDetalle(idx, Number(e.target.value))}
-                                                style={{ width: '100%', background: '#1e293b', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '0.75rem' }}
-                                            >
-                                                {productos.map(p => <option key={p.id ?? p.Id} value={Number(p.id ?? p.Id)}>{p.nombre ?? p.Nombre}</option>)}
-                                            </select>
+                                        <div key={idx} className={styles.itemAuditCard}>
+                                            <div className={styles.formGroup}>
+                                                <small className={styles.textMuted}>Producto</small>
+                                                <select 
+                                                    value={Number(det.idProducto)} 
+                                                    onChange={e => cambiarProductoDetalle(idx, Number(e.target.value))}
+                                                    className={styles.select}
+                                                >
+                                                    {productos.map(p => (
+                                                        <option key={p.id ?? p.Id} value={Number(p.id ?? p.Id)}>{p.nombre ?? p.Nombre}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
-                                                <div>
-                                                    <small style={{ color: '#64748b', fontSize: '0.65rem' }}>Cant.</small>
-                                                    <input type="number" value={det.cantidad} min={1} onChange={e => actualizarCantidadDetalle(idx, Number(e.target.value))} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.75rem', boxSizing: 'border-box' }} />
+                                            <div className={styles.itemAuditInputsGrid}>
+                                                <div className={styles.formGroup}>
+                                                    <small className={styles.textMuted}>Cant.</small>
+                                                    <input 
+                                                        type="number" 
+                                                        min={1} 
+                                                        value={det.cantidad ?? ''} 
+                                                        onChange={e => actualizarCantidadDetalle(idx, e.target.value)} 
+                                                        className={styles.touchInput}
+                                                    />
                                                 </div>
-                                                <div>
-                                                    <small style={{ color: '#64748b', fontSize: '0.65rem' }}>Precio C$</small>
-                                                    <input type="number" value={det.precioUnitario} onChange={e => actualizarPrecioDetalle(idx, Number(e.target.value))} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.75rem', boxSizing: 'border-box' }} />
+
+                                                <div className={styles.formGroup}>
+                                                    <small className={styles.textMuted}>Precio</small>
+                                                    <input 
+                                                        type="number" 
+                                                        value={det.precioUnitario ?? ''} 
+                                                        onChange={e => actualizarPrecioDetalle(idx, e.target.value)} 
+                                                        className={styles.touchInput}
+                                                    />
                                                 </div>
-                                                <div>
-                                                    <small style={{ color: '#f87171', fontSize: '0.65rem' }}>Desc. C$</small>
-                                                    <input type="number" value={det.descuento || 0} min={0} onChange={e => actualizarDescuentoDetalle(idx, Number(e.target.value))} style={{ width: '100%', background: '#1e293b', border: '1px solid #ef4444', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.75rem', boxSizing: 'border-box' }} />
+
+                                                <div className={styles.formGroup}>
+                                                    <small className={styles.textRed}>Desc.</small>
+                                                    <input 
+                                                        type="number" 
+                                                        min={0}
+                                                        value={det.descuento ?? ''} 
+                                                        onChange={e => actualizarDescuentoDetalle(idx, e.target.value)} 
+                                                        className={`${styles.touchInput} ${styles.borderRed}`}
+                                                    />
+                                                </div>
+
+                                                <div className={styles.formGroup}>
+                                                    <small className={styles.textCyan}>Días</small>
+                                                    <input 
+                                                        type="number" 
+                                                        min={1}
+                                                        disabled={!esSuscripcion}
+                                                        value={diasActuales ?? ''} 
+                                                        onChange={e => actualizarDiasSuscripcion(idx, e.target.value)} 
+                                                        className={styles.touchInput}
+                                                    />
                                                 </div>
                                             </div>
 
-                                            {esSuscripcion && (
-                                                <div>
-                                                    <small style={{ color: '#38bdf8', fontSize: '0.65rem' }}>Días Suscripción:</small>
-                                                    <input type="number" value={diasActuales} min={1} onChange={e => actualizarDiasSuscripcion(idx, Number(e.target.value))} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.75rem', boxSizing: 'border-box' }} />
-                                                </div>
-                                            )}
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', borderTop: '1px solid #334155', paddingTop: '4px', marginTop: '2px' }}>
-                                                <span style={{ color: '#64748b' }}>Subtotal:</span>
-                                                <strong style={{ color: '#10b981' }}>C$ {(det.subTotal ?? 0).toLocaleString()}</strong>
+                                            <div className={styles.itemSubtotalRow}>
+                                                <small>Subtotal Ítem:</small>
+                                                <strong className={styles.textCyan}>C$ {(det.subTotal ?? 0).toLocaleString()}</strong>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '8px', borderRadius: '6px', border: '1px solid #334155' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Total Factura:</span>
-                                <strong style={{ fontSize: '1rem', color: '#38bdf8' }}>
+                            <div className={styles.modalTotalBox}>
+                                <span>Nuevo Total Factura:</span>
+                                <strong className={styles.textGreen}>
                                     C$ {detallesEditados.reduce((acc, d) => acc + (d.subTotal || 0), 0).toLocaleString()}
                                 </strong>
                             </div>
 
-                            <button type="submit" style={{ width: '100%', padding: '10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}>
-                                Guardar y Recalcular
-                            </button>
+                            <div className={styles.modalActions}>
+                                <button type="submit" className={styles.btnSaveAudit}>
+                                    Guardar y Recalcular
+                                </button>
+                                <button type="button" onClick={() => setVentaAEditar(null)} className={styles.btnCancelAudit}>
+                                    Cerrar
+                                </button>
+                            </div>
 
-                            <button type="button" onClick={() => eliminarVentaCompleta(ventaAEditar.id)} style={{ width: '100%', padding: '8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>
-                                🚨 Anular Factura Completa
+                            <button type="button" onClick={() => eliminarVentaCompleta(ventaAEditar.id)} className={styles.btnDeleteSaleFull}>
+                                <FaTrash /> Eliminar Factura por Completo (Revertir Stock)
                             </button>
                         </form>
                     </div>

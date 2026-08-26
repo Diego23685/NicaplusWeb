@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { 
-    FaTrophy, FaShieldAlt, FaArrowDown, 
-    FaChartLine, FaWallet, FaUserClock, 
-    FaSync, FaExclamationTriangle, FaPrint, FaChevronDown, FaChevronUp
+    FaDollarSign, FaTrophy, FaShieldAlt, FaArrowDown, 
+    FaCalendarTimes, FaChartLine, FaWallet, FaUserClock, 
+    FaSync, FaExclamationTriangle, FaFilter, FaPrint
 } from 'react-icons/fa';
+import styles from '../assets/styles/Analitica.module.css';
 
 interface Gasto {
     detalle: string;
@@ -38,6 +39,27 @@ interface AnaliticaData {
     rankingServicios: ServicioRentable[];
 }
 
+interface CardProps {
+    title: string;
+    value: string | number;
+    icon: React.ReactNode;
+    colorClass: string;
+    subtitle?: string;
+}
+
+const Card: React.FC<CardProps> = ({ title, value, icon, colorClass, subtitle }) => (
+    <div className={styles.kpiCard}>
+        <div className={`${styles.kpiIconWrap} ${colorClass}`}>
+            {icon}
+        </div>
+        <div className={styles.kpiInfo}>
+            <small className={styles.kpiTitle}>{title}</small>
+            <h3 className={styles.kpiValue}>{value}</h3>
+            {subtitle && <small className={styles.kpiSubtitle}>{subtitle}</small>}
+        </div>
+    </div>
+);
+
 const formatearFechaLocal = (fechaStr: string) => {
     if (!fechaStr) return 'N/A';
     const partes = fechaStr.split('T')[0].split('-');
@@ -51,13 +73,12 @@ const formatearFechaLocal = (fechaStr: string) => {
 export const Analitica: React.FC = () => {
     const fechaActual = new Date();
     
-    // Estados de filtros
-    const [tipoFiltro, setTipoFiltro] = useState<'hoy' | 'semana' | 'mes' | 'anio'>('mes');
+    // Estados principales
+    const [tipoFiltro, setTipoFiltro] = useState<'hoy' | 'semana' | 'mes' | 'anio' | 'rango'>('mes');
     const [mes, setMes] = useState<number>(fechaActual.getMonth() + 1);
     const [anio, setAnio] = useState<number>(fechaActual.getFullYear());
-
-    // Estados de acordeones para móvil
-    const [seccionAbierta, setSeccionAbierta] = useState<'servicios' | 'gastos' | 'renovaciones' | null>('servicios');
+    const [fechaInicio, setFechaInicio] = useState<string>('');
+    const [fechaFin, setFechaFin] = useState<string>('');
 
     const [data, setData] = useState<AnaliticaData | null>(null);
     const [cargando, setCargando] = useState<boolean>(true);
@@ -71,6 +92,9 @@ export const Analitica: React.FC = () => {
 
             if (tipoFiltro === 'mes') {
                 params.mes = mes;
+            } else if (tipoFiltro === 'rango') {
+                params.fechaInicio = fechaInicio;
+                params.fechaFin = fechaFin;
             }
 
             const res = await api.get<AnaliticaData>('/reportes/analitica-ejecutiva', { params });
@@ -81,11 +105,12 @@ export const Analitica: React.FC = () => {
         } finally {
             setCargando(false);
         }
-    }, [tipoFiltro, mes, anio]);
+    }, [tipoFiltro, mes, anio, fechaInicio, fechaFin]);
 
     useEffect(() => {
+        if (tipoFiltro === 'rango' && (!fechaInicio || !fechaFin)) return;
         cargarAnalitica();
-    }, [cargarAnalitica]);
+    }, [cargarAnalitica, tipoFiltro]);
 
     const imprimirReporteAnalitico = () => {
         if (!data) return;
@@ -99,23 +124,31 @@ export const Analitica: React.FC = () => {
             <head>
                 <title>Informe_Analitica_Ejecutiva</title>
                 <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; color: #0f172a; }
+                    body { font-family: Arial, sans-serif; margin: 30px; color: #0f172a; }
                     h2 { border-bottom: 2px solid #38bdf8; padding-bottom: 6px; color: #0f172a; }
-                    .card { border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 10px; background: #f8fafc; }
+                    .card-container { display: flex; gap: 15px; margin-bottom: 20px; }
+                    .card { border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; flex: 1; background: #f8fafc; }
+                    .card small { font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase; }
+                    .card h3 { margin: 5px 0 0 0; font-size: 16px; }
                     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
                     th { background: #0f172a; color: white; padding: 8px; font-size: 11px; text-align: left; }
                     td { border-bottom: 1px solid #e2e8f0; padding: 8px; font-size: 11px; }
                 </style>
             </head>
             <body>
-                <h2>Informe de Analítica de Negocio</h2>
-                <div class="card">
-                    <strong>Utilidad Neta:</strong> C$ ${(data.resumenFinanciero?.utilidadNeta || 0).toLocaleString()}<br/>
-                    <strong>Gastos:</strong> C$ ${(data.resumenFinanciero?.gastosTotales || 0).toLocaleString()}
+                <h2>Informe de Analítica de Negocio y Rentabilidad</h2>
+                <div class="card-container">
+                    <div class="card"><small>Utilidad Bruta</small><h3>C$ ${(data.resumenFinanciero?.utilidadBruta || 0).toLocaleString()}</h3></div>
+                    <div class="card"><small>Gastos Operativos</small><h3>C$ ${(data.resumenFinanciero?.gastosTotales || 0).toLocaleString()}</h3></div>
+                    <div class="card" style="border-color: #10b981; background: #f0fdf4;">
+                        <small style="color: #166534;">Utilidad Neta</small>
+                        <h3 style="color: #15803d;">C$ ${(data.resumenFinanciero?.utilidadNeta || 0).toLocaleString()}</h3>
+                    </div>
                 </div>
+
                 <h3>Top Servicios Rentables</h3>
                 <table>
-                    <thead><tr><th>#</th><th>Servicio</th><th>Utilidad Total</th></tr></thead>
+                    <thead><tr><th>#</th><th>Servicio / Producto</th><th>Utilidad Total</th></tr></thead>
                     <tbody>
                         ${(data.rankingServicios || []).map((s, i) => `
                             <tr>
@@ -126,7 +159,10 @@ export const Analitica: React.FC = () => {
                         `).join('')}
                     </tbody>
                 </table>
-                <script>window.onload = function() { window.print(); }</script>
+
+                <script>
+                    window.onload = function() { window.print(); }
+                </script>
             </body>
             </html>
         `;
@@ -141,231 +177,219 @@ export const Analitica: React.FC = () => {
     const utilidadNeta = data?.resumenFinanciero?.utilidadNeta ?? (utilidadBruta - gastosTotales);
 
     return (
-        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', boxSizing: 'border-box', paddingBottom: '24px' }}>
+        <div className={styles.container}>
             
-            {/* 1. ENCABEZADO Y SELECTOR TÁCTIL DE PERIODOS (Chips Scrollables) */}
-            <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ color: '#38bdf8', margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-                        <FaChartLine /> Analítica Ejecutiva
+            {/* 1. ENCABEZADO Y CONTROLES */}
+            <header className={styles.headerPanel}>
+                <div className={styles.headerTitleWrap}>
+                    <h3 className={styles.title}>
+                        <FaChartLine /> Inteligencia de Negocio
                     </h3>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                </div>
+
+                <div className={styles.controlsWrap}>
+                    <div className={styles.filterBox}>
+                        <FaFilter className={styles.filterIcon} />
+                        
+                        <select 
+                            value={tipoFiltro} 
+                            onChange={(e) => setTipoFiltro(e.target.value as 'hoy' | 'semana' | 'mes' | 'anio' | 'rango')}
+                            className={styles.selectType}
+                        >
+                            <option value="hoy">Hoy</option>
+                            <option value="semana">Esta Semana</option>
+                            <option value="mes">Por Mes</option>
+                            <option value="anio">Todo el Año</option>
+                            <option value="rango">Rango Fechas</option>
+                        </select>
+
+                        {tipoFiltro === 'mes' && (
+                            <select 
+                                value={mes} 
+                                onChange={(e) => setMes(Number(e.target.value))}
+                                className={styles.selectDetail}
+                            >
+                                <option value={1}>Enero</option>
+                                <option value={2}>Febrero</option>
+                                <option value={3}>Marzo</option>
+                                <option value={4}>Abril</option>
+                                <option value={5}>Mayo</option>
+                                <option value={6}>Junio</option>
+                                <option value={7}>Julio</option>
+                                <option value={8}>Agosto</option>
+                                <option value={9}>Septiembre</option>
+                                <option value={10}>Octubre</option>
+                                <option value={11}>Noviembre</option>
+                                <option value={12}>Diciembre</option>
+                            </select>
+                        )}
+
+                        {(tipoFiltro === 'mes' || tipoFiltro === 'anio') && (
+                            <select 
+                                value={anio} 
+                                onChange={(e) => setAnio(Number(e.target.value))}
+                                className={styles.selectDetail}
+                            >
+                                <option value={2025}>2025</option>
+                                <option value={2026}>2026</option>
+                            </select>
+                        )}
+
+                        {tipoFiltro === 'rango' && (
+                            <div className={styles.dateRangeInputs}>
+                                <input 
+                                    type="date" 
+                                    value={fechaInicio} 
+                                    onChange={(e) => setFechaInicio(e.target.value)}
+                                    className={styles.dateInput}
+                                />
+                                <span className={styles.rangeDivider}>a</span>
+                                <input 
+                                    type="date" 
+                                    value={fechaFin} 
+                                    onChange={(e) => setFechaFin(e.target.value)}
+                                    className={styles.dateInput}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={styles.actionButtons}>
                         <button 
                             onClick={imprimirReporteAnalitico}
-                            style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                            className={styles.btnPrint}
                         >
-                            <FaPrint /> PDF
+                            <FaPrint /> <span>PDF</span>
                         </button>
+
                         <button 
                             onClick={cargarAnalitica} 
                             disabled={cargando}
-                            style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, opacity: cargando ? 0.7 : 1 }}
+                            className={styles.btnSync}
+                            title="Recargar analítica"
                         >
-                            <FaSync className={cargando ? 'spin' : ''} />
+                            <FaSync className={cargando ? styles.spin : ''} />
                         </button>
                     </div>
                 </div>
+            </header>
 
-                {/* Filtros rápidos estilo App móvil */}
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {(['hoy', 'semana', 'mes', 'anio'] as const).map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setTipoFiltro(f)}
-                            style={{
-                                background: tipoFiltro === f ? '#38bdf8' : '#0f172a',
-                                color: tipoFiltro === f ? '#0f172a' : '#94a3b8',
-                                border: '1px solid #334155',
-                                padding: '6px 12px',
-                                borderRadius: '20px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                textTransform: 'capitalize',
-                                whiteSpace: 'nowrap',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            {f === 'anio' ? 'Año' : f}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Selectores de Mes y Año si aplica */}
-                {tipoFiltro === 'mes' && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <select 
-                            value={mes} 
-                            onChange={(e) => setMes(Number(e.target.value))}
-                            style={{ flex: 1, background: '#0f172a', color: '#fff', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '0.85rem' }}
-                        >
-                            {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
-                                <option key={i} value={i + 1}>{m}</option>
-                            ))}
-                        </select>
-                        <select 
-                            value={anio} 
-                            onChange={(e) => setAnio(Number(e.target.value))}
-                            style={{ width: '90px', background: '#0f172a', color: '#fff', border: '1px solid #334155', borderRadius: '8px', padding: '8px', fontSize: '0.85rem' }}
-                        >
-                            <option value={2025}>2025</option>
-                            <option value={2026}>2026</option>
-                        </select>
-                    </div>
-                )}
-            </div>
-
-            {/* ESTADO DE CARGA Y ERROR */}
+            {/* 2. ESTADOS DE CARGA Y ERROR */}
             {cargando && !data && (
-                <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', background: '#1e293b', borderRadius: '12px' }}>
-                    <FaSync className="spin" style={{ fontSize: '1.2rem', marginBottom: '8px' }} />
-                    <div style={{ fontSize: '0.85rem' }}>Sincronizando datos contables...</div>
+                <div className={styles.loadingBox}>
+                    <FaSync className={`${styles.spin} ${styles.loadingIcon}`} />
+                    <div>Procesando analítica detallada...</div>
                 </div>
             )}
 
             {error && (
-                <div style={{ color: '#f43f5e', padding: '14px', background: '#1e293b', borderRadius: '12px', border: '1px solid #f43f5e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <FaExclamationTriangle /> {error}
-                    </span>
-                    <button onClick={cargarAnalitica} style={{ background: '#f43f5e', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem' }}>
+                <div className={styles.errorBox}>
+                    <div className={styles.errorContent}>
+                        <FaExclamationTriangle />
+                        <span>{error}</span>
+                    </div>
+                    <button onClick={cargarAnalitica} className={styles.btnRetry}>
                         Reintentar
                     </button>
                 </div>
             )}
 
-            {/* 2. CARD RESUMEN P&L (Balance de Estado de Resultados) */}
+            {/* 3. REPORTES Y GRIDS */}
             {data && (
                 <>
-                    <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', padding: '16px', borderRadius: '14px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <span style={{ color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
-                            Estado de Ganancias y Pérdidas
-                        </span>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                            <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Utilidad Neta:</span>
-                            <span style={{ color: '#10b981', fontSize: '1.6rem', fontWeight: 800 }}>
-                                C$ {utilidadNeta.toLocaleString()}
-                            </span>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid #334155', paddingTop: '10px' }}>
-                            <div>
-                                <small style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>Ingreso Bruto</small>
-                                <strong style={{ color: '#38bdf8', fontSize: '0.95rem' }}>C$ {utilidadBruta.toLocaleString()}</strong>
-                            </div>
-                            <div>
-                                <small style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>Gastos Totales</small>
-                                <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>- C$ {gastosTotales.toLocaleString()}</strong>
-                            </div>
-                        </div>
+                    <div className={styles.gridKpis}>
+                        <Card 
+                            title={tipoFiltro === 'hoy' ? "Utilidad Neta Hoy" : tipoFiltro === 'semana' ? "Utilidad Neta Semana" : tipoFiltro === 'anio' ? "Utilidad Neta Año" : tipoFiltro === 'rango' ? "Utilidad Neta Rango" : "Utilidad Neta Mes"} 
+                            value={`C$ ${utilidadNeta.toLocaleString()}`} 
+                            subtitle={`Bruto: C$ ${utilidadBruta.toLocaleString()}`}
+                            icon={<FaDollarSign />} 
+                            colorClass={styles.iconGreen} 
+                        />
+                        <Card 
+                            title="Garantías Aplicadas" 
+                            value={data.historialGarantias?.length ?? 0} 
+                            icon={<FaShieldAlt />} 
+                            colorClass={styles.iconAmber} 
+                        />
+                        <Card 
+                            title="Pérdida en Garantías" 
+                            value={`C$ ${dineroPerdidoGarantias.toLocaleString()}`} 
+                            icon={<FaArrowDown />} 
+                            colorClass={styles.iconRed} 
+                        />
+                        <Card 
+                            title="Renovaciones Vencidas" 
+                            value={data.renovacionesPerdidas?.length ?? 0} 
+                            icon={<FaCalendarTimes />} 
+                            colorClass={styles.iconRose} 
+                        />
                     </div>
 
-                    {/* 3. METRICAS SECUNDARIAS EN GRID COMPACTO (2x2) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
-                            <div style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <FaShieldAlt /> GARANTÍAS
+                    <div className={styles.gridDetalles}>
+                        {/* TOP SERVICIOS */}
+                        <div className={styles.detailCard}>
+                            <h4 className={`${styles.cardHeaderTitle} ${styles.textCyan}`}>
+                                <FaTrophy /> Top Servicios Rentables
+                            </h4>
+                            <div className={styles.detailList}>
+                                {(!data.rankingServicios || data.rankingServicios.length === 0) ? (
+                                    <div className={styles.emptyListText}>
+                                        No hay datos de servicios en este período.
+                                    </div>
+                                ) : (
+                                    data.rankingServicios.map((s, i) => (
+                                        <div key={i} className={styles.detailItem}>
+                                            <span className={styles.itemTitle}>{i + 1}. {s.servicio}</span>
+                                            <strong className={styles.itemValue}>C$ {(s.utilidadTotal || 0).toLocaleString()}</strong>
+                                        </div>
+                                    ))
+                                )}
                             </div>
-                            <div style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 800, marginTop: '4px' }}>
-                                {data.historialGarantias?.length ?? 0}
+                        </div>
+
+                        {/* GASTOS OPERATIVOS */}
+                        <div className={styles.detailCard}>
+                            <h4 className={`${styles.cardHeaderTitle} ${styles.textOrange}`}>
+                                <FaWallet /> Gastos Operativos (C$ {gastosTotales.toLocaleString()})
+                            </h4>
+                            <div className={styles.detailList}>
+                                {(!data.resumenFinanciero?.gastosDesglosados || data.resumenFinanciero.gastosDesglosados.length === 0) ? (
+                                    <div className={styles.emptyListText}>
+                                        Sin registros de gastos en este período.
+                                    </div>
+                                ) : (
+                                    data.resumenFinanciero.gastosDesglosados.map((g, i) => (
+                                        <div key={i} className={styles.detailItem}>
+                                            <span className={styles.itemTitle}>{g.detalle}</span>
+                                            <strong className={styles.textRed}>- C$ {(g.monto || 0).toLocaleString()}</strong>
+                                        </div>
+                                    ))
+                                )}
                             </div>
-                            <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Casos atencion</small>
                         </div>
 
-                        <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
-                            <div style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <FaArrowDown /> REPOSICIÓN
+                        {/* RENOVACIONES VENCIDAS */}
+                        <div className={styles.detailCard}>
+                            <h4 className={`${styles.cardHeaderTitle} ${styles.textRose}`}>
+                                <FaUserClock /> Renovaciones Vencidas
+                            </h4>
+                            <div className={styles.detailList}>
+                                {(!data.renovacionesPerdidas || data.renovacionesPerdidas.length === 0) ? (
+                                    <div className={styles.emptyListTextGreen}>
+                                        ¡Excelente! Sin renovaciones perdidas.
+                                    </div>
+                                ) : (
+                                    data.renovacionesPerdidas.map((r, i) => (
+                                        <div key={i} className={styles.detailItemStacked}>
+                                            <span className={styles.clientName}>{r.nombre}</span>
+                                            <small className={styles.serviceMeta}>
+                                                {r.nombreServicio} — Venció: <strong className={styles.textRed}>{formatearFechaLocal(r.fechaVencimiento)}</strong>
+                                            </small>
+                                        </div>
+                                    ))
+                                )}
                             </div>
-                            <div style={{ color: '#ef4444', fontSize: '1.2rem', fontWeight: 800, marginTop: '4px' }}>
-                                C$ {dineroPerdidoGarantias.toLocaleString()}
-                            </div>
-                            <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Costo de garantías</small>
                         </div>
-                    </div>
-
-                    {/* 4. ACORDEONES DESPLEGABLES PARA DESGLOSES DETALLADOS */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        
-                        {/* SECCIÓN: TOP SERVICIOS */}
-                        <div style={{ background: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
-                            <button 
-                                onClick={() => setSeccionAbierta(seccionAbierta === 'servicios' ? null : 'servicios')}
-                                style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: '#38bdf8', fontSize: '0.85rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                            >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FaTrophy /> Top Servicios Rentables</span>
-                                {seccionAbierta === 'servicios' ? <FaChevronUp /> : <FaChevronDown />}
-                            </button>
-
-                            {seccionAbierta === 'servicios' && (
-                                <div style={{ padding: '0 14px 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {(!data.rankingServicios || data.rankingServicios.length === 0) ? (
-                                        <div style={{ color: '#64748b', fontSize: '0.8rem' }}>Sin registros en el periodo.</div>
-                                    ) : (
-                                        data.rankingServicios.map((s, i) => (
-                                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #334155', paddingBottom: '6px' }}>
-                                                <span style={{ color: '#cbd5e1' }}>{i + 1}. {s.servicio}</span>
-                                                <strong style={{ color: '#10b981' }}>C$ {(s.utilidadTotal || 0).toLocaleString()}</strong>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* SECCIÓN: GASTOS OPERATIVOS */}
-                        <div style={{ background: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
-                            <button 
-                                onClick={() => setSeccionAbierta(seccionAbierta === 'gastos' ? null : 'gastos')}
-                                style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: '#fb923c', fontSize: '0.85rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                            >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FaWallet /> Desglose de Gastos</span>
-                                {seccionAbierta === 'gastos' ? <FaChevronUp /> : <FaChevronDown />}
-                            </button>
-
-                            {seccionAbierta === 'gastos' && (
-                                <div style={{ padding: '0 14px 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {(!data.resumenFinanciero?.gastosDesglosados || data.resumenFinanciero.gastosDesglosados.length === 0) ? (
-                                        <div style={{ color: '#64748b', fontSize: '0.8rem' }}>Sin gastos registrados.</div>
-                                    ) : (
-                                        data.resumenFinanciero.gastosDesglosados.map((g, i) => (
-                                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #334155', paddingBottom: '6px' }}>
-                                                <span style={{ color: '#cbd5e1' }}>{g.detalle}</span>
-                                                <strong style={{ color: '#ef4444' }}>- C$ {(g.monto || 0).toLocaleString()}</strong>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* SECCIÓN: RENOVACIONES VENCIDAS */}
-                        <div style={{ background: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
-                            <button 
-                                onClick={() => setSeccionAbierta(seccionAbierta === 'renovaciones' ? null : 'renovaciones')}
-                                style={{ width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', color: '#f43f5e', fontSize: '0.85rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                            >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FaUserClock /> Renovaciones Vencidas ({data.renovacionesPerdidas?.length ?? 0})</span>
-                                {seccionAbierta === 'renovaciones' ? <FaChevronUp /> : <FaChevronDown />}
-                            </button>
-
-                            {seccionAbierta === 'renovaciones' && (
-                                <div style={{ padding: '0 14px 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {(!data.renovacionesPerdidas || data.renovacionesPerdidas.length === 0) ? (
-                                        <div style={{ color: '#10b981', fontSize: '0.8rem' }}>Sin pérdidas registradas.</div>
-                                    ) : (
-                                        data.renovacionesPerdidas.map((r, i) => (
-                                            <div key={i} style={{ borderBottom: '1px solid #334155', paddingBottom: '6px' }}>
-                                                <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#f8fafc' }}>{r.nombre}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                                    {r.nombreServicio} — <span style={{ color: '#f43f5e' }}>{formatearFechaLocal(r.fechaVencimiento)}</span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
                     </div>
                 </>
             )}

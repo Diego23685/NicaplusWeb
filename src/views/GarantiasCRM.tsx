@@ -3,8 +3,10 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
     FaShieldAlt, FaHistory, FaPlus, FaFileContract, 
-    FaSave, FaWhatsapp, FaPrint, FaLaptop
+    FaSave, FaWhatsapp, FaPrint, FaLaptop, FaChevronDown,
+    FaChevronUp, FaUser, FaMoneyBillWave, FaCheckCircle
 } from 'react-icons/fa';
+import styles from '../assets/styles/GarantiasCRM.module.css';
 
 interface Plantilla {
     id: string;
@@ -20,10 +22,11 @@ export const GarantiasCRM: React.FC = () => {
     const [clientes, setClientes] = useState<any[]>([]);
     const [cargando, setCargando] = useState(true);
 
-    // CONTROL DE PESTAÑAS MÓVILES
-    const [tabActiva, setTabActiva] = useState<'poliza' | 'reposicion' | 'historial' | 'plantillas'>('poliza');
+    // Navegación por Pestañas
+    const [seccionActiva, setSeccionActiva] = useState<'emitir' | 'reposicion' | 'historial'>('emitir');
+    const [mostrarConfigPlantilla, setMostrarConfigPlantilla] = useState(false);
 
-    // CONTROL DE BÚSQUEDA Y ASIGNACIÓN
+    // CONTROL DE BUSQUEDA Y ASIGNACIÓN
     const [idCliente, setIdCliente] = useState('');
     const [busquedaCliente, setBusquedaCliente] = useState('');
 
@@ -33,7 +36,7 @@ export const GarantiasCRM: React.FC = () => {
     const [cuentaNueva, setCuentaNueva] = useState('');
     const [costoReposicion, setCostoReposicion] = useState(0);
 
-    // SISTEMA DE PLANTILLAS PREGUARDADAS
+    // SISTEMA DE PLANTILLAS
     const [plantillas, setPlantillas] = useState<Plantilla[]>([
         { id: '1', tipoProducto: 'Celulares', cobertura: '1 mes en placa y pantalla (no golpes). 1 mes en batería.', exclusiones: 'Humedad, sellos rotos, golpes evidentes o sobrecargas.', diasValidez: 30 },
         { id: '2', tipoProducto: 'Parlantes y Audio', cobertura: '30 días en el módulo bluetooth y puerto de carga.', exclusiones: 'Saturación de bobina por exceso de volumen o uso de cargador inadecuado.', diasValidez: 30 }
@@ -65,7 +68,6 @@ export const GarantiasCRM: React.FC = () => {
 
     useEffect(() => { cargarDatos(); }, []);
 
-    // ACCIÓN: Guardar nueva plantilla localmente
     const guardarPlantilla = (e: React.FormEvent) => {
         e.preventDefault();
         if (!nuevoTipo || !nuevaCobertura) return;
@@ -80,10 +82,10 @@ export const GarantiasCRM: React.FC = () => {
 
         setPlantillas([...plantillas, creada]);
         setNuevoTipo(''); setNuevaCobertura(''); setNuevasExclusiones(''); setNuevosDias(30);
-        alert(`Plantilla para ${creada.tipoProducto} guardada.`);
+        setMostrarConfigPlantilla(false);
+        alert(`Plantilla para "${creada.tipoProducto}" guardada.`);
     };
 
-    // ACCIÓN: Procesar una reposición de cuenta/servicio caídos
     const procesarGarantia = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!idCliente) {
@@ -105,14 +107,13 @@ export const GarantiasCRM: React.FC = () => {
             alert("Reposición de garantía auditada y guardada.");
             setMotivo(''); setCuentaAnterior(''); setCuentaNueva(''); setCostoReposicion(0);
             setIdCliente(''); setBusquedaCliente('');
-            setTabActiva('historial');
             cargarDatos();
+            setSeccionActiva('historial');
         } catch {
             alert("Error de red al registrar la garantía.");
         }
     };
 
-    // ACCIÓN: Imprimir Póliza A4/Carta
     const imprimirPolizaFormal = (cliente: any, p: Plantilla) => {
         const ventana = window.open('', '_blank');
         if (!ventana) return;
@@ -123,7 +124,7 @@ export const GarantiasCRM: React.FC = () => {
                 <title>Poliza_Garantia_${imeiSerie || 'NICAPLUS'}</title>
                 <style>
                     @page { size: letter; margin: 15mm; }
-                    body { font-family: 'Segoe UI', sans-serif; color: #1e293b; line-height: 1.5; font-size: 13px; }
+                    body { font-family: 'Segoe UI', sans-serif; color: #1e293b; line-height: 1.5; font-size: 13px; margin: 0; padding: 0; }
                     .header { border-bottom: 3px solid #581c7e; padding-bottom: 10px; margin-bottom: 20px; }
                     .logo { font-size: 24px; font-weight: bold; color: #1e293b; }
                     .logo span { color: #581c7e; }
@@ -151,7 +152,7 @@ export const GarantiasCRM: React.FC = () => {
                 <table class="grid">
                     <tr>
                         <td class="label">Cliente:</td><td>${cliente.nombre}</td>
-                        <td class="label">Teléfono:</td><td>${cliente.telefono}</td>
+                        <td class="label">Teléfono:</td><td>${cliente.telefono || 'N/A'}</td>
                     </tr>
                     <tr>
                         <td class="label">Producto / Modelo:</td><td>${modeloEspecifico || p.tipoProducto}</td>
@@ -166,7 +167,7 @@ export const GarantiasCRM: React.FC = () => {
                 <div class="box"><strong>Qué cubre:</strong><br>${p.cobertura}</div>
 
                 <h3>3. Exclusiones Críticas</h3>
-                <div class="box" style="border-left: 4px solid #581c7e;"><strong>Qué NO cubre (Anulación inmediata):</strong><br>${p.exclusiones}</div>
+                <div class="box" style="border-left: 4px solid #581c7e;"><strong>Qué NO cubre (Anulación inmediata):</strong><br>${p.exclusiones || 'Daños por humedad o sellos rotos.'}</div>
 
                 <table class="signatures">
                     <tr>
@@ -183,8 +184,12 @@ export const GarantiasCRM: React.FC = () => {
         ventana.document.close();
     };
 
-    // ACCIÓN: Enviar Póliza al Cliente por WhatsApp
     const enviarPolizaWhatsApp = (cliente: any, p: Plantilla) => {
+        if (!cliente?.telefono) {
+            alert("El cliente no posee número telefónico asignado.");
+            return;
+        }
+
         let telefono = cliente.telefono.replace(/\s+/g, '').replace(/-/g, '');
         if (!telefono.startsWith('505')) telefono = '505' + telefono;
 
@@ -194,7 +199,7 @@ export const GarantiasCRM: React.FC = () => {
             `🔢 *Serie/IMEI:* ${imeiSerie || 'N/A'}\n` +
             `📅 *Vigencia:* ${p.diasValidez} días desde hoy.\n\n` +
             `✅ *Cobertura:* ${p.cobertura}\n\n` +
-            `❌ *Exclusiones:* ${p.exclusiones}\n\n` +
+            `❌ *Exclusiones:* ${p.exclusiones || 'Sellos rotos o humedad.'}\n\n` +
             `_Conserve este mensaje. La manipulación de los sellos de seguridad anulará este respaldo._`;
 
         const url = `https://api.whatsapp.com/send/?phone=${telefono}&text=${encodeURIComponent(texto)}&type=phone_number&app_absent=0`;
@@ -202,274 +207,367 @@ export const GarantiasCRM: React.FC = () => {
     };
 
     const clientesFiltrados = clientes.filter(c => 
-        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || c.telefono.includes(busquedaCliente)
+        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || 
+        (c.telefono && c.telefono.includes(busquedaCliente))
     );
 
-    const perdidaTotal = garantias.reduce((sum, g) => sum + (g.costoReposicion || 0), 0);
-
-    if (cargando) return (
-        <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>
-            Sincronizando pólizas de garantías...
-        </div>
-    );
-
+    const perdidaTotal = garantias.reduce((sum, g) => sum + (Number(g.costoReposicion) || 0), 0);
     const clienteActivoObj = clientes.find(c => c.id === Number(idCliente));
 
+    if (cargando) {
+        return (
+            <div className={styles.loadingScreen}>
+                <div className={styles.loaderPulse} />
+                <span>Sincronizando pólizas de garantías...</span>
+            </div>
+        );
+    }
+
     return (
-        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
+        <div className={styles.container}>
             
-            {/* ENCABEZADO Y BALANCE DE PÉRDIDAS */}
-            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Garantías y Reposiciones</h3>
-                        <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Pólizas de venta y bitácora de reemplazos</small>
-                    </div>
-
-                    <div style={{ background: '#0f172a', border: '1px solid #ef4444', padding: '6px 10px', borderRadius: '8px', textAlign: 'right' }}>
-                        <small style={{ color: '#ef4444', fontSize: '0.65rem', display: 'block', fontWeight: 700 }}>PÉRDIDA REPOSICIÓN</small>
-                        <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>C$ {perdidaTotal.toLocaleString()}</strong>
-                    </div>
+            {/* 1. ENCABEZADO Y RESUMEN FINANCIERO */}
+            <header className={styles.header}>
+                <div className={styles.headerTitleWrap}>
+                    <h3 className={styles.title}>Pólizas y Garantías</h3>
+                    <p className={styles.subtitle}>Emisión de certificados y auditoría de reposiciones.</p>
                 </div>
-
-                {/* Conmutador de Pestañas Móviles */}
-                <div style={{ display: 'flex', gap: '4px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155', overflowX: 'auto' }}>
-                    <button 
-                        onClick={() => setTabActiva('poliza')}
-                        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: tabActiva === 'poliza' ? '#38bdf8' : 'transparent', color: tabActiva === 'poliza' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    >
-                        <FaLaptop /> Emitir Póliza
-                    </button>
-                    <button 
-                        onClick={() => setTabActiva('reposicion')}
-                        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: tabActiva === 'reposicion' ? '#38bdf8' : 'transparent', color: tabActiva === 'reposicion' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    >
-                        <FaShieldAlt /> Reemplazo
-                    </button>
-                    <button 
-                        onClick={() => setTabActiva('historial')}
-                        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: tabActiva === 'historial' ? '#38bdf8' : 'transparent', color: tabActiva === 'historial' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    >
-                        <FaHistory /> Historial
-                    </button>
-                    <button 
-                        onClick={() => setTabActiva('plantillas')}
-                        style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: tabActiva === 'plantillas' ? '#38bdf8' : 'transparent', color: tabActiva === 'plantillas' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    >
-                        <FaFileContract /> Plantillas
-                    </button>
+                <div className={styles.perdidaCard}>
+                    <small className={styles.perdidaLabel}>Pérdida en Reposiciones</small>
+                    <strong className={styles.perdidaMonto}>C$ {perdidaTotal.toLocaleString()}</strong>
                 </div>
+            </header>
+
+            {/* 2. SELECTOR DE PESTAÑAS TÁCTIL */}
+            <div className={styles.tabsHeader}>
+                <button 
+                    type="button"
+                    onClick={() => setSeccionActiva('emitir')}
+                    className={`${styles.tabBtn} ${seccionActiva === 'emitir' ? styles.tabBtnActive : ''}`}
+                >
+                    <FaLaptop /> Emitir Póliza
+                </button>
+                <button 
+                    type="button"
+                    onClick={() => setSeccionActiva('reposicion')}
+                    className={`${styles.tabBtn} ${seccionActiva === 'reposicion' ? styles.tabBtnActiveOrange : ''}`}
+                >
+                    <FaShieldAlt /> Reposición Cuenta
+                </button>
+                <button 
+                    type="button"
+                    onClick={() => setSeccionActiva('historial')}
+                    className={`${styles.tabBtn} ${seccionActiva === 'historial' ? styles.tabBtnActiveBlue : ''}`}
+                >
+                    <FaHistory /> Historial ({garantias.length})
+                </button>
             </div>
 
-            {/* PESTAÑA 1: EMISOR DIGITAL DE PÓLIZAS */}
-            {tabActiva === 'poliza' && (
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <FaLaptop /> Emitir Póliza de Venta
-                    </h4>
-
-                    {/* Selector de Cliente */}
-                    <div>
-                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>1. Asignar Cliente de la Operación</label>
-                        <input 
-                            type="text" 
-                            placeholder="🔍 Filtrar cliente por nombre..." 
-                            value={busquedaCliente} 
-                            onChange={e => setBusquedaCliente(e.target.value)} 
-                            style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '4px', boxSizing: 'border-box' }}
-                        />
-                        <select 
-                            value={idCliente} 
-                            onChange={e => {
-                                setIdCliente(e.target.value);
-                                const text = e.target.options[e.target.selectedIndex].text;
-                                if (e.target.value !== '') setBusquedaCliente(text.split(' (')[0]);
-                            }} 
-                            style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
-                        >
-                            <option value="">-- Seleccionar Cliente --</option>
-                            {clientesFiltrados.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>)}
-                        </select>
-                    </div>
-
-                    {/* Selector de Plantilla */}
-                    <div>
-                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block', marginBottom: '2px' }}>2. Plantilla de Cobertura</label>
-                        <select 
-                            onChange={e => {
-                                const seleccion = plantillas.find(p => p.id === e.target.value);
-                                setPlantillaSeleccionada(seleccion || null);
-                            }} 
-                            style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}
-                        >
-                            <option value="">-- Escoger Plantilla --</option>
-                            {plantillas.map(p => <option key={p.id} value={p.id}>{p.tipoProducto} ({p.diasValidez} días)</option>)}
-                        </select>
-                    </div>
-
-                    {/* Especificaciones adicionales si hay plantilla seleccionada */}
-                    {plantillaSeleccionada && (
-                        <div style={{ background: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #38bdf8', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Modelo Específico</label>
-                                <input type="text" placeholder="Ej: iPhone 13 Pro Max" value={modeloEspecifico} onChange={e => setModeloEspecifico(e.target.value)} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-                            </div>
-
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>IMEI / Serie Única</label>
-                                <input type="text" placeholder="Garantiza unicidad física" value={imeiSerie} onChange={e => setImeiSerie(e.target.value)} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-                            </div>
-
+            {/* 3. VISTAS OPERATIVAS */}
+            <div className={styles.contentWrapper}>
+                
+                {/* PESTAÑA 1: EMITIR PÓLIZA DE VENTA */}
+                {seccionActiva === 'emitir' && (
+                    <div className={styles.panelCard}>
+                        <div className={styles.cardHeaderWithAction}>
+                            <h4 className={`${styles.panelTitle} ${styles.titleBlue}`}>
+                                <FaLaptop /> Emisión de Garantía Comercial
+                            </h4>
                             <button 
-                                type="button" 
-                                onClick={() => {
-                                    if(!clienteActivoObj) return alert("Seleccione un cliente primero.");
-                                    imprimirPolizaFormal(clienteActivoObj, plantillaSeleccionada);
-                                }}
-                                style={{ width: '100%', padding: '10px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '4px' }}
+                                type="button"
+                                onClick={() => setMostrarConfigPlantilla(!mostrarConfigPlantilla)}
+                                className={styles.btnToggleAccordion}
                             >
-                                <FaPrint /> Imprimir Contrato PDF/Carta
-                            </button>
-                            
-                            <button 
-                                type="button" 
-                                onClick={() => {
-                                    if(!clienteActivoObj) return alert("Seleccione un cliente primero.");
-                                    enviarPolizaWhatsApp(clienteActivoObj, plantillaSeleccionada);
-                                }}
-                                style={{ width: '100%', padding: '10px', background: '#25D366', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                            >
-                                <FaWhatsapp /> Despachar Póliza (WhatsApp)
+                                <FaFileContract size={12} /> 
+                                <span>{mostrarConfigPlantilla ? 'Cerrar Plantillas' : '+ Nueva Plantilla'}</span>
+                                {mostrarConfigPlantilla ? <FaChevronUp size={10} /> : <FaChevronDown size={10} />}
                             </button>
                         </div>
-                    )}
-                </div>
-            )}
 
-            {/* PESTAÑA 2: REGISTRO REPOSICIÓN DE DIGITALES / CUENTAS */}
-            {tabActiva === 'reposicion' && (
-                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155' }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#fb923c', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <FaShieldAlt /> Auditar Reemplazo / Pérdida Cuenta
-                    </h4>
-
-                    <form onSubmit={procesarGarantia} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Cliente Afectado</label>
-                            <select value={idCliente} onChange={e => setIdCliente(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
-                                <option value="">-- Seleccionar Cliente --</option>
-                                {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Falla Técnica / Motivo</label>
-                            <input type="text" placeholder="Ej: Cuenta caída masiva" value={motivo} onChange={e => setMotivo(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                        </div>
-
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Cuenta Anterior Revocada</label>
-                            <input type="text" placeholder="perfil3@mail.com" value={cuentaAnterior} onChange={e => setCuentaAnterior(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                        </div>
-
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Cuenta Nueva Entregada</label>
-                            <input type="text" placeholder="nuevo3@mail.com" value={cuentaNueva} onChange={e => setCuentaNueva(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                        </div>
-
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Costo de Reposición / Pérdida (C$)</label>
-                            <input type="number" min={0} value={costoReposicion || ''} onChange={e => setCostoReposicion(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                        </div>
-
-                        <button type="submit" style={{ width: '100%', padding: '10px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
-                            <FaPlus /> Autorizar Reposición
-                        </button>
-                    </form>
-                </div>
-            )}
-
-            {/* PESTAÑA 3: HISTORIAL DE REEMPLAZOS */}
-            {tabActiva === 'historial' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {garantias.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
-                            No se registran reemplazos de garantía en el periodo.
-                        </div>
-                    ) : (
-                        garantias.map((g) => (
-                            <div key={g.id} style={{ background: '#1e293b', borderLeft: '4px solid #ef4444', padding: '10px 12px', borderRadius: '10px', borderTop: '1px solid #334155', borderRight: '1px solid #334155', borderBottom: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <strong style={{ color: '#fff', fontSize: '0.82rem' }}>OS-G#{g.id} — {g.motivo}</strong>
-                                    <strong style={{ color: '#ef4444', fontSize: '0.85rem' }}>- C$ {g.costoReposicion}</strong>
+                        {/* ACCORDEÓN PARA CREAR PLANTILLAS */}
+                        {mostrarConfigPlantilla && (
+                            <form onSubmit={guardarPlantilla} className={styles.formPlantilla}>
+                                <div className={styles.plantillaHeader}>
+                                    <strong>Nueva Plantilla de Cobertura</strong>
                                 </div>
-
-                                <div style={{ background: '#0f172a', padding: '6px 8px', borderRadius: '6px', fontSize: '0.72rem', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
-                                    <span style={{ color: '#ef4444' }}>❌ Revocada: <code>{g.cuentaAnterior}</code></span>
-                                    <span style={{ color: '#10b981' }}>✨ Nueva: <code>{g.cuentaNueva}</code></span>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Tipo de Línea o Producto *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Ej: Celulares, Audio JBL, Mandos" 
+                                        value={nuevoTipo} 
+                                        onChange={e => setNuevoTipo(e.target.value)} 
+                                        className={styles.input} 
+                                        required 
+                                    />
                                 </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.68rem', marginTop: '2px' }}>
-                                    <span>👤 Cliente: {g.clienteNombre}</span>
-                                    <span>📅 {new Date(g.fechaRepo).toLocaleDateString()}</span>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Días de Validez *</label>
+                                    <input 
+                                        type="number" 
+                                        min={1} 
+                                        value={nuevosDias} 
+                                        onChange={e => setNuevosDias(Number(e.target.value))} 
+                                        className={styles.input} 
+                                        required 
+                                    />
                                 </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Cobertura *</label>
+                                    <textarea 
+                                        rows={2}
+                                        placeholder="Qué piezas o fallas cubre..." 
+                                        value={nuevaCobertura} 
+                                        onChange={e => setNuevaCobertura(e.target.value)} 
+                                        className={styles.textarea} 
+                                        required 
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Exclusiones</label>
+                                    <textarea 
+                                        rows={2}
+                                        placeholder="Sellos rotos, golpes, humedad..." 
+                                        value={nuevasExclusiones} 
+                                        onChange={e => setNuevasExclusiones(e.target.value)} 
+                                        className={styles.textarea} 
+                                    />
+                                </div>
+                                <button type="submit" className={styles.btnSavePlantilla}>
+                                    <FaSave /> Guardar en Catálogo
+                                </button>
+                            </form>
+                        )}
+
+                        <div className={styles.formGrid}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaUser size={10} /> 1. Cliente</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="🔍 Buscar por nombre o celular..." 
+                                    value={busquedaCliente} 
+                                    onChange={e => setBusquedaCliente(e.target.value)} 
+                                    className={styles.input} 
+                                />
+                                <select 
+                                    value={idCliente} 
+                                    onChange={e => {
+                                        setIdCliente(e.target.value);
+                                        const text = e.target.options[e.target.selectedIndex].text;
+                                        if (e.target.value !== '') setBusquedaCliente(text.split(' (')[0]);
+                                    }} 
+                                    className={styles.select}
+                                >
+                                    <option value="">-- Seleccionar Cliente --</option>
+                                    {clientesFiltrados.map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre} ({c.telefono || 'Sin tel'})</option>
+                                    ))}
+                                </select>
                             </div>
-                        ))
-                    )}
-                </div>
-            )}
 
-            {/* PESTAÑA 4: GESTIÓN DE PLANTILLAS BASE */}
-            {tabActiva === 'plantillas' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155' }}>
-                        <h4 style={{ margin: '0 0 10px 0', color: '#10b981', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <FaFileContract /> Crear Nueva Plantilla
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaFileContract size={10} /> 2. Plantilla de Garantía</label>
+                                <select 
+                                    onChange={e => {
+                                        const seleccion = plantillas.find(p => p.id === e.target.value);
+                                        setPlantillaSeleccionada(seleccion || null);
+                                    }} 
+                                    className={styles.select}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>-- Escoger Plantilla --</option>
+                                    {plantillas.map(p => (
+                                        <option key={p.id} value={p.id}>{p.tipoProducto} ({p.diasValidez} días)</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {plantillaSeleccionada && (
+                                <>
+                                    <div className={styles.plantillaResumenBox}>
+                                        <span className={styles.plantillaResumenTitle}>
+                                            <FaCheckCircle className={styles.textGreen} /> {plantillaSeleccionada.tipoProducto} ({plantillaSeleccionada.diasValidez} días)
+                                        </span>
+                                        <p className={styles.plantillaResumenText}><strong>Cubre:</strong> {plantillaSeleccionada.cobertura}</p>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Modelo / Descripción</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Ej: iPhone 13 Pro Max 256GB" 
+                                            value={modeloEspecifico} 
+                                            onChange={e => setModeloEspecifico(e.target.value)} 
+                                            className={styles.input} 
+                                        />
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>IMEI / Número de Serie</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Ej: 356789012345678" 
+                                            value={imeiSerie} 
+                                            onChange={e => setImeiSerie(e.target.value)} 
+                                            className={styles.input} 
+                                        />
+                                    </div>
+
+                                    <div className={styles.actionsDual}>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                if (!clienteActivoObj) return alert("Seleccione un cliente primero.");
+                                                imprimirPolizaFormal(clienteActivoObj, plantillaSeleccionada);
+                                            }}
+                                            className={styles.btnPrint} 
+                                        >
+                                            <FaPrint /> Imprimir Contrato
+                                        </button>
+                                        
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                if (!clienteActivoObj) return alert("Seleccione un cliente primero.");
+                                                enviarPolizaWhatsApp(clienteActivoObj, plantillaSeleccionada);
+                                            }}
+                                            className={styles.btnWhatsapp}
+                                        >
+                                            <FaWhatsapp size={16} /> Enviar WhatsApp
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* PESTAÑA 2: AUDITAR REPOSICIÓN DE CUENTA CAÍDA */}
+                {seccionActiva === 'reposicion' && (
+                    <div className={styles.panelCard}>
+                        <h4 className={`${styles.panelTitle} ${styles.titleOrange}`}>
+                            <FaShieldAlt /> Registrar Reemplazo de Cuenta Caída
                         </h4>
-
-                        <form onSubmit={guardarPlantilla} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Línea / Producto</label>
-                                <input type="text" placeholder="Ej: Celulares, Parlantes, Mandos" value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
+                        <form onSubmit={procesarGarantia} className={styles.formGrid}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaUser size={10} /> Cliente Afectado *</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="🔍 Buscar cliente..." 
+                                    value={busquedaCliente} 
+                                    onChange={e => setBusquedaCliente(e.target.value)} 
+                                    className={styles.input} 
+                                />
+                                <select 
+                                    value={idCliente} 
+                                    onChange={e => {
+                                        setIdCliente(e.target.value);
+                                        const text = e.target.options[e.target.selectedIndex].text;
+                                        if (e.target.value !== '') setBusquedaCliente(text.split(' (')[0]);
+                                    }} 
+                                    className={styles.select} 
+                                    required
+                                >
+                                    <option value="">-- Seleccionar Cliente --</option>
+                                    {clientesFiltrados.map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre} ({c.telefono || 'Sin tel'})</option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Días Validez</label>
-                                <input type="number" value={nuevosDias} onChange={e => setNuevosDias(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Motivo de la Reclamación *</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Ej: Cuenta caída masiva, clave cambiada" 
+                                    value={motivo} 
+                                    onChange={e => setMotivo(e.target.value)} 
+                                    className={styles.input} 
+                                    required 
+                                />
                             </div>
 
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Cláusula de Cobertura (Lo que SÍ cubre)</label>
-                                <textarea placeholder="Módulos cubiertos..." value={nuevaCobertura} onChange={e => setNuevaCobertura(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} rows={2} required />
+                            <div className={styles.formGroupDual}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.labelRed}>Cuenta / Perfil Anterior *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="perfil_viejo@correo.com" 
+                                        value={cuentaAnterior} 
+                                        onChange={e => setCuentaAnterior(e.target.value)} 
+                                        className={styles.input} 
+                                        required 
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.labelGreen}>Cuenta / Perfil Nuevo Entregado *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="perfil_nuevo@correo.com" 
+                                        value={cuentaNueva} 
+                                        onChange={e => setCuentaNueva(e.target.value)} 
+                                        className={styles.input} 
+                                        required 
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Exclusiones (Lo que NO cubre)</label>
-                                <textarea placeholder="Humedad, golpes, etc." value={nuevasExclusiones} onChange={e => setNuevasExclusiones(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} rows={2} />
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaMoneyBillWave size={10} /> Costo de Reposición / Pérdida (C$)</label>
+                                <input 
+                                    type="number" 
+                                    min={0} 
+                                    value={costoReposicion === 0 ? '' : costoReposicion} 
+                                    onFocus={(e) => e.target.select()}
+                                    onChange={e => setCostoReposicion(e.target.value === '' ? 0 : Number(e.target.value))} 
+                                    placeholder="0.00"
+                                    className={`${styles.input} ${styles.inputCost}`} 
+                                    required 
+                                />
                             </div>
 
-                            <button type="submit" style={{ width: '100%', padding: '10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
-                                <FaSave /> Almacenar Plantilla
+                            <button type="submit" className={styles.btnSubmitReposicion}>
+                                <FaPlus /> Autorizar y Guardar Reposición
                             </button>
                         </form>
                     </div>
+                )}
 
-                    {/* Lista de plantillas registradas */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <strong style={{ color: '#38bdf8', fontSize: '0.8rem' }}>Plantillas Disponibles en Sistema ({plantillas.length})</strong>
-                        {plantillas.map(p => (
-                            <div key={p.id} style={{ background: '#1e293b', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '0.82rem', color: '#fff' }}>
-                                    <span>{p.tipoProducto}</span>
-                                    <span style={{ color: '#38bdf8' }}>{p.diasValidez} días</span>
-                                </div>
-                                <div style={{ color: '#cbd5e1', fontSize: '0.72rem' }}>✅ Cobertura: {p.cobertura}</div>
-                                {p.exclusiones && <div style={{ color: '#f87171', fontSize: '0.72rem' }}>❌ Exclusiones: {p.exclusiones}</div>}
-                            </div>
-                        ))}
+                {/* PESTAÑA 3: HISTORIAL AUDITABLE */}
+                {seccionActiva === 'historial' && (
+                    <div className={styles.panelCard}>
+                        <h4 className={`${styles.panelTitle} ${styles.titleBlue}`}>
+                            <FaHistory /> Historial de Garantías Ejecutadas
+                        </h4>
+                        <div className={styles.historyFeed}>
+                            {garantias.length === 0 ? (
+                                <div className={styles.emptyText}>No se registran reemplazos en el periodo.</div>
+                            ) : (
+                                garantias.map((g) => (
+                                    <div key={g.id} className={styles.historyCard}>
+                                        <div className={styles.historyCardHeader}>
+                                            <strong className={styles.historyTitle}>#OS-G{g.id} — {g.motivo}</strong>
+                                            <span className={styles.historyCost}>- C$ {Number(g.costoReposicion || 0).toLocaleString()}</span>
+                                        </div>
+
+                                        <div className={styles.historyDetailsBox}>
+                                            <div className={styles.historyLineRed}>❌ Anterior: <code>{g.cuentaAnterior}</code></div>
+                                            <div className={styles.historyLineGreen}>✨ Nueva: <code>{g.cuentaNueva}</code></div>
+                                        </div>
+
+                                        <div className={styles.historyMeta}>
+                                            <span>👤 <strong>{g.clienteNombre}</strong></span>
+                                            <span>🛠️ {g.responsableNombre || 'Técnico'}</span>
+                                            <span>📅 {new Date(g.fechaRepo).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+
+            </div>
         </div>
     );
 };

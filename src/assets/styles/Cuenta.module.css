@@ -1,410 +1,462 @@
-/* Cuentas.module.css */
-
+/* =========================================================
+   CONTENEDOR BASE
+   ========================================================= */
 .cuentasContainer {
-  padding: 20px;
-  color: #f1f5f9;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  max-width: 1280px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    color: #f1f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 
-@media (max-width: 768px) {
-  .cuentasContainer {
-    padding: 12px;
-  }
-}
-
-/* ================= CONTROLES Y ENCABEZADO ================= */
-.headerControls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+/* 1. Header & Pestañas */
+.headerTabsWrap {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #0b1120;
+    padding-bottom: 0.25rem;
 }
 
 .subModuloTabs {
-  display: flex;
-  gap: 8px;
-  background: #0f172a;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid #334155;
+    display: flex;
+    width: 100%;
+    gap: 0.4rem;
+    background: #0f172a;
+    padding: 0.35rem;
+    border-radius: 10px;
+    border: 1px solid #334155;
 }
 
 .tabBtn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: #94a3b8;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.tabBtn:hover {
-  color: #ffffff;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.65rem 0.5rem;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.2s ease;
 }
 
 .tabBtnCobrarActive {
-  background: #581c7e;
-  color: #ffffff;
+    background: #0284c7;
+    color: #ffffff;
 }
 
 .tabBtnPagarActive {
-  background: #b91c1c;
-  color: #ffffff;
+    background: #d97706;
+    color: #ffffff;
 }
 
-.actionWrapper {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+/* 2. Barra de resumen y filtros */
+.summaryBar {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
-/* Botones de Acción */
-.btnAction {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #ffffff;
-  transition: opacity 0.2s;
+.summaryInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
 }
 
-.btnAction:hover {
-  opacity: 0.9;
+.summaryLabel {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
 }
 
-.btnProveedor {
-  background: #047688;
+.summaryAmount {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #38bdf8;
 }
 
-.btnCuentaPagar {
-  background: #b91c1c;
+.controlsRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .selectFilter {
-  padding: 10px 14px;
-  background: #1e293b;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  outline: none;
-  font-size: 0.85rem;
-  cursor: pointer;
-  font-weight: 600;
-  transition: border-color 0.2s;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #f8fafc;
+    padding: 0.55rem;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
 }
 
-.selectFilter:focus {
-  border-color: #38bdf8;
+.buttonsActionGroup {
+    display: flex;
+    gap: 0.4rem;
 }
 
-/* ================= TABLAS CONTABLES ================= */
+.btnAction {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.6rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.btnProveedor { background: #334155; color: #fff; }
+.btnCuentaPagar { background: #d97706; color: #fff; }
+
+/* =========================================================
+   3. VISTA MÓVIL (FEED DE CARDS)
+   ========================================================= */
+.mobileCardsFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.accountCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.accountCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accountId {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #38bdf8;
+}
+
+.accountCardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.cardTitle {
+    font-size: 0.9rem;
+    color: #f8fafc;
+}
+
+.cardSubTitle {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.accountFinancials {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    background: #0f172a;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.financialCol {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.financialLabel {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.accountDates {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+.dateItem {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.btnAbonarMobile {
+    width: 100%;
+    padding: 0.65rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.emptyCard {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #1e293b;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* Badges de estado */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.badgePagado { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.badgePendiente { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.badgeVencido { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+.saldoPendiente { color: #f87171; font-weight: 700; }
+.saldoSaldado { color: #4ade80; font-weight: 700; }
+.fechaVencida { color: #ef4444 !important; font-weight: 700; }
+
+.btnAbonarCobrar { background: #0284c7; color: #fff; }
+.btnAbonarPagar { background: #d97706; color: #fff; }
+
+/* =========================================================
+   4. VISTA ESCRITORIO (TABLA)
+   ========================================================= */
 .tableContainer {
-  width: 100%;
-  overflow-x: auto;       /* Activa el scroll horizontal cuando la pantalla es chica o hay muchas columnas */
-  overflow-y: auto;       /* Activa el scroll vertical interno */
-  max-height: 70vh;       /* Evita bajar hasta el fondo de los 1000 registros para mover la barra */
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 0 16px 16px 16px; /* Ajustado el padding superior para el sticky header */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
+    display: none;
+    background: #1e293b;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    overflow-x: auto;
 }
 
 .table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
 }
 
-/* Cabecera Fija / Sticky Header */
 .table th {
-  position: sticky;
-  top: 0;
-  background-color: #1e293b; /* Fondo sólido obligatorio para tapar las celdas inferiores al bajar */
-  padding: 16px 10px 12px 10px; /* Incrementado ligeramente el padding superior */
-  border-bottom: 2px solid #334155;
-  color: #94a3b8;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  z-index: 10;                /* Mantiene los títulos por encima de los datos */
-  white-space: nowrap;        /* Evita que los títulos se rompan en dos líneas rompiendo el diseño */
-}
-
-.table tr {
-  border-bottom: 1px solid #0f172a;
-  transition: background-color 0.15s ease;
-}
-
-.table tr:hover {
-  background-color: rgba(255, 255, 255, 0.02);
+    background: #0f172a;
+    padding: 0.75rem 1rem;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #334155;
 }
 
 .table td {
-  padding: 14px 10px;
-  vertical-align: middle;
-  white-space: nowrap; /* Opcional: añade esto si no quieres que los datos de las celdas se deformen */
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    vertical-align: middle;
 }
 
-.idCell {
-  font-weight: 700;
-  color: #64748b;
-}
+.idCell { color: #38bdf8; font-weight: 700; }
+.bold { font-weight: 700; color: #f8fafc; }
+.subText { font-size: 0.7rem; color: #94a3b8; }
+.subTextBlue { color: #38bdf8; }
 
-.subText {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.subTextBlue {
-  color: #38bdf8;
-}
-
-.bold {
-  font-weight: 700;
-}
-
-.saldoPendiente {
-  font-weight: 700;
-  color: #f43f5e;
-}
-
-.saldoSaldado {
-  font-weight: 700;
-  color: #4ade80;
-}
-
-.fechaVencida {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-/* Badges de Estado */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.badgePagado {
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-}
-
-.badgeVencido {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.badgePendiente {
-  background: rgba(234, 179, 8, 0.1);
-  color: #eab308;
-}
-
-/* Botones de acción en celda */
 .btnAbonar {
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.8rem;
-  color: #ffffff;
-  transition: opacity 0.2s;
+    padding: 0.45rem 0.85rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
 }
 
-.btnAbonarCobrar {
-  background: #581c7e;
-}
-
-.btnAbonarPagar {
-  background: #b91c1c;
-}
-
-.btnAbonar:hover {
-  opacity: 0.9;
-}
-
-/* ================= MODALES GENÉRICOS ================= */
+/* =========================================================
+   MODALES
+   ========================================================= */
 .modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(4px);
-  padding: 16px;
-  box-sizing: border-box;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 100;
 }
 
 .modalForm {
-  background: #1e293b;
-  border: 1px solid #334155;
-  padding: 24px;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 440px;
+    padding: 1.25rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
 .modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
 }
 
 .modalTitle {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 
-.titlePagar {
-  color: #f59e0b;
-}
-
-.titleProveedor {
-  color: #047688;
-}
-
-.titleAbono {
-  color: #38bdf8;
-}
+.titlePagar { color: #f59e0b; }
+.titleProveedor { color: #38bdf8; }
+.titleAbono { color: #10b981; }
 
 .btnCloseModal {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  transition: color 0.2s;
-}
-
-.btnCloseModal:hover {
-  color: #ef4444;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 1rem;
 }
 
 .formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .label {
-  font-size: 0.8rem;
-  color: #94a3b8;
-  font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8;
 }
 
-/* Inputs, Selects en Modales */
 .input, .select {
-  width: 100%;
-  padding: 10px 12px;
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  box-sizing: border-box;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s;
+    width: 100%;
+    height: 40px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #fff;
+    padding: 0 0.6rem;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+    outline: none;
 }
 
-.input:focus, .select:focus {
-  border-color: #38bdf8;
+.saldoOverviewBox {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.saldoDestacado {
+    font-size: 1.1rem;
+    color: #f87171;
 }
 
 .modalActions {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
-.btnCancel {
-  flex: 1;
-  padding: 12px;
-  background: #475569;
-  border: none;
-  border-radius: 8px;
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
+.btnSubmit, .btnCancel {
+    flex: 1;
+    height: 42px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
-.btnCancel:hover {
-  background: #334155;
+.btnCancel { background: #334155; color: #cbd5e1; }
+.btnSubmitPagar { background: #d97706; color: #fff; }
+.btnSubmitProveedor { background: #0284c7; color: #fff; }
+.btnSubmitAbonoCobrar { background: #0284c7; color: #fff; }
+.btnSubmitAbonoPagar { background: #d97706; color: #fff; }
+
+/* =========================================================
+   BREAKPOINTS: TABLETS & DESKTOP (>= 768px / >= 1024px)
+   ========================================================= */
+@media (min-width: 768px) {
+    .summaryBar {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .controlsRow {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .mobileCardsFeed {
+        grid-template-columns: repeat(2, 1fr);
+        display: grid;
+    }
 }
 
-.btnSubmit {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
+@media (min-width: 1024px) {
+    .cuentasContainer {
+        padding: 1rem;
+    }
 
-.btnSubmit:hover {
-  opacity: 0.9;
-}
+    .mobileCardsFeed {
+        display: none;
+    }
 
-.btnSubmitPagar {
-  background: #b91c1c;
-}
-
-.btnSubmitProveedor {
-  background: #047688;
-}
-
-.btnSubmitAbonoCobrar {
-  background: #581c7e;
-}
-
-.btnSubmitAbonoPagar {
-  background: #b91c1c;
+    .tableContainer {
+        display: block;
+    }
 }

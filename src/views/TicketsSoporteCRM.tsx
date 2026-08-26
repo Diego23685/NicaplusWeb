@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import { FaExclamationTriangle, FaSave, FaClock, FaTimes, FaTools, FaUser } from 'react-icons/fa';
+import { 
+    FaExclamationTriangle, FaSave, FaClock, FaTimes, FaTools, 
+    FaUser, FaPlus, FaChevronUp, FaFilter, FaCheckCircle, 
+    FaSearch, FaCommentDots
+} from 'react-icons/fa';
+import styles from '../assets/styles/TicketsSoporteCRM.module.css';
 
 export const TicketsSoporteCRM: React.FC = () => {
     const [tickets, setTickets] = useState<any[]>([]);
     const [clientes, setClientes] = useState<any[]>([]);
     const [cargando, setCargando] = useState(true);
+
+    // Formulario colapsable en móvil
+    const [mostrarFormulario, setMostrarFormulario] = useState(false);
+    const [filtroEstado, setFiltroEstado] = useState<string>('Todos');
+    const [busquedaTicket, setBusquedaTicket] = useState('');
 
     // FORMULARIO: CREAR TICKET
     const [idCliente, setIdCliente] = useState('');
@@ -25,8 +35,8 @@ export const TicketsSoporteCRM: React.FC = () => {
                 api.get('/ticketssoporte'),
                 api.get('/clientes')
             ]);
-            setTickets(resTickets.data);
-            setClientes(resClientes.data);
+            setTickets(resTickets.data || []);
+            setClientes(resClientes.data || []);
         } catch (err) {
             console.error("Error cargando tickets de soporte:", err);
         } finally {
@@ -50,10 +60,11 @@ export const TicketsSoporteCRM: React.FC = () => {
                 descripcionFalla,
                 estado: "Pendiente"
             });
-            alert("Ticket de incidencia aperturado.");
+            alert("Ticket de incidencia aperturado correctamente.");
             setDescripcionFalla('');
             setIdCliente('');
             setBusquedaCliente('');
+            setMostrarFormulario(false);
             cargarDatos();
         } catch {
             alert("Error de red al guardar el ticket.");
@@ -67,7 +78,6 @@ export const TicketsSoporteCRM: React.FC = () => {
         setMostrarModalEstado(true);
     };
 
-    // ✅ REEMPLAZAR LA FUNCIÓN EN TicketsSoporteCRM.tsx
     const guardarCambioEstado = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -83,137 +93,267 @@ export const TicketsSoporteCRM: React.FC = () => {
         }
     };
 
-    const clientesFiltrados = clientes.filter(c => 
-        c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || c.telefono.includes(busquedaCliente)
-    );
+    const clientesFiltrados = useMemo(() => {
+        return clientes.filter(c => 
+            c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase()) || 
+            (c.telefono && c.telefono.includes(busquedaCliente))
+        );
+    }, [clientes, busquedaCliente]);
 
-    const colorEstado = (estado: string) => {
-        const estilos: any = {
-            'Pendiente': '#ef4444',
-            'En proceso': '#f59e0b',
-            'Esperando proveedor': '#38bdf8',
-            'Resuelto': '#10b981'
-        };
-        return estilos[estado] || '#94a3b8';
+    const ticketsFiltrados = useMemo(() => {
+        return tickets.filter(t => {
+            const coincideEstado = filtroEstado === 'Todos' || t.estado === filtroEstado;
+            const termino = busquedaTicket.toLowerCase();
+            const coincideTexto = !termino || 
+                t.id.toString().includes(termino) ||
+                t.tipoTicket.toLowerCase().includes(termino) ||
+                (t.clienteNombre && t.clienteNombre.toLowerCase().includes(termino)) ||
+                (t.descripcionFalla && t.descripcionFalla.toLowerCase().includes(termino));
+
+            return coincideEstado && coincideTexto;
+        });
+    }, [tickets, filtroEstado, busquedaTicket]);
+
+    const colorBadgeEstado = (estado: string) => {
+        switch (estado) {
+            case 'Pendiente': return styles.badgePendiente;
+            case 'En proceso': return styles.badgeEnProceso;
+            case 'Esperando proveedor': return styles.badgeProveedor;
+            case 'Resuelto': return styles.badgeResuelto;
+            default: return styles.badgeDefault;
+        }
     };
 
-    const inputEstilo = { width: '100%', padding: '10px 12px', marginTop: '6px', background: '#0f172a', color: '#ffffff', border: '1px solid #334155', borderRadius: '8px', boxSizing: 'border-box' as const, fontSize: '0.9rem', outline: 'none' };
-
-    if (cargando) return <div style={{ color: '#38bdf8', padding: '30px', fontWeight: 'bold' }}>Cargando bitácora de incidencias...</div>;
+    if (cargando) {
+        return (
+            <div className={styles.loadingScreen}>
+                <div className={styles.loaderPulse} />
+                <span>Cargando bitácora de incidencias...</span>
+            </div>
+        );
+    }
 
     return (
-        <div style={{ color: '#fff', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', textAlign: 'left' }}>
+        <div className={styles.container}>
             
-            {/* ENCABEZADO */}
-            <div>
-                <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.4rem', fontWeight: 700 }}>Módulo de Reclamos, Garantías y Tickets</h3>
-                <p style={{ color: '#94a3b8', margin: '2px 0 0 0', fontSize: '0.85rem' }}>Administración de cuentas caídas, reposiciones y flujos con proveedores.</p>
-            </div>
+            {/* 1. ENCABEZADO PRINCIPAL */}
+            <header className={styles.header}>
+                <div>
+                    <h3 className={styles.title}>Garantías y Tickets de Soporte</h3>
+                    <p className={styles.subtitle}>Atención a cuentas caídas, reclamos de perfiles y reposiciones.</p>
+                </div>
+                <span className={styles.countBadge}>{ticketsFiltrados.length} incidencias</span>
+            </header>
 
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                
-                {/* PANEL IZQUIERDO: FORMULARIO APERTURA TICKET */}
-                <div style={{ flex: '1 1 320px', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid #334155', height: 'fit-content' }}>
-                    <h4 style={{ color: '#ef4444', margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}><FaExclamationTriangle /> Reportar Nueva Falla</h4>
-                    <form onSubmit={crearTicket} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        
-                        <div>
-                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}><FaUser size={10} /> Buscar Cliente Afectado</label>
-                            <input type="text" placeholder="🔍 Buscar por nombre o móvil..." value={busquedaCliente} onChange={e => setBusquedaCliente(e.target.value)} style={{ ...inputEstilo, padding: '6px 10px' }} />
-                            <select value={idCliente} onChange={e => {
+            {/* 2. BOTÓN ACCORDION PARA APERTURA DE TICKET EN MÓVIL */}
+            <div className={styles.formAccordionWrap}>
+                <button 
+                    type="button" 
+                    onClick={() => setMostrarFormulario(!mostrarFormulario)} 
+                    className={styles.accordionToggleBtn}
+                >
+                    <span className={styles.accordionTitle}>
+                        <FaExclamationTriangle className={styles.textRed} /> Reportar Nueva Falla / Reclamo
+                    </span>
+                    {mostrarFormulario ? <FaChevronUp /> : <FaPlus />}
+                </button>
+
+                <form 
+                    onSubmit={crearTicket} 
+                    className={`${styles.formContent} ${!mostrarFormulario ? styles.formCollapsed : ''}`}
+                >
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}><FaUser size={10} /> Cliente Afectado *</label>
+                        <div className={styles.searchBoxInputWrap}>
+                            <input 
+                                type="text" 
+                                placeholder="🔍 Filtrar por nombre o móvil..." 
+                                value={busquedaCliente} 
+                                onChange={e => setBusquedaCliente(e.target.value)} 
+                                className={styles.input} 
+                            />
+                        </div>
+                        <select 
+                            value={idCliente} 
+                            onChange={e => {
                                 setIdCliente(e.target.value);
                                 const text = e.target.options[e.target.selectedIndex].text;
                                 if (e.target.value !== '') setBusquedaCliente(text.split(' (')[0]);
-                            }} style={{ ...inputEstilo, cursor: 'pointer' }} required>
-                                <option value="">-- Seleccionar Cliente --</option>
-                                {clientesFiltrados.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.telefono})</option>)}
-                            </select>
-                        </div>
+                            }} 
+                            className={styles.select} 
+                            required
+                        >
+                            <option value="">-- Seleccionar Cliente --</option>
+                            {clientesFiltrados.map(c => (
+                                <option key={c.id} value={c.id}>{c.nombre} ({c.telefono || 'Sin tel'})</option>
+                            ))}
+                        </select>
+                    </div>
 
-                        <div>
-                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Tipo de Incidencia / Reclamo</label>
-                            <select value={tipoTicket} onChange={e => setTipoTicket(e.target.value)} style={{ ...inputEstilo, cursor: 'pointer' }}>
-                                <option value="Garantía">Garantía</option>
-                                <option value="Cambio de perfil">Cambio de perfil</option>
-                                <option value="Cambio de contraseña">Cambio de contraseña</option>
-                                <option value="Cliente no puede ingresar">Cliente no puede ingresar</option>
-                                <option value="Reposición">Reposición</option>
-                                <option value="Reembolso">Reembolso</option>
-                            </select>
-                        </div>
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}>Tipo de Reclamo</label>
+                        <select 
+                            value={tipoTicket} 
+                            onChange={e => setTipoTicket(e.target.value)} 
+                            className={styles.select}
+                        >
+                            <option value="Garantía">Garantía</option>
+                            <option value="Cambio de perfil">Cambio de perfil</option>
+                            <option value="Cambio de contraseña">Cambio de contraseña</option>
+                            <option value="Cliente no puede ingresar">Cliente no puede ingresar</option>
+                            <option value="Reposición">Reposición</option>
+                            <option value="Reembolso">Reembolso</option>
+                        </select>
+                    </div>
 
-                        <div>
-                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Descripción Detallada de la Falla</label>
-                            <textarea rows={4} value={descripcionFalla} onChange={e => setDescripcionFalla(e.target.value)} style={{ ...inputEstilo, resize: 'none' }} placeholder="Ej: Netflix arroja clave incorrecta. Cuenta comprada hace 5 días." required />
-                        </div>
+                    <div className={styles.formGroup}>
+                        <label className={styles.label}>Descripción de la Falla *</label>
+                        <textarea 
+                            rows={3} 
+                            value={descripcionFalla} 
+                            onChange={e => setDescripcionFalla(e.target.value)} 
+                            className={styles.textarea} 
+                            placeholder="Ej: Netflix arroja clave incorrecta. Cuenta comprada hace 5 días." 
+                            required 
+                        />
+                    </div>
 
-                        <button type="submit" style={{ padding: '12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '6px' }}><FaTools /> Abrir Orden Soporte</button>
-                    </form>
+                    <button type="submit" className={styles.btnCrearTicket}>
+                        <FaTools /> Abrir Orden de Soporte
+                    </button>
+                </form>
+            </div>
+
+            {/* 3. BARRA DE BÚSQUEDA Y FILTROS POR ESTADO */}
+            <div className={styles.controlsBar}>
+                <div className={styles.searchBox}>
+                    <FaSearch className={styles.searchIcon} />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por #ID, cliente, falla..." 
+                        value={busquedaTicket} 
+                        onChange={e => setBusquedaTicket(e.target.value)} 
+                        className={styles.searchInput} 
+                    />
+                    {busquedaTicket && (
+                        <button onClick={() => setBusquedaTicket('')} className={styles.clearBtn}>
+                            <FaTimes />
+                        </button>
+                    )}
                 </div>
 
-                {/* PANEL DERECHO: CRONOLOGÍA / GRILLA DE TICKETS */}
-                <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {tickets.map(t => (
-                        <div key={t.id} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '14px' }}>
-                            <div style={{ minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <span style={{ color: colorEstado(t.estado), fontWeight: 'bold', fontSize: '0.75rem', background: 'rgba(15,23,42,0.4)', padding: '2px 8px', borderRadius: '4px', border: `1px solid ${colorEstado(t.estado)}` }}>
-                                        {t.estado.toUpperCase()}
-                                    </span>
-                                    <strong style={{ fontSize: '0.95rem', color: '#38bdf8' }}>{t.tipoTicket} (OS #{t.id})</strong>
-                                </div>
-                                <p style={{ margin: '8px 0', fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.4' }}>{t.descripcionFalla}</p>
-                                
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderTop: '1px solid #233249', paddingTop: '6px', marginTop: '6px' }}>
-                                    <small style={{ color: '#94a3b8' }}>👤 Cliente: <strong style={{ color: '#fff' }}>{t.clienteNombre}</strong> ({t.clienteTelefono})</small>
-                                    <small style={{ color: '#64748b' }}>📅 Reportado: {new Date(t.fechaCreacion).toLocaleString()}</small>
-                                    {t.notasResolucion && (
-                                        <small style={{ color: '#f59e0b', background: '#101f30', padding: '4px 8px', borderRadius: '4px', marginTop: '4px', display: 'block', borderLeft: '3px solid #f59e0b' }}>
-                                            📝 Resolución: {t.notasResolucion}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={() => abrirEditorEstado(t)}
-                                style={{ padding: '6px 10px', background: '#334155', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', flexShrink: 0 }}
-                            >
-                                Gestionar
-                            </button>
-                        </div>
+                <div className={styles.filterPills}>
+                    {['Todos', 'Pendiente', 'En proceso', 'Esperando proveedor', 'Resuelto'].map(st => (
+                        <button
+                            key={st}
+                            type="button"
+                            onClick={() => setFiltroEstado(st)}
+                            className={`${styles.filterPillBtn} ${filtroEstado === st ? styles.filterPillActive : ''}`}
+                        >
+                            {st}
+                        </button>
                     ))}
-                    {tickets.length === 0 && (
-                        <div style={{ background: '#1e293b', border: '1px dashed #334155', padding: '40px', borderRadius: '12px', color: '#64748b', textAlign: 'center' }}>
-                            No hay reclamos ni tickets de soporte técnico activos.
-                        </div>
-                    )}
                 </div>
             </div>
 
-            {/* MODAL: CAMBIO DE ESTADO Y NOTAS DE RESOLUCIÓN */}
-            {mostrarModalEstado && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '420px', width: '90%', border: '1px solid #334155' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                            <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 'bold' }}><FaClock /> Gestionar Ticket #{ticketSeleccionado?.id}</h3>
-                            <button onClick={() => setMostrarModalEstado(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
+            {/* 4. FEED DE TICKETS RESPONSIVO */}
+            <div className={styles.ticketsFeed}>
+                {ticketsFiltrados.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <FaCheckCircle size={32} className={styles.emptyIcon} />
+                        <p>No se encontraron tickets de soporte con el criterio seleccionado.</p>
+                    </div>
+                ) : (
+                    ticketsFiltrados.map(t => (
+                        <div key={t.id} className={styles.ticketCard}>
+                            <div className={styles.ticketCardHeader}>
+                                <div className={styles.ticketBadgeWrap}>
+                                    <span className={`${styles.badge} ${colorBadgeEstado(t.estado)}`}>
+                                        {t.estado}
+                                    </span>
+                                    <strong className={styles.ticketType}>{t.tipoTicket}</strong>
+                                    <span className={styles.ticketId}>#OS-{t.id}</span>
+                                </div>
+                                <button 
+                                    onClick={() => abrirEditorEstado(t)} 
+                                    className={styles.btnGestionar}
+                                >
+                                    Gestionar
+                                </button>
+                            </div>
+
+                            <p className={styles.ticketDesc}>{t.descripcionFalla}</p>
+
+                            <div className={styles.ticketFooter}>
+                                <div className={styles.ticketMeta}>
+                                    <span>👤 <strong>{t.clienteNombre || 'Genérico'}</strong> {t.clienteTelefono ? `(${t.clienteTelefono})` : ''}</span>
+                                    <small className={styles.ticketDate}>📅 {new Date(t.fechaCreacion).toLocaleString()}</small>
+                                </div>
+
+                                {t.notasResolucion && (
+                                    <div className={styles.resolutionBox}>
+                                        <FaCommentDots className={styles.textOrange} />
+                                        <span><strong>Resolución:</strong> {t.notasResolucion}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <form onSubmit={guardarCambioEstado} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Actualizar Estado Operativo</label>
-                                <select value={nuevoEstado} onChange={e => setNuevoEstado(e.target.value)} style={{ ...inputEstilo, cursor: 'pointer' }}>
+                    ))
+                )}
+            </div>
+
+            {/* 5. MODAL: ACTUALIZACIÓN DE ESTADO Y RESOLUCIÓN */}
+            {mostrarModalEstado && ticketSeleccionado && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalBox}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>
+                                <FaClock /> Gestionar Ticket #{ticketSeleccionado.id}
+                            </h3>
+                            <button onClick={() => setMostrarModalEstado(false)} className={styles.modalCloseBtn}>
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        <form onSubmit={guardarCambioEstado} className={styles.modalForm}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Actualizar Estado</label>
+                                <select 
+                                    value={nuevoEstado} 
+                                    onChange={e => setNuevoEstado(e.target.value)} 
+                                    className={styles.select}
+                                >
                                     <option value="Pendiente">Pendiente</option>
                                     <option value="En proceso">En proceso</option>
                                     <option value="Esperando proveedor">Esperando proveedor</option>
                                     <option value="Resuelto">Resuelto</option>
                                 </select>
                             </div>
-                            <div>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Notas Internas / Diagnóstico de Cierre</label>
-                                <textarea rows={3} value={notasResolucion} onChange={e => setNotasResolucion(e.target.value)} style={{ ...inputEstilo, resize: 'none' }} placeholder="Ej: Se repuso la pantalla con el proveedor VIP. Nueva clave enviada." required />
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Diagnóstico de Cierre / Notas Internas *</label>
+                                <textarea 
+                                    rows={3} 
+                                    value={notasResolucion} 
+                                    onChange={e => setNotasResolucion(e.target.value)} 
+                                    className={styles.textarea} 
+                                    placeholder="Ej: Se repuso la cuenta con el proveedor. Se enviaron nuevas claves al cliente." 
+                                    required 
+                                />
                             </div>
-                            <button type="submit" style={{ padding: '10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '6px' }}><FaSave /> Guardar Cambios</button>
+
+                            <div className={styles.modalActions}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setMostrarModalEstado(false)} 
+                                    className={styles.btnModalCancel}
+                                >
+                                    Cancelar
+                                </button>
+                                <button type="submit" className={styles.btnModalConfirm}>
+                                    <FaSave /> Guardar Cambios
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>

@@ -1,0 +1,620 @@
+/* =========================================================
+   CONTENEDOR BASE & LAYOUT
+   ========================================================= */
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #f1f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
+    min-height: 100vh;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.subtitle {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* =========================================================
+   FILTROS RÁPIDOS Y SELECTORES TEMPORALES
+   ========================================================= */
+.filtersCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.quickPillsScroll {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    align-items: center;
+}
+
+.quickPillsScroll::-webkit-scrollbar { display: none; }
+
+.btnPill {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.monthNavBox {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 0.2rem 0.4rem;
+    margin-left: auto;
+}
+
+.btnNavMonth {
+    background: none;
+    border: none;
+    color: #38bdf8;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    display: flex;
+    align-items: center;
+}
+
+.monthText {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.formFiltersGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+}
+
+.formGroup, .formGroupDate {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.input, .select, .touchInput {
+    width: 100%;
+    height: 38px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #fff;
+    padding: 0 0.55rem;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.touchInput {
+    text-align: center;
+}
+
+.btnConsultar {
+    height: 42px;
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* =========================================================
+   KPIS FINANCIEROS DEL REPORTE
+   ========================================================= */
+.reportSummaryWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.periodHeaderRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1e293b;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.periodTitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #f8fafc;
+}
+
+.btnExportPdf {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+}
+
+.kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.kpiCard {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.kpiLabel {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.kpiCard h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.kpiCajaReal { border-left: 3px solid #10b981; }
+.kpiFacturado { border-left: 3px solid #38bdf8; }
+.kpiCredito { border-left: 3px solid #f59e0b; }
+.kpiInversion { border-left: 3px solid #a855f7; }
+.kpiGastos { border-left: 3px solid #ef4444; }
+.kpiUtilidad { border-left: 3px solid #10b981; }
+
+/* =========================================================
+   PESTAÑAS DE AUDITORÍA Y FEED MÓVIL
+   ========================================================= */
+.auditSection {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.auditHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.auditTabsRow {
+    display: flex;
+    gap: 0.35rem;
+    background: #0f172a;
+    padding: 0.35rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    overflow-x: auto;
+}
+
+.tabBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.6rem 0.4rem;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+}
+
+.tabBtnActive {
+    background: #1e293b;
+    color: #38bdf8;
+}
+
+.searchBox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0 0.6rem;
+    height: 38px;
+}
+
+.searchIcon { color: #64748b; font-size: 0.85rem; }
+.searchInput { width: 100%; background: transparent; border: none; outline: none; color: #fff; padding: 0 0.4rem; font-size: 0.85rem; }
+.clearBtn { background: none; border: none; color: #94a3b8; cursor: pointer; }
+
+/* Feed móvil de tarjetas */
+.mobileFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.auditCard {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.auditCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.orderIdBadge {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #38bdf8;
+}
+
+.paymentBadge {
+    font-size: 0.65rem;
+    background: #1e293b;
+    color: #cbd5e1;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.cardCustomerRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+}
+
+.itemsDesgloseBox {
+    background: #1e293b;
+    padding: 0.4rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.itemDesgloseLine { color: #cbd5e1; }
+
+.cardFooterRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(51, 65, 85, 0.4);
+    padding-top: 0.35rem;
+}
+
+.totalText {
+    font-size: 0.95rem;
+    color: #f8fafc;
+}
+
+.actionsGroup, .actionsGroupCenter {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.actionsGroupCenter {
+    justify-content: center;
+}
+
+.btnActionEdit, .btnActionPrint, .btnActionWhatsapp {
+    padding: 0.45rem 0.65rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    touch-action: manipulation;
+}
+
+.btnActionEdit { background: #581c7e; }
+.btnActionPrint { background: #0284c7; }
+.btnActionWhatsapp { background: #22c55e; }
+
+.borderGreen { border-left: 3px solid #10b981; }
+.borderRed { border-left: 3px solid #ef4444; }
+.bgGreen { background: #15803d !important; color: #fff !important; }
+.bgRed { background: #b91c1c !important; color: #fff !important; }
+
+.movementConceptRow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+}
+
+.movementDetail {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+}
+
+.emptyText {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* =========================================================
+   VISTA ESCRITORIO (TABLAS >= 1024px)
+   ========================================================= */
+.desktopTableWrap {
+    display: none;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.table th {
+    background: #0f172a;
+    padding: 0.65rem 0.85rem;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #334155;
+}
+
+.table td {
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    vertical-align: middle;
+}
+
+/* Utilidades */
+.textGreen { color: #10b981; }
+.textCyan { color: #38bdf8; }
+.textAmber { color: #f59e0b; }
+.textPurple { color: #a855f7; }
+.textRed { color: #ef4444; }
+.textMuted { color: #94a3b8; font-size: 0.75rem; }
+
+/* =========================================================
+   MODAL DE EDICIÓN DE FACTURA
+   ========================================================= */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    z-index: 100;
+}
+
+.modalBox {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 650px;
+    max-height: 90vh;
+    padding: 1.25rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow-y: auto;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modalTitle { margin: 0; font-size: 1rem; color: #38bdf8; }
+.modalCloseBtn { background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; }
+
+.modalForm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.formRowDual {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+}
+
+.itemsAuditContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.itemAuditCard {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.itemAuditInputsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+}
+
+.borderRed {
+    border-color: #ef4444 !important;
+}
+
+.itemSubtotalRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    border-top: 1px solid rgba(51, 65, 85, 0.4);
+    padding-top: 0.3rem;
+}
+
+.modalTotalBox {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.modalActions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btnSaveAudit, .btnCancelAudit {
+    flex: 1;
+    height: 42px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.btnSaveAudit { background: #10b981; color: #fff; }
+.btnCancelAudit { background: #334155; color: #cbd5e1; }
+
+.btnDeleteSaleFull {
+    width: 100%;
+    height: 38px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #f87171;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+/* =========================================================
+   BREAKPOINTS: TABLETS & DESKTOP (>= 768px / >= 1024px)
+   ========================================================= */
+@media (min-width: 768px) {
+    .formFiltersGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .formRowDual {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .kpiGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .mobileFeed {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: 1.25rem;
+    }
+
+    .formFiltersGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .kpiGrid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .mobileFeed {
+        display: none;
+    }
+
+    .desktopTableWrap {
+        display: block;
+    }
+}

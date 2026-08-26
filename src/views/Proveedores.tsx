@@ -3,14 +3,26 @@ import api from '../services/api';
 import {
   FaTruck,
   FaShoppingCart,
+  FaChartLine,
+  FaUserCheck,
   FaSave,
   FaPlus,
+  FaBoxes,
   FaEdit,
   FaTrash,
-  FaTimes} from 'react-icons/fa';
+  FaTimes,
+  FaHistory,
+  FaSearch,
+  FaChevronDown,
+  FaChevronUp,
+  FaPhoneAlt,
+  FaCalendarAlt,
+  FaFileInvoiceDollar
+} from 'react-icons/fa';
+import styles from '../assets/styles/Proveedores.module.css';
 
 export const Proveedores: React.FC = () => {
-  const [subTab, setSubTab] = useState<'registro' | 'historial' | 'analisis' | 'proveedores'>('registro');
+  const [subTab, setSubTab] = useState<'registro' | 'historial' | 'analisis'>('registro');
 
   const [proveedores, setProveedores] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
@@ -19,6 +31,13 @@ export const Proveedores: React.FC = () => {
 
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<number | null>(null);
+  const [mostrarFormProveedor, setMostrarFormProveedor] = useState(false);
+
+  // BUSCADORES DE TABLAS Y FORMULARIOS
+  const [busquedaProducto, setBusquedaProducto] = useState('');
+  const [mostrarDropdownProd, setMostrarDropdownProd] = useState(false);
+  const [filtroTablaProveedores, setFiltroTablaProveedores] = useState('');
+  const [filtroTablaHistorial, setFiltroTablaHistorial] = useState('');
 
   // FORMULARIO PROVEEDOR
   const [razonSocial, setRazonSocial] = useState('');
@@ -29,11 +48,14 @@ export const Proveedores: React.FC = () => {
   // FORMULARIO COMPRA
   const [idProvSeleccionado, setIdProvSeleccionado] = useState('');
   const [idProdSeleccionado, setIdProdSeleccionado] = useState('');
+  const [idVariacionSeleccionada, setIdVariacionSeleccionada] = useState('');
+  const [variacionesDisponibles, setVariacionesDisponibles] = useState<any[]>([]);
+
   const [cantidadCompra, setCantidadCompra] = useState(1);
   const [costoUnitarioCompra, setCostoUnitarioCompra] = useState(0);
   const [nuevoPrecioVenta, setNuevoPrecioVenta] = useState<number | ''>('');
   const [garantiaCompra, setGarantiaCompra] = useState(30);
-  const [tiempoEntregaRealDias] = useState(1);
+  const [tiempoEntregaRealDias, setTiempoEntregaRealDias] = useState(1);
   const [observacionesCompra, setObservacionesCompra] = useState('');
 
   // ESTADO PARA MODAL DE EDICIÓN DE COMPRA
@@ -51,6 +73,7 @@ export const Proveedores: React.FC = () => {
     setRuc('');
     setTelefono('');
     setEmail('');
+    setMostrarFormProveedor(false);
   };
 
   const cargarDatos = async () => {
@@ -77,22 +100,44 @@ export const Proveedores: React.FC = () => {
     cargarDatos();
   }, []);
 
-  const seleccionarProductoCompra = (idProdStr: string) => {
-    setIdProdSeleccionado(idProdStr);
-    const prod = productos.find(p => (p.id ?? p.Id) === Number(idProdStr));
-    if (prod) {
+  const seleccionarProductoDesdeBuscador = (prod: any) => {
+    const idProd = prod.id ?? prod.Id;
+    setIdProdSeleccionado(String(idProd));
+    setBusquedaProducto(prod.nombre ?? prod.Nombre);
+    setMostrarDropdownProd(false);
+    setIdVariacionSeleccionada('');
+
+    const tieneVars = prod.tieneVariaciones ?? prod.TieneVariaciones ?? false;
+    const vars = prod.variaciones ?? prod.Variaciones ?? [];
+
+    if (tieneVars && vars.length > 0) {
+      setVariacionesDisponibles(vars);
+      setCostoUnitarioCompra(0);
+      setNuevoPrecioVenta('');
+    } else {
+      setVariacionesDisponibles([]);
       setCostoUnitarioCompra(prod.precioCosto ?? prod.PrecioCosto ?? 0);
       setNuevoPrecioVenta(prod.precioVenta ?? prod.PrecioVenta ?? 0);
+    }
+  };
+
+  const seleccionarVariacionCompra = (idVarStr: string) => {
+    setIdVariacionSeleccionada(idVarStr);
+    const variacion = variacionesDisponibles.find(v => (v.id ?? v.Id) === Number(idVarStr));
+    if (variacion) {
+      setCostoUnitarioCompra(variacion.precioCosto ?? variacion.PrecioCosto ?? 0);
+      setNuevoPrecioVenta(variacion.precioVenta ?? variacion.PrecioVenta ?? 0);
     }
   };
 
   const editarProveedor = (proveedor: any) => {
     setEditando(proveedor.id);
     setRazonSocial(proveedor.razonSocial);
-    setRuc(proveedor.ruc);
-    setTelefono(proveedor.telefono);
-    setEmail(proveedor.email);
-    setSubTab('proveedores');
+    setRuc(proveedor.ruc || '');
+    setTelefono(proveedor.telefono || '');
+    setEmail(proveedor.email || '');
+    setMostrarFormProveedor(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const eliminarProveedor = async (id: number) => {
@@ -120,9 +165,21 @@ export const Proveedores: React.FC = () => {
   const abrirModalEditarCompra = (compra: any) => {
     const detallesFormateados = compra.detalles?.map((d: any) => {
       const prod = productos.find(p => (p.id ?? p.Id) === d.idProducto);
+      let precioActual = 0;
+      
+      if (prod) {
+        if (d.idVariacion && prod.variaciones) {
+          const varEncontrada = prod.variaciones.find((v: any) => (v.id ?? v.Id) === d.idVariacion);
+          precioActual = varEncontrada ? (varEncontrada.precioVenta ?? varEncontrada.PrecioVenta ?? 0) : 0;
+        } else {
+          precioActual = prod.precioVenta ?? prod.PrecioVenta ?? 0;
+        }
+      }
+
       return {
         ...d,
-        nuevoPrecioVenta: prod ? (prod.precioVenta ?? prod.PrecioVenta ?? 0) : 0
+        idVariacion: d.idVariacion || null,
+        nuevoPrecioVenta: precioActual
       };
     }) || [];
 
@@ -144,9 +201,10 @@ export const Proveedores: React.FC = () => {
       observaciones: compraAEditar.observaciones || '',
       detalles: compraAEditar.detalles.map((d: any) => ({
         idProducto: Number(d.idProducto),
+        idVariacion: d.idVariacion ? Number(d.idVariacion) : null,
         cantidad: Number(d.cantidad),
         costoUnitario: Number(d.costoUnitario),
-        nuevoPrecioVenta: d.nuevoPrecioVenta ? Number(d.nuevoPrecioVenta) : null,
+        nuevoPrecioVenta: d.nuevoPrecioVenta !== '' ? Number(d.nuevoPrecioVenta) : null,
         garantiaDiasPactada: Number(d.garantiaDiasPactada || 0)
       }))
     };
@@ -162,7 +220,7 @@ export const Proveedores: React.FC = () => {
   };
 
   const anularCompra = async (idCompra: number) => {
-    if (!window.confirm(`¿Está seguro de ANULAR la Orden de Compra #${idCompra}?`)) return;
+    if (!window.confirm(`¿Está seguro de ANULAR la Orden de Compra #${idCompra}? Se revertirá el stock y egreso.`)) return;
 
     try {
       await api.delete(`/proveedores/compras/${idCompra}`);
@@ -175,7 +233,7 @@ export const Proveedores: React.FC = () => {
 
   const guardarProveedor = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { razonSocial, ruc, telephone: telefono, email };
+    const payload = { razonSocial, ruc, telefono, email };
 
     try {
       if (editando === null) {
@@ -195,7 +253,15 @@ export const Proveedores: React.FC = () => {
 
   const registrarIngresoInventario = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!idProvSeleccionado || !idProdSeleccionado) return;
+    if (!idProvSeleccionado || !idProdSeleccionado) {
+      alert("Debe seleccionar un proveedor y un producto válido.");
+      return;
+    }
+
+    if (variacionesDisponibles.length > 0 && !idVariacionSeleccionada) {
+      alert("Este producto requiere seleccionar una variante específica.");
+      return;
+    }
 
     const payload = {
       idProveedor: Number(idProvSeleccionado),
@@ -205,6 +271,7 @@ export const Proveedores: React.FC = () => {
       detalles: [
         {
           idProducto: Number(idProdSeleccionado),
+          idVariacion: idVariacionSeleccionada ? Number(idVariacionSeleccionada) : null,
           cantidad: Number(cantidadCompra),
           costoUnitario: Number(costoUnitarioCompra),
           nuevoPrecioVenta: nuevoPrecioVenta !== '' ? Number(nuevoPrecioVenta) : null,
@@ -217,283 +284,772 @@ export const Proveedores: React.FC = () => {
       await api.post('/proveedores/compras', payload);
       alert("Compra registrada correctamente.");
       setIdProdSeleccionado('');
+      setBusquedaProducto('');
+      setIdVariacionSeleccionada('');
+      setVariacionesDisponibles([]);
       setCantidadCompra(1);
       setCostoUnitarioCompra(0);
       setNuevoPrecioVenta('');
       setObservacionesCompra('');
-      setSubTab('historial');
       await cargarDatos();
-    } catch {
-      alert("No fue posible registrar la compra.");
+    } catch (err: any) {
+      alert(err.response?.data?.mensaje || "No fue posible registrar la compra.");
     }
   };
 
+  const productosFiltradosBusqueda = productos.filter(p => {
+    const query = busquedaProducto.toLowerCase().trim();
+    if (!query) return true;
+    const nombre = (p.nombre ?? p.Nombre ?? '').toLowerCase();
+    return nombre.includes(query);
+  });
+
+  const proveedoresFiltradosTabla = proveedores.filter(p => {
+    const q = filtroTablaProveedores.toLowerCase().trim();
+    if (!q) return true;
+    return (p.razonSocial || '').toLowerCase().includes(q) ||
+           (p.ruc || '').toLowerCase().includes(q) ||
+           (p.telefono || '').toLowerCase().includes(q);
+  });
+
+  const historialFiltradoTabla = historialCompras.filter(c => {
+    const q = filtroTablaHistorial.toLowerCase().trim();
+    if (!q) return true;
+    const prov = (c.proveedorNombre || '').toLowerCase();
+    const obs = (c.observaciones || '').toLowerCase();
+    const idStr = String(c.id);
+    const prodNames = c.detalles?.map((d: any) => (d.productoNombre || '').toLowerCase()).join(' ') || '';
+    return prov.includes(q) || obs.includes(q) || idStr.includes(q) || prodNames.includes(q);
+  });
+
   if (cargando) {
-    return <div style={{ color: '#38bdf8', padding: '30px', textAlign: 'center', fontSize: '0.85rem' }}>Analizando abastecimiento...</div>;
+    return (
+      <div className={styles.loadingScreen}>
+        <div className={styles.loaderPulse} />
+        <span>Analizando abastecimiento y logística...</span>
+      </div>
+    );
   }
 
   return (
-    <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
-      
-      {/* ENCABEZADO Y TABS */}
-      <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div>
-          <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem', fontWeight: 700 }}>Logística y Proveedores</h3>
-          <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Abastecimiento de inventario y rendimiento</small>
+    <div className={styles.container}>
+      {/* 1. ENCABEZADO */}
+      <header className={styles.header}>
+        <div className={styles.headerTitle}>
+          <h3 className={styles.title}>Proveedores y Logística</h3>
+          <p className={styles.subtitle}>Abastecimiento, historial de órdenes y rentabilidad.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '4px', background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #334155', overflowX: 'auto' }}>
+        <div className={styles.tabContainer}>
           <button
             onClick={() => setSubTab('registro')}
-            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'registro' ? '#38bdf8' : 'transparent', color: subTab === 'registro' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            className={`${styles.tabBtn} ${subTab === 'registro' ? styles.tabBtnActive : ''}`}
           >
-            📦 Comprar
+            📦 Abastecer
           </button>
           <button
             onClick={() => setSubTab('historial')}
-            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'historial' ? '#38bdf8' : 'transparent', color: subTab === 'historial' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            className={`${styles.tabBtn} ${subTab === 'historial' ? styles.tabBtnActive : ''}`}
           >
-            📜 Historial
+            📜 Compras ({historialCompras.length})
           </button>
           <button
             onClick={() => setSubTab('analisis')}
-            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'analisis' ? '#38bdf8' : '#1e293b', color: subTab === 'analisis' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            className={`${styles.tabBtn} ${subTab === 'analisis' ? styles.tabBtnActive : ''}`}
           >
-            📊 Ránking
-          </button>
-          <button
-            onClick={() => setSubTab('proveedores')}
-            style={{ flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: subTab === 'proveedores' ? '#38bdf8' : 'transparent', color: subTab === 'proveedores' ? '#0f172a' : '#94a3b8', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            🚚 Proveedores
+            📊 Rentabilidad
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* PESTAÑA 1: REGISTRAR COMPRA */}
-      {subTab === 'registro' && (
-        <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FaShoppingCart /> Registrar Compra e Ingresar Stock
-          </h4>
-
-          <form onSubmit={registrarIngresoInventario} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div>
-              <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Proveedor</label>
-              <select value={idProvSeleccionado} onChange={e => setIdProvSeleccionado(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
-                <option value="">-- Seleccionar Proveedor --</option>
-                {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Producto a Abastecer</label>
-              <select value={idProdSeleccionado} onChange={e => seleccionarProductoCompra(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
-                <option value="">-- Seleccionar Producto --</option>
-                {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stockActual})</option>)}
-              </select>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <div>
-                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Cantidad</label>
-                <input type="number" min={1} value={cantidadCompra} onChange={e => setCantidadCompra(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Costo Unit. (C$)</label>
-                <input type="number" min={0} value={costoUnitarioCompra} onChange={e => setCostoUnitarioCompra(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <div>
-                <label style={{ color: '#38bdf8', fontSize: '0.72rem', display: 'block' }}>Nuevo Precio Venta</label>
-                <input type="number" min={0} placeholder="Opcional" value={nuevoPrecioVenta} onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Garantía (Días)</label>
-                <input type="number" min={0} value={garantiaCompra} onChange={e => setGarantiaCompra(Number(e.target.value))} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-              </div>
-            </div>
-
-            <div>
-              <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Notas / Correos Renovados</label>
-              <input type="text" placeholder="Ej: Lote #412 o Cuenta renovada..." value={observacionesCompra} onChange={e => setObservacionesCompra(e.target.value)} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-            </div>
-
-            <div style={{ background: '#0f172a', padding: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8' }}>
-              <span>Total calculado:</span>
-              <strong style={{ color: '#ef4444' }}>C$ {(cantidadCompra * costoUnitarioCompra).toLocaleString()}</strong>
-            </div>
-
-            <button type="submit" style={{ width: '100%', padding: '12px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
-              <FaPlus /> Confirmar e Ingresar Stock
+      {/* 2. SUBTAB: ABASTECIMIENTO */}
+      {subTab === "registro" && (
+        <div className={styles.abastecimientoLayout}>
+          
+          {/* ACORDEÓN PROVEEDOR */}
+          <div className={styles.panelCard}>
+            <button 
+              type="button" 
+              onClick={() => setMostrarFormProveedor(!mostrarFormProveedor)}
+              className={styles.accordionToggleBtn}
+            >
+              <span className={styles.accordionTitle}>
+                <FaTruck /> {editando === null ? "Registrar Nuevo Proveedor" : `Editar: ${razonSocial}`}
+              </span>
+              {mostrarFormProveedor ? <FaChevronUp /> : <FaPlus />}
             </button>
-          </form>
-        </div>
-      )}
 
-      {/* PESTAÑA 2: HISTORIAL DE COMPRAS */}
-      {subTab === 'historial' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {historialCompras.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
-              No hay compras registradas en el historial.
-            </div>
-          ) : (
-            historialCompras.map(c => (
-              <div key={c.id} style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '10px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ color: '#38bdf8', fontSize: '0.85rem' }}>Orden #{c.id} — {c.proveedorNombre}</strong>
-                  <strong style={{ color: '#ef4444', fontSize: '0.9rem' }}>C$ {c.totalCompra.toLocaleString()}</strong>
+            <form 
+              onSubmit={guardarProveedor} 
+              className={`${styles.formVertical} ${!mostrarFormProveedor ? styles.formCollapsed : ''}`}
+            >
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Razón Social / Nombre *</label>
+                <input type="text" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} className={styles.input} required />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>RUC / Cédula</label>
+                <input type="text" value={ruc} onChange={e => setRuc(e.target.value)} className={styles.input} placeholder="Opcional" />
+              </div>
+              <div className={styles.formGroupDual}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Teléfono</label>
+                  <input type="text" value={telefono} onChange={e => setTelefono(e.target.value)} className={styles.input} placeholder="8888-8888" />
                 </div>
-
-                <div style={{ background: '#0f172a', padding: '6px 8px', borderRadius: '6px', fontSize: '0.72rem', color: '#cbd5e1' }}>
-                  {c.detalles?.map((d: any, idx: number) => (
-                    <div key={idx}>• {d.cantidad}x {d.productoNombre} (a C$ {d.costoUnitario})</div>
-                  ))}
-                  {c.observaciones && <div style={{ color: '#94a3b8', marginTop: '2px', fontStyle: 'italic' }}>Note: {c.observaciones}</div>}
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                  <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Fecha: {new Date(c.fechaCompra).toLocaleDateString()}</small>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => abrirModalEditarCompra(c)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><FaEdit /></button>
-                    <button onClick={() => anularCompra(c.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}><FaTrash /></button>
-                  </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Email</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={styles.input} placeholder="correo@proveedor.com" />
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
 
-      {/* PESTAÑA 3: RÁNKING / RENTABILIDAD PROVEEDORES */}
-      {subTab === 'analisis' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {metricas.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px', fontSize: '0.8rem' }}>
-              No existen datos de métricas disponibles.
-            </div>
-          ) : (
-            metricas.map(m => (
-              <div key={m.id} style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '10px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ color: '#fff', fontSize: '0.88rem' }}>{m.razonSocial}</strong>
-                  <span style={{ background: m.scoreConfiabilidad >= 80 ? 'rgba(16,185,129,.2)' : 'rgba(245,158,11,.2)', color: m.scoreConfiabilidad >= 80 ? '#10b981' : '#f59e0b', padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700 }}>
-                    Score: {m.scoreConfiabilidad}%
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', background: '#0f172a', padding: '6px', borderRadius: '6px', fontSize: '0.7rem' }}>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block' }}>Órdenes</span>
-                    <strong style={{ color: '#fff' }}>{m.totalOrdenes}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block' }}>Invertido</span>
-                    <strong style={{ color: '#ef4444' }}>C$ {m.totalInvertido.toLocaleString()}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block' }}>Margen</span>
-                    <strong style={{ color: '#10b981' }}>C$ {m.margenGananciaHistorico.toLocaleString()}</strong>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* PESTAÑA 4: DIRECTORIO DE PROVEEDORES */}
-      {subTab === 'proveedores' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {/* Formulario Proveedor */}
-          <div style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155' }}>
-            <h4 style={{ margin: '0 0 8px 0', color: '#38bdf8', fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FaTruck /> {editando === null ? "Nuevo Proveedor" : "Editar Proveedor"}
-            </h4>
-
-            <form onSubmit={guardarProveedor} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <input type="text" placeholder="Razón Social" value={razonSocial} onChange={e => setRazonSocial(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} required />
-              <input type="text" placeholder="RUC Comercial" value={ruc} onChange={e => setRuc(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} />
-              <input type="text" placeholder="Teléfono" value={telefono} onChange={e => setTelefono(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} />
-              <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '0.78rem' }} />
-              
-              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                <button type="submit" style={{ flex: 1, padding: '8px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>
-                  <FaSave /> {editando === null ? "Guardar" : "Actualizar"}
+              <div className={styles.actionsRow}>
+                <button type="submit" className={styles.btnGuardar}>
+                  <FaSave /> {editando === null ? "Guardar Proveedor" : "Actualizar"}
                 </button>
                 {editando !== null && (
-                  <button type="button" onClick={limpiarFormularioProveedor} style={{ background: '#475569', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
-                    <FaTimes />
+                  <button type="button" onClick={limpiarFormularioProveedor} className={styles.btnCancelar}>
+                    Cancelar
                   </button>
                 )}
               </div>
             </form>
           </div>
 
-          {/* Lista de Proveedores */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {proveedores.map(p => (
-              <div key={p.id} style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ color: '#fff', fontSize: '0.85rem', display: 'block' }}>{p.razonSocial}</strong>
-                  <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Tel: {p.telefono || 'N/A'} • RUC: {p.ruc || 'N/A'}</small>
-                </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => editarProveedor(p)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><FaEdit /></button>
-                  <button onClick={() => eliminarProveedor(p.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}><FaTrash /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+          {/* FORMULARIO DE COMPRA E INGRESO DE STOCK */}
+          <div className={styles.panelCard}>
+            <h4 className={`${styles.panelTitle} ${styles.titleBlue}`}>
+              <FaShoppingCart /> Ingreso de Stock / Orden de Compra
+            </h4>
 
-      {/* MODAL EDITAR COMPRA */}
-      {compraAEditar && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-          <div style={{ background: '#1e293b', border: '1px solid #38bdf8', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem' }}>🛠️ Editar Compra #{compraAEditar.id}</h4>
-              <button onClick={() => setCompraAEditar(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><FaTimes /></button>
-            </div>
-
-            <form onSubmit={guardarEdicionCompra} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>
-                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Proveedor</label>
-                <select value={compraAEditar.idProveedor} onChange={e => setCompraAEditar({ ...compraAEditar, idProveedor: Number(e.target.value) })} style={{ width: '100%', background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
+            <form onSubmit={registrarIngresoInventario} className={styles.formCompra}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>1. Proveedor *</label>
+                <select value={idProvSeleccionado} onChange={e => setIdProvSeleccionado(e.target.value)} className={styles.select} required>
+                  <option value="">-- Seleccionar Proveedor --</option>
                   {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>Observaciones</label>
-                <input type="text" value={compraAEditar.observaciones || ''} onChange={e => setCompraAEditar({ ...compraAEditar, observaciones: e.target.value })} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              {/* BUSCADOR DE PRODUCTOS TOUCH */}
+              <div className={styles.searchProdWrapper}>
+                <label className={styles.label}>2. Buscar Producto *</label>
+                <div className={styles.searchBox}>
+                  <input
+                    type="text"
+                    placeholder="Escribe el nombre del artículo..."
+                    value={busquedaProducto}
+                    onChange={e => {
+                      setBusquedaProducto(e.target.value);
+                      setIdProdSeleccionado('');
+                      setVariacionesDisponibles([]);
+                      setMostrarDropdownProd(true);
+                    }}
+                    onFocus={() => setMostrarDropdownProd(true)}
+                    className={styles.searchInput}
+                    required
+                  />
+                  <FaSearch className={styles.searchIcon} />
+                </div>
+
+                {mostrarDropdownProd && (
+                  <div className={styles.dropdownResults}>
+                    {productosFiltradosBusqueda.length > 0 ? (
+                      productosFiltradosBusqueda.map(p => {
+                        const idProd = p.id ?? p.Id;
+                        const tieneVars = p.tieneVariaciones ?? p.TieneVariaciones;
+                        const stock = p.stockActual ?? p.StockActual;
+
+                        return (
+                          <div
+                            key={idProd}
+                            onClick={() => seleccionarProductoDesdeBuscador(p)}
+                            className={styles.dropdownItem}
+                          >
+                            <span>{p.nombre}</span>
+                            <small className={tieneVars ? styles.textCyan : styles.textMuted}>
+                              {tieneVars ? '🎨 Variantes' : `Stock: ${stock}`}
+                            </small>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className={styles.dropdownEmpty}>No se encontraron productos</div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <button type="button" onClick={() => setCompraAEditar(null)} style={{ flex: 1, background: '#475569', border: 'none', color: '#fff', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>Cancelar</button>
-                <button type="submit" style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', padding: '8px', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>Guardar</button>
+              {/* SELECTOR DE VARIANTES SI APLICA */}
+              {variacionesDisponibles.length > 0 && (
+                <div className={styles.formGroup}>
+                  <label className={styles.labelCyan}>Variante Específica *</label>
+                  <select 
+                    value={idVariacionSeleccionada} 
+                    onChange={e => seleccionarVariacionCompra(e.target.value)} 
+                    className={`${styles.select} ${styles.selectVariant}`}
+                    required
+                  >
+                    <option value="">Seleccionar variante (Color/Capacidad/RAM)</option>
+                    {variacionesDisponibles.map(v => {
+                      const idVar = v.id ?? v.Id;
+                      const nombreVar = v.nombreVariacion ?? v.NombreVariacion ?? 'Variante';
+                      const colorVar = v.color ?? v.Color ?? '';
+                      const almacVar = v.almacenamiento ?? v.Almacenamiento ?? '';
+                      const stockVar = v.stockActual ?? v.StockActual ?? 0;
+
+                      return (
+                        <option key={idVar} value={idVar}>
+                          {nombreVar} {colorVar && `- ${colorVar}`} {almacVar} (Stock: ${stockVar})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* GRID FINANCIERO Y CANTIDADES */}
+              <div className={styles.financialGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cantidad</label>
+                  <input 
+                    type="number" 
+                    min={1} 
+                    value={cantidadCompra === 0 ? '' : cantidadCompra} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setCantidadCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    onBlur={() => {
+                      if (cantidadCompra < 1) setCantidadCompra(1);
+                    }}
+                    className={styles.touchInput} 
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Costo Unit. (C$)</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={costoUnitarioCompra === 0 ? '' : costoUnitarioCompra} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setCostoUnitarioCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    className={`${styles.touchInput} ${styles.textRed}`} 
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>P. Venta (C$)</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    placeholder="Catálogo"
+                    value={nuevoPrecioVenta} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} 
+                    className={`${styles.touchInput} ${styles.textGreen}`} 
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Días Entrega</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={tiempoEntregaRealDias === 0 ? '' : tiempoEntregaRealDias} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setTiempoEntregaRealDias(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    className={styles.touchInput} 
+                  />
+                </div>
+              </div>
+
+              <div className={styles.formGroupDual}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Garantía (Días)</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={garantiaCompra === 0 ? '' : garantiaCompra} 
+                    onFocus={(e) => e.target.select()}
+                    onChange={e => setGarantiaCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
+                    className={styles.input} 
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Notas / Cuenta Renovada</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Lote #412 o correo nuevo" 
+                    value={observacionesCompra} 
+                    onChange={e => setObservacionesCompra(e.target.value)} 
+                    className={styles.input} 
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className={styles.btnRegistrarCompra}>
+                <FaPlus /> Registrar Ingreso (C$ {(cantidadCompra * costoUnitarioCompra).toLocaleString()})
+              </button>
+            </form>
+          </div>
+
+          {/* LISTA/DIRECTORIO DE PROVEEDORES */}
+          <div className={styles.panelCard}>
+            <div className={styles.cardHeaderWithFilter}>
+              <h4 className={styles.panelTitle}><FaTruck /> Directorio Proveedores</h4>
+              <div className={styles.miniSearchBox}>
+                <FaSearch className={styles.searchIcon} />
+                <input 
+                  type="text" 
+                  placeholder="Filtrar..."
+                  value={filtroTablaProveedores}
+                  onChange={e => setFiltroTablaProveedores(e.target.value)}
+                  className={styles.miniSearchInput}
+                />
+              </div>
+            </div>
+
+            {/* FEED MÓVIL DE PROVEEDORES */}
+            <div className={styles.mobileProvidersFeed}>
+              {proveedoresFiltradosTabla.map(p => (
+                <div key={p.id} className={styles.providerCard}>
+                  <div className={styles.providerCardHeader}>
+                    <strong className={styles.providerName}>{p.razonSocial}</strong>
+                    <div className={styles.providerActions}>
+                      <button onClick={() => editarProveedor(p)} className={styles.btnEdit} title="Editar">
+                        <FaEdit />
+                      </button>
+                      <button onClick={() => eliminarProveedor(p.id)} className={styles.btnDelete} title="Eliminar">
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.providerMetaRow}>
+                    <span>RUC: {p.ruc || 'N/D'}</span>
+                    <span><FaPhoneAlt size={9} /> {p.telefono || 'Sin tel'}</span>
+                  </div>
+                </div>
+              ))}
+              {proveedoresFiltradosTabla.length === 0 && (
+                <div className={styles.emptyFeedText}>No existen proveedores coincidentes.</div>
+              )}
+            </div>
+
+            {/* TABLA EN ESCRITORIO */}
+            <div className={styles.desktopTableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>RUC</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th style={{ textAlign: "center" }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {proveedoresFiltradosTabla.map(p => (
+                    <tr key={p.id}>
+                      <td><strong>{p.razonSocial}</strong></td>
+                      <td>{p.ruc || 'N/A'}</td>
+                      <td>{p.telefono || 'Sin teléfono'}</td>
+                      <td>{p.email || 'Sin email'}</td>
+                      <td style={{ textAlign: "center" }}>
+                        <button onClick={() => editarProveedor(p)} className={styles.btnEdit}><FaEdit /></button>
+                        <button onClick={() => eliminarProveedor(p.id)} className={styles.btnDelete}><FaTrash /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. SUBTAB: HISTORIAL DE COMPRAS */}
+      {subTab === "historial" && (
+        <div className={styles.panelCard}>
+          <div className={styles.cardHeaderWithFilter}>
+            <h4 className={styles.panelTitle}><FaHistory /> Historial de Lotes Abastecidos</h4>
+            <div className={styles.miniSearchBox}>
+              <FaSearch className={styles.searchIcon} />
+              <input 
+                type="text" 
+                placeholder="Buscar orden, ítem..."
+                value={filtroTablaHistorial}
+                onChange={e => setFiltroTablaHistorial(e.target.value)}
+                className={styles.miniSearchInput}
+              />
+            </div>
+          </div>
+
+          {/* FEED MÓVIL HISTORIAL */}
+          <div className={styles.mobileHistoryFeed}>
+            {historialFiltradoTabla.map(c => (
+              <div key={c.id} className={styles.historyCard}>
+                <div className={styles.historyCardHeader}>
+                  <strong className={styles.orderNumber}>#ORD-{c.id}</strong>
+                  <span className={styles.historyDate}><FaCalendarAlt size={10} /> {new Date(c.fechaCompra).toLocaleDateString()}</span>
+                </div>
+
+                <div className={styles.historyProvider}>
+                  <span>Proveedor: <strong>{c.proveedorNombre}</strong></span>
+                </div>
+
+                <div className={styles.historyItemsBox}>
+                  {c.detalles?.map((d: any, idx: number) => (
+                    <div key={idx} className={styles.historyItemLine}>
+                      • {d.cantidad}x {d.productoNombre} 
+                      {d.variacionNombre && <strong className={styles.textCyan}> ({d.variacionNombre})</strong>} 
+                      <span className={styles.textMuted}>(a C$ {d.costoUnitario})</span>
+                    </div>
+                  ))}
+                </div>
+
+                {c.observaciones && (
+                  <div className={styles.historyObs}>📝 {c.observaciones}</div>
+                )}
+
+                <div className={styles.historyFooter}>
+                  <strong className={styles.historyTotal}>C$ {c.totalCompra.toLocaleString()}</strong>
+                  <div className={styles.historyActions}>
+                    <button onClick={() => abrirModalEditarCompra(c)} className={styles.btnEdit} title="Editar">
+                      <FaEdit />
+                    </button>
+                    <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular">
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {historialFiltradoTabla.length === 0 && (
+              <div className={styles.emptyFeedText}>No hay compras coincidentes.</div>
+            )}
+          </div>
+
+          {/* TABLA ESCRITORIO HISTORIAL */}
+          <div className={styles.desktopTableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>N° Orden</th>
+                  <th>Fecha</th>
+                  <th>Proveedor</th>
+                  <th>Detalle Items</th>
+                  <th>Notas</th>
+                  <th style={{ textAlign: "right" }}>Total</th>
+                  <th style={{ textAlign: "center" }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historialFiltradoTabla.map(c => (
+                  <tr key={c.id}>
+                    <td className={styles.orderNumber}>#{c.id}</td>
+                    <td>{new Date(c.fechaCompra).toLocaleDateString()}</td>
+                    <td><strong>{c.proveedorNombre}</strong></td>
+                    <td>
+                      <div className={styles.textMuted}>
+                        {c.detalles?.map((d: any, idx: number) => (
+                          <div key={idx}>
+                            • {d.cantidad}x {d.productoNombre} 
+                            {d.variacionNombre && <strong className={styles.textCyan}> ({d.variacionNombre})</strong>} 
+                            (a C$ {d.costoUnitario})
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td><span className={styles.textItalic}>{c.observaciones || 'Sin notas'}</span></td>
+                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#ef4444" }}>
+                      C$ {c.totalCompra.toLocaleString()}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <div className={styles.actionsDualCenter}>
+                        <button onClick={() => abrirModalEditarCompra(c)} className={styles.btnEdit}><FaEdit /></button>
+                        <button onClick={() => anularCompra(c.id)} className={styles.btnDelete}><FaTrash /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 4. SUBTAB: ANÁLISIS DE RENTABILIDAD */}
+      {subTab === "analisis" && (
+        <div className={styles.panelCard}>
+          <h4 className={styles.panelTitle}><FaChartLine /> Ranking Estratégico de Proveedores</h4>
+          
+          {/* FEED MÓVIL MÉTRICAS */}
+          <div className={styles.mobileMetricsFeed}>
+            {metricas.map(m => (
+              <div key={m.id} className={styles.metricCard}>
+                <div className={styles.metricCardHeader}>
+                  <strong className={styles.providerName}>{m.razonSocial}</strong>
+                  <span className={`${styles.badgeScore} ${m.scoreConfiabilidad >= 80 ? styles.scoreGreen : m.scoreConfiabilidad >= 50 ? styles.scoreOrange : styles.scoreRed}`}>
+                    <FaUserCheck size={10} /> {m.scoreConfiabilidad}%
+                  </span>
+                </div>
+
+                <div className={styles.metricGrid}>
+                  <div className={styles.metricItem}>
+                    <small>Órdenes:</small>
+                    <strong>{m.totalOrdenes} lotes</strong>
+                  </div>
+                  <div className={styles.metricItem}>
+                    <small>Invertido:</small>
+                    <strong>C$ {m.totalInvertido.toLocaleString()}</strong>
+                  </div>
+                  <div className={styles.metricItem}>
+                    <small>Margen Ganancia:</small>
+                    <strong className={styles.textGreen}>C$ {m.margenGananciaHistorico.toLocaleString()}</strong>
+                  </div>
+                  <div className={styles.metricItem}>
+                    <small>Entrega Promedio:</small>
+                    <strong>{m.tiempoRespuestaPromedio} días</strong>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {metricas.length === 0 && (
+              <div className={styles.emptyFeedText}>No existen datos para analizar.</div>
+            )}
+          </div>
+
+          {/* TABLA ESCRITORIO MÉTRICAS */}
+          <div className={styles.desktopTableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Proveedor</th>
+                  <th style={{ textAlign: "center" }}>Órdenes</th>
+                  <th>Total Invertido</th>
+                  <th>Ganancia</th>
+                  <th>Entrega</th>
+                  <th style={{ textAlign: "center" }}>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metricas.map(m => (
+                  <tr key={m.id}>
+                    <td><strong>{m.razonSocial}</strong></td>
+                    <td style={{ textAlign: "center" }}><span className={styles.badgeMetrica}><FaBoxes size={10} /> {m.totalOrdenes}</span></td>
+                    <td>C$ {m.totalInvertido.toLocaleString()}</td>
+                    <td><strong className={styles.textGreen}>C$ {m.margenGananciaHistorico.toLocaleString()}</strong></td>
+                    <td>{m.tiempoRespuestaPromedio} días</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className={`${styles.badgeScore} ${m.scoreConfiabilidad >= 80 ? styles.scoreGreen : m.scoreConfiabilidad >= 50 ? styles.scoreOrange : styles.scoreRed}`}>
+                        <FaUserCheck size={10} /> {m.scoreConfiabilidad}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MODAL DE EDICIÓN DE COMPRA */}
+      {compraAEditar && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h4 className={styles.modalTitle}>🛠️ Editar Compra #{compraAEditar.id}</h4>
+              <button onClick={() => setCompraAEditar(null)} className={styles.modalCloseBtn}>
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={guardarEdicionCompra} className={styles.modalForm}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Proveedor</label>
+                <select 
+                  value={compraAEditar.idProveedor} 
+                  onChange={e => setCompraAEditar({ ...compraAEditar, idProveedor: Number(e.target.value) })}
+                  className={styles.select}
+                  required
+                >
+                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Notas / Lote</label>
+                <input 
+                  type="text" 
+                  value={compraAEditar.observaciones || ''} 
+                  onChange={e => setCompraAEditar({ ...compraAEditar, observaciones: e.target.value })}
+                  className={styles.input}
+                />
+              </div>
+
+              <div className={styles.loteEditList}>
+                <label className={styles.label}>Detalle de Artículos:</label>
+                {compraAEditar.detalles?.map((det: any, idx: number) => {
+                  const prodSeleccionado = productos.find(p => (p.id ?? p.Id) === det.idProducto);
+                  const tieneVars = prodSeleccionado?.tieneVariaciones && prodSeleccionado?.variaciones?.length > 0;
+
+                  return (
+                    <div key={idx} className={styles.itemEditCard}>
+                      <div className={styles.formGroup}>
+                        <label className={styles.miniLabel}>Producto</label>
+                        <select 
+                          value={det.idProducto} 
+                          onChange={e => {
+                            const copia = [...compraAEditar.detalles];
+                            copia[idx].idProducto = Number(e.target.value);
+                            copia[idx].idVariacion = null;
+                            setCompraAEditar({ ...compraAEditar, detalles: copia });
+                          }}
+                          className={styles.select}
+                        >
+                          {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                      </div>
+
+                      {tieneVars && (
+                        <div className={styles.formGroup}>
+                          <label className={styles.miniLabelCyan}>Variante</label>
+                          <select 
+                            value={det.idVariacion || ''} 
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].idVariacion = e.target.value ? Number(e.target.value) : null;
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.select}
+                            required
+                          >
+                            <option value="">Seleccionar variante</option>
+                            {prodSeleccionado.variaciones.map((v: any) => (
+                              <option key={v.id} value={v.id}>{v.nombreVariacion}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className={styles.itemEditInputsRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.miniLabel}>Cant.</label>
+                          <input 
+                            type="number" 
+                            min={1} 
+                            value={det.cantidad === 0 ? '' : det.cantidad} 
+                            onFocus={(e) => e.target.select()}
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].cantidad = e.target.value === '' ? 0 : Number(e.target.value);
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            onBlur={() => {
+                              if (det.cantidad < 1) {
+                                const copia = [...compraAEditar.detalles];
+                                copia[idx].cantidad = 1;
+                                setCompraAEditar({ ...compraAEditar, detalles: copia });
+                              }
+                            }}
+                            className={styles.touchInput} 
+                          />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                          <label className={styles.miniLabel}>Costo U.</label>
+                          <input 
+                            type="number" 
+                            min={0} 
+                            value={det.costoUnitario === 0 ? '' : det.costoUnitario} 
+                            onFocus={(e) => e.target.select()}
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].costoUnitario = e.target.value === '' ? 0 : Number(e.target.value);
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.touchInput} 
+                          />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                          <label className={styles.miniLabelCyan}>P. Venta</label>
+                          <input 
+                            type="number" 
+                            min={0} 
+                            value={det.nuevoPrecioVenta === 0 ? '' : det.nuevoPrecioVenta} 
+                            onFocus={(e) => e.target.select()}
+                            onChange={e => {
+                              const copia = [...compraAEditar.detalles];
+                              copia[idx].nuevoPrecioVenta = e.target.value === '' ? '' : Number(e.target.value);
+                              setCompraAEditar({ ...compraAEditar, detalles: copia });
+                            }}
+                            className={styles.touchInput} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className={styles.recalcTotalRow}>
+                <span>Total Recalculado:</span>
+                <strong className={styles.textRed}>
+                  C$ {compraAEditar.detalles?.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0).toLocaleString()}
+                </strong>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button type="button" onClick={() => setCompraAEditar(null)} className={styles.btnCancelar}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.btnGuardar}>
+                  Guardar Cambios
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL CONFLICTO */}
+      {/* 6. MODAL DE CONFLICTO */}
       {modalConflicto.visible && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
-            <h4 style={{ color: '#f87171', margin: 0 }}>Acción Bloqueada</h4>
-            <p style={{ color: '#e2e8f0', fontSize: '0.82rem', margin: 0 }}>{modalConflicto.mensaje}</p>
-            <button onClick={() => setModalConflicto({ visible: false, mensaje: '', compras: [] })} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', marginTop: '6px', fontSize: '0.85rem' }}>
-              Entendido
-            </button>
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContentConflict}>
+            <div className={styles.modalHeader}>
+              <h4 className={styles.modalTitleRed}><FaTrash /> Acción Bloqueada</h4>
+              <button onClick={() => setModalConflicto({ visible: false, mensaje: '', compras: [] })} className={styles.modalCloseBtn}>
+                <FaTimes />
+              </button>
+            </div>
+
+            <p className={styles.conflictText}>{modalConflicto.mensaje}</p>
+
+            <div className={styles.conflictListBox}>
+              <span className={styles.conflictSubhead}>Compras vinculadas a este proveedor:</span>
+              <div className={styles.conflictScrollBox}>
+                {modalConflicto.compras.map(c => (
+                  <div key={c.id} className={styles.conflictRow}>
+                    <span className={styles.textCyan}>ID: #{c.id}</span>
+                    <span className={styles.textMuted}>{new Date(c.fecha).toLocaleDateString()}</span>
+                    <strong className={styles.textGreen}>C$ {c.total.toLocaleString()}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.modalActionsEnd}>
+              <button
+                onClick={() => setModalConflicto({ visible: false, mensaje: '', compras: [] })}
+                className={styles.btnEntendido}
+              >
+                Entendido
+              </button>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };

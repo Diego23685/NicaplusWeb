@@ -1,366 +1,781 @@
-/* CatalogosAdmin.module.css */
-
-/* Contenedor Principal */
+/* =========================================================
+   CONTENEDOR BASE & RESET
+   ========================================================= */
 .container {
-  color: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    max-width: 1440px;
+    margin: 0 auto;
+    color: #f1f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
+    min-height: 100vh;
 }
 
-/* Encabezado */
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 16px;
+    display: flex;
+    flex-direction: column;
 }
 
 .title {
-  margin: 0;
-  color: #38bdf8;
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
 }
-
-.loading {
-  color: #38bdf8;
-  padding: 30px;
-  font-family: system-ui, sans-serif;
-  font-weight: bold;
-  font-size: 1.1rem;
-  text-align: center;
-  background-color: #0f172a;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 
 .subtitle {
-  color: #94a3b8;
-  margin: 4px 0 0 0;
-  font-size: 0.9rem;
+    margin: 0.15rem 0 0 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
 }
 
-/* Selector de Pestañas (Tabs) */
-.tabContainer {
-  display: flex;
-  background: #1e293b;
-  padding: 4px;
-  border-radius: 8px;
-  border: 1px solid #334155;
-}
-
-.tabButton {
-  padding: 8px 16px;
-  background: transparent;
-  color: #94a3b8;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.tabButton:hover {
-  color: #f1f5f9;
-}
-
-.tabButtonActive {
-  background: #581c7e;
-  color: #ffffff;
-}
-
-/* Botonera y Controles */
 .actionRow {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
 }
 
 .btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
-.btn:active {
-  transform: scale(0.98);
-}
+.btnPrimary { background: #0284c7; color: #fff; }
+.btnSecondary { background: #334155; color: #cbd5e1; }
+.btnWarning { background: #f59e0b; color: #000; }
+.btnIndigo { background: #6366f1; color: #fff; }
+.btnPurple { background: #a855f7; color: #fff; }
+.btnAmber { background: #f59e0b; color: #000; }
+.btnDanger { background: #ef4444; color: #fff; }
 
-.btnPrimary {
-  background: #10b981;
-  color: #ffffff;
-}
-.btnPrimary:hover { background: #059669; }
-
-.btnDanger {
-  background: #ef4444;
-  color: #ffffff;
-}
-.btnDanger:hover { background: #dc2626; }
-
-.btnSecondary {
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
-}
-.btnSecondary:hover {
-  background: #334155;
-  color: #ffffff;
-}
-
-.btnWarning {
-  background: #f59e0b;
-  color: #0f172a;
-}
-.btnWarning:hover { background: #d97706; }
-
-/* Paneles Secundarios / Formularios */
-.panel {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-sizing: border-box;
-}
-
+/* Subsecciones Categorías y Juegos */
 .panelSubSections {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  width: 100%;
-  background: #0f172a;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px dashed #334155;
-  box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
 }
 
 .panelSub {
-  flex: 1 1 300px;
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-sizing: border-box;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-/* Inputs, Textareas y Formularios */
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-}
+.titlePurple { color: #a855f7; margin: 0; font-size: 0.9rem; font-weight: 700; }
+.titleAmber { color: #f59e0b; margin: 0; font-size: 0.9rem; font-weight: 700; }
 
-.formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.label {
-  font-size: 0.8rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.input, .select, .textarea {
-  width: 100%;
-  padding: 10px 12px;
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  box-sizing: border-box;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.input:focus, .select:focus, .textarea:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
-}
-
-.textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.checkboxLabel {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  cursor: pointer;
-  font-size: 0.85rem;
-  user-select: none;
-  margin-top: 8px;
-}
-
-/* Filtros */
-.filterCard {
-  background: #0f172a;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.scrollRow {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.scrollRow::-webkit-scrollbar {
-  height: 4px;
-}
-.scrollRow::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-}
-
-.pill {
-  padding: 6px 14px;
-  background: #1e293b;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-.pill:hover { background: #334155; }
-
-.pillActivePurple { background: #a855f7 !important; font-weight: bold; }
-.pillActiveAmber { background: #f59e0b !important; color: #000 !important; font-weight: bold; }
-
-/* Tablas Modernas */
-.tableWrapper {
-  width: 100%;
-  overflow-x: auto;       /* Activa el scroll horizontal */
-  overflow-y: auto;       /* Activa el scroll vertical interno */
-  max-height: 70vh;       /* Limita la altura al 70% de la pantalla (ajustable) */
-  border: 1px solid #233249;
-  border-radius: 8px;
-  background-color: #0f172a;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.table th {
-  padding: 12px 8px;
-  border-bottom: 2px solid #334155;
-  color: #94a3b8;
-  text-align: left;
-  font-weight: 600;
-}
-
-/* Opcional: Mantén el encabezado de la tabla fijo arriba mientras bajas */
-.table thead th {
-  position: sticky;
-  top: 0;
-  background-color: #1e293b; /* Color de fondo para que no se trasluzca el texto al bajar */
-  z-index: 10;
-}
-
-.table td {
-  padding: 12px 8px;
-  border-bottom: 1px solid #1e293b;
-  vertical-align: middle;
-}
-
-.table tr:hover {
-  background: rgba(255, 255, 255, 0.01);
+.formMini {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
 .miniList {
-  max-height: 120px;
-  overflow-y: auto;
-  margin-top: 8px;
-  background: #0f172a;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #233249;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 140px;
+    overflow-y: auto;
 }
 
 .miniListItem {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 6px;
-  border-bottom: 1px solid #1e293b;
-  font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
 }
 
-/* Modales */
+.miniItemActions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.btnIconEdit, .btnIconDelete, .btnIconAction, .btnIconAmber, .btnIconTeal {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.btnIconEdit { color: #f59e0b; }
+.btnIconDelete { color: #ef4444; }
+.btnIconAction { color: #38bdf8; }
+.btnIconAmber { color: #f59e0b; }
+.btnIconTeal { color: #0ea5e9; }
+
+/* =========================================================
+   FORMULARIO UNIFICADO
+   ========================================================= */
+.formCard {
+    background: #1e293b;
+    border: 1px solid #38bdf8;
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.formCardTitle {
+    margin: 0;
+    font-size: 1rem;
+    color: #38bdf8;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.formGridUnified {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.formColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.formRowDual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+}
+
+.label, .labelRed {
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.label { color: #94a3b8; }
+.labelRed { color: #f87171; }
+
+.input, .select, .textarea, .fileInput {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #fff;
+    padding: 0.55rem;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.textarea { resize: vertical; }
+
+.togglesBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: #0f172a;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.checkboxLabel, .checkboxLabelCyan {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.checkboxLabelCyan { color: #38bdf8; font-weight: 700; }
+.streamingSubOptions { display: flex; flex-direction: column; gap: 0.35rem; padding-left: 0.5rem; }
+
+/* Subsección Variaciones */
+.variacionesSection {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+}
+
+.variacionesPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.variacionesPanelTitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #38bdf8;
+}
+
+.variacionesInputGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.btnAddVar {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    padding: 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tableResponsive {
+    overflow-x: auto;
+}
+
+.formFooterActions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+/* =========================================================
+   FILTROS POR RUBRO Y PILLS TOUCH
+   ========================================================= */
+.filterSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rubrosScroll, .pillsScroll {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.3rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.rubrosScroll::-webkit-scrollbar, .pillsScroll::-webkit-scrollbar { display: none; }
+
+.pillRubro, .pillMini {
+    padding: 0.45rem 0.75rem;
+    border-radius: 20px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.rubroActiveBlue { background: #0284c7 !important; color: #fff !important; }
+.rubroActiveTeal { background: #047688 !important; color: #fff !important; }
+.rubroActiveCyan { background: #38bdf8 !important; color: #000 !important; }
+.rubroActiveRose { background: #f43f5e !important; color: #fff !important; }
+.pillActivePurple { background: #a855f7 !important; color: #fff !important; }
+.pillActiveAmber { background: #f59e0b !important; color: #000 !important; }
+
+.searchBox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0 0.6rem;
+    height: 38px;
+}
+
+.searchIcon { color: #64748b; font-size: 0.85rem; }
+.searchInput { width: 100%; background: transparent; border: none; outline: none; color: #fff; padding: 0 0.4rem; font-size: 0.85rem; }
+.clearSearchBtn { background: none; border: none; color: #94a3b8; cursor: pointer; }
+
+/* =========================================================
+   VISTA MÓVIL (FEED DE TARJETAS TÁCTILES)
+   ========================================================= */
+.mobileCardsFeed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.productCardTouch {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.productCardTop {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+}
+
+.productImgWrap {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.productImg { width: 100%; height: 100%; object-fit: cover; }
+.noImgIcon { color: #475569; font-size: 1.2rem; }
+
+.productDetailsWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.productTitle { font-size: 0.85rem; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.productBadgesRow {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.badgeType, .badgeStatus, .badgeVar {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
+.badgeType { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.badgeVar { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.statusGreen { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.statusAmber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+
+.productPricesRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+.priceSale { font-weight: 800; color: #38bdf8; font-size: 0.85rem; }
+.priceCost { color: #94a3b8; }
+.productStockText { color: #4ade80; font-weight: 700; }
+
+.productCardActions {
+    display: flex;
+    gap: 0.3rem;
+    border-top: 1px solid #334155;
+    padding-top: 0.45rem;
+    overflow-x: auto;
+}
+
+.btnActionSecondary, .btnActionAmber, .btnActionTeal, .btnActionDanger {
+    padding: 0.45rem 0.65rem;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btnActionSecondary { background: #0f172a; color: #cbd5e1; border: 1px solid #334155; }
+.btnActionAmber { background: #f59e0b; color: #000; }
+.btnActionTeal { background: #047688; color: #fff; }
+.btnActionDanger { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* =========================================================
+   VISTA ESCRITORIO: TABLA COMPLETA
+   ========================================================= */
+.desktopTableWrap {
+    display: none;
+    background: #1e293b;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.table th {
+    background: #0f172a;
+    padding: 0.65rem 0.85rem;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #334155;
+}
+
+.table td {
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    vertical-align: middle;
+}
+
+.tableImg { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
+.tdLink { cursor: pointer; }
+.tableActionsRow { display: flex; gap: 0.3rem; justify-content: center; }
+
+/* =========================================================
+   MODALES (PANTALLAS, VENTAS, VARIANTES, ERRORES)
+   ========================================================= */
 .modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(4px);
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    z-index: 100;
 }
 
-.modalContent {
-  background: #1e293b;
-  padding: 24px;
-  border-radius: 12px;
-  max-width: 460px;
-  width: 90%;
-  border: 1px solid #334155;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+.modalContentWide, .modalContentError {
+    background: #1e293b;
+    border: 1px solid #38bdf8;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+    gap: 0.6rem;
 }
+
+.modalContentError { border-color: #ef4444; max-width: 480px; }
 
 .modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-/* Extras */
-.badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
+.modalTitle { margin: 0; font-size: 1rem; color: #38bdf8; display: flex; align-items: center; gap: 0.4rem; }
+.modalCloseBtn { background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; }
+
+/* Panel Pantallas Streaming */
+.panelMiniLoad {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tabsModoIngreso { display: flex; gap: 0.4rem; }
+
+.btnTabModo {
+    flex: 1;
+    padding: 0.4rem;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btnTabModoActive { background: #047688; color: #fff; border-color: #38bdf8; }
+
+.formPerfilesGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+}
+
+.perfilesSearchRow {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.selectAuto {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #fff;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.perfilesGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.perfilCard {
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.perfilLibre { background: #142820; border-color: #10b981; }
+.perfilOcupado { background: #2d1e24; border-color: #ef4444; }
+
+.perfilCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.perfilActionsTop { display: flex; gap: 0.3rem; }
+.perfilDetails { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.75rem; }
+.perfilEditInputs { display: flex; flex-direction: column; gap: 0.3rem; }
+.inputMini { width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 0.3rem; border-radius: 4px; font-size: 0.75rem; }
+
+.ocupadoBox {
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.35rem;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fca5a5;
+    font-size: 0.7rem;
+}
+
+.btnLiberar {
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    cursor: pointer;
+}
+
+.perfilCardFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.3rem;
+    border-top: 1px solid rgba(51, 65, 85, 0.4);
+    padding-top: 0.3rem;
+}
+
+.btnSaveMini { background: #0284c7; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; }
+.btnCancelMini { background: #334155; color: #cbd5e1; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; }
+.btnEditMini { background: #f59e0b; color: #000; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+
+/* Historial de Ventas */
+.salesListScroll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.saleItemCard {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.saleItemHeader { display: flex; justify-content: space-between; font-size: 0.8rem; color: #38bdf8; }
+.saleDate { color: #94a3b8; font-size: 0.7rem; }
+.saleItemDetails { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.75rem; }
+.salePriceRow { display: flex; justify-content: space-between; align-items: center; }
+
+/* Modal Variaciones */
+.addVarBox {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.addVarInputsRow {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem;
+}
+
+.variationsListScroll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.varCardTouch {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.varCardTop { display: flex; justify-content: space-between; align-items: center; }
+.varCardDetailsRow { display: flex; justify-content: space-between; font-size: 0.75rem; }
+.varStockCounterRow { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
+
+.counterWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #1e293b;
+    padding: 0.15rem 0.5rem;
+    border-radius: 16px;
+    border: 1px solid #334155;
+}
+
+.btnCounterMinus, .btnCounterPlus {
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btnCounterMinus { color: #ef4444; }
+.btnCounterPlus { color: #22c55e; }
+.counterValue { font-weight: 700; color: #fff; min-width: 20px; text-align: center; }
+
+.modalFooterActions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    border-top: 1px solid #334155;
+    padding-top: 0.5rem;
+}
+
+/* Modal Error */
+.titleRed { color: #ef4444; margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.4rem; }
+.errorDesc { font-size: 0.85rem; color: #cbd5e1; margin: 0; }
+.linkedItemsBox { background: #0f172a; border: 1px solid #334155; padding: 0.5rem; border-radius: 6px; max-height: 140px; overflow-y: auto; }
+.linkedItem { font-size: 0.75rem; padding: 0.3rem 0.5rem; background: #1e293b; border-left: 3px solid #ef4444; border-radius: 4px; margin-bottom: 0.25rem; }
+.modalActionsEnd { display: flex; justify-content: flex-end; }
+
+/* Utilidades */
+.textCyan { color: #38bdf8; }
+.textOrange { color: #fb923c; }
+.textMuted { color: #94a3b8; }
+.textEllipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emptyText, .loading { text-align: center; padding: 2rem 0.5rem; color: #64748b; font-size: 0.85rem; }
+
+/* =========================================================
+   BREAKPOINTS: TABLETS & ESCRITORIO (>= 768px / >= 1024px)
+   ========================================================= */
+@media (min-width: 768px) {
+    .panelSubSections {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .formGridUnified {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .variacionesSection {
+        grid-column: 1 / -1;
+    }
+
+    .formFooterActions {
+        grid-column: 1 / -1;
+        flex-direction: row;
+    }
+
+    .mobileCardsFeed {
+        grid-template-columns: repeat(2, 1fr);
+        display: grid;
+    }
+
+    .formPerfilesGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .perfilesGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: 1.25rem;
+    }
+
+    .formGridUnified {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .mobileCardsFeed {
+        display: none;
+    }
+
+    .desktopTableWrap {
+        display: block;
+    }
 }

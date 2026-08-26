@@ -1,11 +1,29 @@
 import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent, type FormEvent } from 'react';
 import api from '../services/api';
 import { 
-    FaBoxOpen, FaGamepad, FaTags, FaTrash, 
-    FaTimes, FaPlus, FaChevronDown, FaChevronUp, 
-    FaSearch, FaTv, FaUser, FaImage, FaPlusCircle, FaMinusCircle,
-    FaEdit, FaBoxes
+    FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
+    FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
+    FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory,
+    FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
+import styles from '../assets/styles/CatalogosAdmin.module.css';
+
+export interface VariacionProducto {
+    id?: number;
+    productoPadreId?: number;
+    sku?: string;
+    color?: string;
+    almacenamiento?: string;
+    ram?: string;
+    talla?: string;
+    nombreVariacion: string;
+    precioVenta: number;
+    precioCosto: number;
+    stockActual: number;
+    stockMinimo?: number;
+    imagenUrl?: string;
+    estado?: string;
+}
 
 interface Producto {
     id: number;
@@ -18,6 +36,7 @@ interface Producto {
     esDigital: boolean;
     esSuscripcion: boolean;
     controlaStock: boolean;
+    requiereServicio?: boolean;
     diasDuracion: number;
     categoriaId: number | null;
     juegoId: number | null;
@@ -25,6 +44,8 @@ interface Producto {
     proveedor: string;
     estado: string;
     perfilesCount?: number;
+    tieneVariaciones?: boolean;
+    variaciones?: VariacionProducto[];
 }
 
 interface PerfilCuenta {
@@ -38,6 +59,19 @@ interface PerfilCuenta {
     idClienteAsignado: number | null;
     nombreCliente?: string;
     accountGroupKey?: string;
+}
+
+interface HistorialVentaItem {
+    ventaId: number;
+    fecha: string;
+    clienteId: number | null;
+    clienteNombre: string;
+    clienteTelefono: string;
+    cantidad: number;
+    precioUnitario: number;
+    subTotal: number;
+    metodoPago: string;
+    operador: string;
 }
 
 interface Categoria { id: number; nombre: string; imagenUrl: string; }
@@ -59,8 +93,12 @@ const productoFormInicial = {
     diasDuracion: 30,
     garantiaDias: 30,
     proveedor: '',
-    estado: 'Activo'
+    estado: 'Activo',
+    tieneVariaciones: false,
+    variaciones: [] as VariacionProducto[]
 };
+
+const PAGE_SIZE = 20;
 
 export const CatalogosAdmin: React.FC = () => {
     const [mostrarFormularioProducto, setMostrarFormularioProducto] = useState(false);
@@ -69,16 +107,38 @@ export const CatalogosAdmin: React.FC = () => {
     // DATOS DE APIS
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
-    const [, setJuegos] = useState<Juego[]>([]);
+    const [juegos, setJuegos] = useState<Juego[]>([]);
     const [listaProveedores, setListaProveedores] = useState<Proveedor[]>([]);
     const [cargando, setCargando] = useState(true);
+    const [subiendoImagen, setSubiendoImagen] = useState(false);
 
-    // FORMULARIO UNIFICADO DE PRODUCTOS
+    // PAGINACIÓN
+    const [paginaActual, setPaginaActual] = useState(1);
+
+    // FORMULARIO UNIFICADO
     const [editandoProductoId, setEditandoProductoId] = useState<number | null>(null);
     const [formProducto, setFormProducto] = useState(productoFormInicial);
 
-    // GESTIÓN DE PERFILES Y CUENTAS BATCH
-    const [productoIdPerfilAbierto, setProductoIdPerfilAbierto] = useState<number | null>(null);
+    // MODAL CRUD DE VARIACIONES
+    const [productoVariacionAbierto, setProductoVariacionAbierto] = useState<Producto | null>(null);
+    const [variacionesModal, setVariacionesModal] = useState<VariacionProducto[]>([]);
+    const [filtroColorVariacion, setFiltroColorVariacion] = useState<string>('Todos');
+    const [variacionEditandoIdx, setVariacionEditandoIdx] = useState<number | null>(null);
+
+    // MODAL DE HISTORIAL DE VENTAS
+    const [productoHistorial, setProductoHistorial] = useState<Producto | null>(null);
+    const [historialVentas, setHistorialVentas] = useState<HistorialVentaItem[]>([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
+    const [busquedaHistorial, setBusquedaHistorial] = useState('');
+
+    // FORMULARIO RÁPIDO AGREGAR VARIANTE
+    const [nuevaVarNombre, setNuevaVarNombre] = useState('');
+    const [nuevaVarPrecioCosto, setNuevaVarPrecioCosto] = useState<number | ''>('');
+    const [nuevaVarPrecioVenta, setNuevaVarPrecioVenta] = useState<number | ''>('');
+    const [nuevaVarStock, setNuevaVarStock] = useState<number | ''>('');
+
+    // GESTIÓN DE PERFILES
+    const [productoPerfilAbierto, setProductoPerfilAbierto] = useState<Producto | null>(null);
     const [perfilesActuales, setPerfilesActuales] = useState<PerfilCuenta[]>([]);
     const [perfilEditandoId, setPerfilEditandoId] = useState<number | null>(null);
     const [perfilEditandoDatos, setPerfilEditandoDatos] = useState({ id: 0, idProducto: 0, ExtNombrePerfil: '', pin: '', correoCuenta: '', passwordCuenta: '', accountGroupKey: '' });
@@ -104,15 +164,17 @@ export const CatalogosAdmin: React.FC = () => {
     
     // FILTROS Y RUBROS
     const [filtroProd, setFiltroProd] = useState('');
-    const [juegoFiltroActivo] = useState<number | null>(null);
+    const [juegoFiltroActivo, setJuegoFiltroActivo] = useState<number | null>(null);
     const [categoriaFiltroActiva, setCategoriaFiltroActiva] = useState<number | null>(null);
     const [rubroAdmin, setRubroAdmin] = useState<'todos' | 'fisicos' | 'digitales' | 'streaming'>('todos');
 
-    // MODAL ERRORES
-    const [errorModal, setErrorModal] = useState({ visible: false, mensaje: '', detalles: '' });
+    // MODAL DE ERRORES
+    const [errorModal, setErrorModal] = useState({
+        visible: false, mensaje: '', detalles: '', elementosVinculados: [] as string[]
+    });
 
-    const dispararErrorVisual = useCallback((mensaje: string, detalles: string) => {
-        setErrorModal({ visible: true, mensaje, detalles });
+    const dispararErrorVisual = useCallback((mensaje: string, detalles: string, vinculados: string[] = []) => {
+        setErrorModal({ visible: true, mensaje, detalles, elementosVinculados: vinculados });
     }, []);
 
     const cargarSincronizacionMaster = useCallback(async () => {
@@ -123,13 +185,13 @@ export const CatalogosAdmin: React.FC = () => {
                 api.get('/juegos'),
                 api.get('/proveedores')
             ]);
-            setProductos(resProd.data);
-            setCategorias(resCat.data);
-            setJuegos(resJue.data);
-            setListaProveedores(resProv.data);
+            setProductos(resProd.data || []);
+            setCategorias(resCat.data || []);
+            setJuegos(resJue.data || []);
+            setListaProveedores(resProv.data || []);
         } catch (err: any) { 
             console.error("Error al sincronizar catálogos:", err); 
-            dispararErrorVisual("Error de Red", err.response?.data?.message || "No se pudo sincronizar con el servidor.");
+            dispararErrorVisual("Error de Red", err.response?.data?.message || "No se pudo sincronizar la información del servidor central.");
         } finally {
             setCargando(false);
         }
@@ -138,8 +200,9 @@ export const CatalogosAdmin: React.FC = () => {
     useEffect(() => { cargarSincronizacionMaster(); }, [cargarSincronizacionMaster]);
 
     const prodsFiltrados = useMemo(() => {
+        const query = filtroProd.toLowerCase().trim();
         return productos.filter(p => {
-            const coincideTexto = p.nombre.toLowerCase().includes(filtroProd.toLowerCase());
+            const coincideTexto = !query || p.nombre.toLowerCase().includes(query);
             const coincideJuego = juegoFiltroActivo ? p.juegoId === juegoFiltroActivo : true;
             const coincideCategoria = categoriaFiltroActiva ? p.categoriaId === categoriaFiltroActiva : true;
             
@@ -152,7 +215,17 @@ export const CatalogosAdmin: React.FC = () => {
         });
     }, [productos, filtroProd, juegoFiltroActivo, categoriaFiltroActiva, rubroAdmin]);
 
-    // FILTRADO Y ORDENAMIENTO DE PERFILES DE STREAMING
+    // Reseteo de página al cambiar filtros
+    useEffect(() => {
+        setPaginaActual(1);
+    }, [filtroProd, juegoFiltroActivo, categoriaFiltroActiva, rubroAdmin]);
+
+    const totalPaginas = Math.ceil(prodsFiltrados.length / PAGE_SIZE) || 1;
+    const prodsPaginados = useMemo(() => {
+        const inicio = (paginaActual - 1) * PAGE_SIZE;
+        return prodsFiltrados.slice(inicio, inicio + PAGE_SIZE);
+    }, [prodsFiltrados, paginaActual]);
+
     const perfilesFiltradosYOrdenados = useMemo(() => {
         return perfilesActuales
             .filter((perfil) => {
@@ -167,22 +240,49 @@ export const CatalogosAdmin: React.FC = () => {
             })
             .sort((a, b) => {
                 switch (ordenPerfil) {
-                    case 'a-z': return a.nombrePerfil.localeCompare(b.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
-                    case 'z-a': return b.nombrePerfil.localeCompare(a.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
-                    case 'correo': return a.correoCuenta.localeCompare(b.correoCuenta);
-                    case 'disponibles': return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? 1 : -1;
-                    case 'ocupados': return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? -1 : 1;
-                    default: return 0;
+                    case 'a-z':
+                        return a.nombrePerfil.localeCompare(b.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
+                    case 'z-a':
+                        return b.nombrePerfil.localeCompare(a.nombrePerfil, undefined, { numeric: true, sensitivity: 'base' });
+                    case 'correo':
+                        return a.correoCuenta.localeCompare(b.correoCuenta);
+                    case 'disponibles':
+                        return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? 1 : -1;
+                    case 'ocupados':
+                        return (a.ocupado === b.ocupado) ? 0 : a.ocupado ? -1 : 1;
+                    default:
+                        return 0;
                 }
             });
     }, [perfilesActuales, busquedaPerfil, ordenPerfil]);
 
+    const ventasFiltradas = useMemo(() => {
+        if (!busquedaHistorial.trim()) return historialVentas;
+        const q = busquedaHistorial.toLowerCase().trim();
+        return historialVentas.filter(h => 
+            h.fecha.toLowerCase().includes(q) ||
+            h.ventaId.toString().includes(q) ||
+            h.clienteNombre.toLowerCase().includes(q) ||
+            (h.clienteTelefono && h.clienteTelefono.includes(q)) ||
+            h.cantidad.toString().includes(q) ||
+            h.precioUnitario.toString().includes(q) ||
+            h.subTotal.toString().includes(q) ||
+            h.metodoPago.toLowerCase().includes(q) ||
+            h.operador.toLowerCase().includes(q)
+        );
+    }, [historialVentas, busquedaHistorial]);
+
     const handleProductoInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
-        const valorFinal = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+        let valorFinal: any = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+
+        if (type === 'number') {
+            valorFinal = value === '' ? '' : Number(value);
+        }
 
         setFormProducto(prev => {
             const nuevoEstado = { ...prev, [name]: valorFinal };
+            
             if (name === 'esDigital' && valorFinal) {
                 nuevoEstado.controlaStock = false;
             } else if (name === 'esDigital' && !valorFinal) {
@@ -190,30 +290,28 @@ export const CatalogosAdmin: React.FC = () => {
                 nuevoEstado.juegoId = '';
                 nuevoEstado.controlaStock = true;
             }
+            
             return nuevoEstado;
         });
     };
 
-    const ajustarStockRapido = async (producto: Producto, delta: number) => {
-        const nuevoStock = Math.max(0, producto.stockActual + delta);
+    const abrirHistorialProducto = async (producto: Producto) => {
+        setProductoHistorial(producto);
+        setBusquedaHistorial('');
+        setCargandoHistorial(true);
         try {
-            await api.put(`/products/${producto.id}`, {
-                ...producto,
-                stockActual: nuevoStock
-            });
-            setProductos(prev => prev.map(p => p.id === producto.id ? { ...p, stockActual: nuevoStock } : p));
+            const res = await api.get(`/products/${producto.id}/historial-ventas`);
+            setHistorialVentas(res.data || []);
         } catch (err: any) {
-            dispararErrorVisual("Error de Stock", "No se pudo actualizar el stock en el servidor.");
+            dispararErrorVisual("Error al Cargar Historial", err.response?.data?.mensaje || "No se pudieron obtener las ventas de este artículo.");
+            setHistorialVentas([]);
+        } finally {
+            setCargandoHistorial(false);
         }
     };
 
     const abrirGestionPerfiles = async (producto: Producto) => {
-        if (productoIdPerfilAbierto === producto.id) {
-            setProductoIdPerfilAbierto(null);
-            setPerfilesActuales([]);
-            return;
-        }
-        setProductoIdPerfilAbierto(producto.id);
+        setProductoPerfilAbierto(producto);
         setPerfNombre(`Perfil ${(producto.perfilesCount ?? 0) + 1}`);
         setPerfPin('');
         setBusquedaPerfil('');
@@ -221,10 +319,14 @@ export const CatalogosAdmin: React.FC = () => {
         
         try {
             const res = await api.get(`/perfilescuentas/producto/${producto.id}`);
-            setPerfilesActuales(res.data);
-            if (res.data.length > 0) {
+            setPerfilesActuales(res.data || []);
+            if (res.data && res.data.length > 0) {
                 setPerfCorreo(res.data[0].correoCuenta);
                 setPerfPassword(res.data[0].passwordCuenta);
+                setPerfNombre(`Perfil ${res.data.length + 1}`);
+            } else {
+                setPerfCorreo('');
+                setPerfPassword('');
             }
         } catch {
             setPerfilesActuales([]);
@@ -233,27 +335,37 @@ export const CatalogosAdmin: React.FC = () => {
 
     const comenzarEdicionPerfil = (perfil: PerfilCuenta) => {
         setPerfilEditandoId(perfil.id);
-        setPerfilEditandoDatos({ ...perfil, ExtNombrePerfil: perfil.nombrePerfil, accountGroupKey: perfil.accountGroupKey || '' });
+        setPerfilEditandoDatos({ 
+            ...perfil, 
+            ExtNombrePerfil: perfil.nombrePerfil,
+            accountGroupKey: perfil.accountGroupKey || ''
+        });
     };
 
     const removerCuentaCompletaManual = async (accountGroupKey: string) => {
-        if (!window.confirm('⚠️ ¿Desea eliminar la CUENTA COMPLETA (todas sus pantallas)?')) return;
+        if (!window.confirm('⚠️ ¿Desea eliminar la CUENTA COMPLETA (todas sus pantallas) de forma irreversible?')) return;
         try {
             await api.delete(`/perfilescuentas/grupo/${accountGroupKey}`);
-            if (productoIdPerfilAbierto) {
-                const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
-                setPerfilesActuales(res.data);
+            if (productoPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
+                setPerfilesActuales(res.data || []);
             }
         } catch (err: any) {
-            dispararErrorVisual("Integridad Bloqueada", err.response?.data?.message || "Una o más pantallas tienen suscripciones vigentes.");
+            dispararErrorVisual(
+                "Integridad Bloqueada", 
+                err.response?.data?.message || "Una o más pantallas de esta cuenta están activas en suscripciones vigentes."
+            );
         }
     };
 
     const guardarCambiosPerfil = async () => {
         try {
             let actualizarTodoElGrupo = false;
+
             if (perfilEditandoDatos.accountGroupKey) {
-                actualizarTodoElGrupo = window.confirm("¿Aplicar Correo/Clave a TODAS las pantallas del lote?");
+                actualizarTodoElGrupo = window.confirm(
+                    "¿Desea aplicar este Correo y Contraseña a TODAS las pantallas que comparten esta misma cuenta?"
+                );
             }
 
             await api.put(`/perfilescuentas/${perfilEditandoId}`, {
@@ -263,35 +375,35 @@ export const CatalogosAdmin: React.FC = () => {
             });
 
             setPerfilEditandoId(null);
-            if (productoIdPerfilAbierto) {
-                const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
-                setPerfilesActuales(res.data);
+            if (productoPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
+                setPerfilesActuales(res.data || []);
             }
         } catch (err: any) {
-            dispararErrorVisual("Error de Envío", err.response?.data?.message || "No se guardaron los cambios del perfil.");
+            dispararErrorVisual("Error de Envío", err.response?.data?.message || "Hubo problemas al guardar los datos del perfil o del grupo.");
         }
     };
 
     const liberarPerfilCliente = async (idPerfil: number) => {
-        if (!window.confirm("¿Liberar pantalla?")) return;
+        if (!window.confirm("¿Quitar cliente asignado? La pantalla quedará disponible en caja inmediata.")) return;
         try {
             await api.put(`/perfilescuentas/${idPerfil}/liberar`);
-            if (productoIdPerfilAbierto) {
-                const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
-                setPerfilesActuales(res.data);
+            if (productoPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
+                setPerfilesActuales(res.data || []);
             }
         } catch (err: any) {
-            dispararErrorVisual("Error Operacional", "No se pudo liberar la pantalla.");
+            dispararErrorVisual("Error Operacional", err.response?.data?.message || "No se logró desvincular al cliente de la pantalla.");
         }
     };
 
     const agregarPerfilManual = async (e: FormEvent) => {
         e.preventDefault();
-        if (!productoIdPerfilAbierto) return;
+        if (!productoPerfilAbierto) return;
 
         try {
             await api.post('/perfilescuentas', {
-                idProducto: productoIdPerfilAbierto,
+                idProducto: productoPerfilAbierto.id,
                 nombrePerfil: perfNombre,
                 pin: perfPin || '0000',
                 correoCuenta: perfCorreo,
@@ -300,33 +412,35 @@ export const CatalogosAdmin: React.FC = () => {
                 idClienteAsignado: null
             });
             setPerfPin('');
-            const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
-            setPerfilesActuales(res.data);
-            setPerfNombre(`Perfil ${res.data.length + 1}`);
+            const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
+            setPerfilesActuales(res.data || []);
+            setPerfNombre(`Perfil ${(res.data?.length || 0) + 1}`);
         } catch (err: any) {
-            dispararErrorVisual("Fallo de Registro", "Error al agregar el perfil.");
+            dispararErrorVisual("Fallo de Registro", err.response?.data?.message || "Imposible inyectar perfil.");
         }
     };
 
     const removerPerfilManual = async (idPerfil: number) => {
-        if (!window.confirm('¿Eliminar esta pantalla?')) return;
+        if (!window.confirm('¿Desea eliminar la pantalla de forma irreversible?')) return;
         try {
             await api.delete(`/perfilescuentas/${idPerfil}`);
-            const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
-            setPerfilesActuales(res.data);
-            setPerfNombre(`Perfil ${res.data.length + 1}`);
+            if (productoPerfilAbierto) {
+                const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
+                setPerfilesActuales(res.data || []);
+                setPerfNombre(`Perfil ${(res.data?.length || 0) + 1}`);
+            }
         } catch (err: any) {
-            dispararErrorVisual("Integridad Bloqueada", "Perfil activo en una suscripción.");
+            dispararErrorVisual("Integridad Bloqueada", err.response?.data?.message || "El perfil se encuentra activo dentro de una suscripción vigente.");
         }
     };
 
     const agregarCuentaCompletaManual = async (e: FormEvent) => {
         e.preventDefault();
-        if (!productoIdPerfilAbierto) return;
+        if (!productoPerfilAbierto) return;
 
         try {
             await api.post('/perfilescuentas/cuenta-completa', {
-                idProducto: productoIdPerfilAbierto, 
+                idProducto: productoPerfilAbierto.id, 
                 correoCuenta: perfCorreo,
                 passwordCuenta: perfPassword,
                 cantidadPerfiles
@@ -335,25 +449,29 @@ export const CatalogosAdmin: React.FC = () => {
             setPerfPassword('');
             setCantidadPerfiles(5);
             
-            const res = await api.get(`/perfilescuentas/producto/${productoIdPerfilAbierto}`);
-            setPerfilesActuales(res.data);
+            const res = await api.get(`/perfilescuentas/producto/${productoPerfilAbierto.id}`);
+            setPerfilesActuales(res.data || []);
         } catch (err: any) {
-            dispararErrorVisual("Fallo Multipantalla", "Error al generar lote de perfiles.");
+            dispararErrorVisual("Fallo Multipantalla", err.response?.data?.message || "No se generó el lote completo.");
         }
     };
 
-    const guardarProducto = async (e: FormEvent) => {
+    const guardarProducto = async (e: FormEvent, mantenerParaDuplicar: boolean = false) => {
         e.preventDefault();
+        
         const payload = {
             ...(editandoProductoId ? { id: editandoProductoId } : {}), 
             ...formProducto,
+            precioCosto: Number(formProducto.precioCosto) || 0,
+            precioVenta: Number(formProducto.precioVenta) || 0,
+            stockActual: formProducto.controlaStock ? (Number(formProducto.stockActual) || 0) : 0,
             descripcion: formProducto.descripcion || 'Sin descripción detallada',
             stockMinimo: formProducto.controlaStock ? 2 : 0,
             categoriaId: formProducto.categoriaId ? Number(formProducto.categoriaId) : null,
             juegoId: formProducto.esDigital && formProducto.juegoId ? Number(formProducto.juegoId) : null,
             visibleEnCatalogo: true,
-            diasDuracion: formProducto.esDigital ? Number(formProducto.diasDuracion) : (Number(formProducto.diasDuracion) || 1),
-            garantiaDias: Number(formProducto.garantiaDias)
+            diasDuracion: formProducto.esDigital ? (Number(formProducto.diasDuracion) || 30) : (Number(formProducto.diasDuracion) || 1),
+            garantiaDias: Number(formProducto.garantiaDias) || 0
         };
 
         try {
@@ -362,11 +480,22 @@ export const CatalogosAdmin: React.FC = () => {
             } else {
                 await api.post('/products', payload);
             }
-            limpiarFormularioProducto();
-            setMostrarFormularioProducto(false);
+
+            if (mantenerParaDuplicar) {
+                setEditandoProductoId(null);
+                setFormProducto(prev => ({
+                    ...prev,
+                    nombre: `${prev.nombre} (Siguiente)`,
+                    stockActual: prev.controlaStock ? (Number(prev.stockActual) || 0) : 0
+                }));
+            } else {
+                limpiarFormularioProducto();
+                setMostrarFormularioProducto(false);
+            }
+
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Fallo de Procesamiento", err.response?.data?.message || "Error al guardar el producto."); 
+            dispararErrorVisual("Fallo de Procesamiento", err.response?.data?.message || "Error crítico al guardar la ficha técnica."); 
         }
     };
 
@@ -390,494 +519,919 @@ export const CatalogosAdmin: React.FC = () => {
             categoriaId: producto.categoriaId?.toString() || '',
             juegoId: producto.juegoId?.toString() || '',
             diasDuracion: producto.diasDuracion || 30,
-            garantiaDias: producto.garantiaDias || 0,
+            garantiaDias: producto.garantiaDias ?? 30,
             proveedor: producto.proveedor || '',
-            estado: producto.estado || 'Activo'
+            estado: producto.estado || 'Activo',
+            tieneVariaciones: producto.tieneVariaciones || false,
+            variaciones: producto.variaciones || []
+        });
+        setMostrarFormularioProducto(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const clonarProducto = (producto: Producto) => {
+        setEditandoProductoId(null);
+        setFormProducto({
+            nombre: `${producto.nombre} (Copia)`,
+            descripcion: producto.descripcion || '',
+            precioVenta: producto.precioVenta,
+            precioCosto: producto.precioCosto,
+            stockActual: producto.controlaStock ? producto.stockActual : 0,
+            imagenUrl: producto.imagenUrl || '',
+            esDigital: producto.esDigital,
+            esSuscripcion: producto.esSuscripcion || false,
+            controlaStock: producto.controlaStock ?? true,
+            categoriaId: producto.categoriaId?.toString() || '',
+            juegoId: producto.juegoId?.toString() || '',
+            diasDuracion: producto.diasDuracion || 30,
+            garantiaDias: producto.garantiaDias ?? 30,
+            proveedor: producto.proveedor || '',
+            estado: producto.estado || 'Activo',
+            tieneVariaciones: producto.tieneVariaciones || false,
+            variaciones: producto.variaciones || []
         });
         setMostrarFormularioProducto(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const eliminarProducto = async (id: number) => {
-        if (!window.confirm('¿Remover artículo del inventario?')) return;
+        if (!window.confirm('¿Remover artículo del inventario permanente?')) return;
         try {
             await api.delete(`/products/${id}`);
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Acción Denegada", "Tiene registros o perfiles asociados."); 
+            dispararErrorVisual("Acción Denegada", err.response?.data?.message || "Integridad referencial activa: Este producto tiene facturas o perfiles anclados."); 
         }
     };
 
     const guardarJuego = async (e: FormEvent) => {
         e.preventDefault();
         try {
-            const payload = { nombre: nuevoJuego, imagenUrl: juegoImagen || '' };
+            const payload = { nombre: nuevoJuego, imagenUrl: juegoImagen || 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=256' };
             if (editandoJuego) await api.put(`/juegos/${editandoJuego}`, { id: editandoJuego, ...payload });
             else await api.post('/juegos', payload);
             setNuevoJuego(''); setJuegoImagen(''); setEditandoJuego(null);
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Error", "Error guardando juego."); 
+            dispararErrorVisual("Error", err.response?.data?.message || "No se procesó el título."); 
+        }
+    };
+
+    const eliminarJuego = async (id: number) => {
+        if (!window.confirm('¿Eliminar juego del catálogo?')) return;
+        try {
+            await api.delete(`/juegos/${id}`);
+            if (juegoFiltroActivo === id) setJuegoFiltroActivo(null);
+            cargarSincronizacionMaster();
+        } catch (err: any) {
+            dispararErrorVisual("Restricción de Integridad", "Existen artículos vinculados a este título:", err.response?.data?.productos || []);
         }
     };
 
     const guardarCategoria = async (e: FormEvent) => {
         e.preventDefault();
         try {
-            const payload = { nombre: nuevaCategoria, imagenUrl: categoriaImagen || '' };
+            const payload = { nombre: nuevaCategoria, imagenUrl: categoriaImagen || 'https://images.unsplash.com/photo-1486572788966-cfd3df1f5b42?q=80&w=256' };
             if (editandoCategoria) await api.put(`/categorias/${editandoCategoria}`, { id: editandoCategoria, ...payload });
             else await api.post('/categorias', payload);
             setNuevaCategoria(''); setCategoriaImagen(''); setEditandoCategoria(null);
             cargarSincronizacionMaster();
         } catch (err: any) { 
-            dispararErrorVisual("Error", "Error guardando categoría."); 
+            dispararErrorVisual("Error", err.response?.data?.message || "No se guardó la categoría."); 
         }
     };
 
-    const procesarSubidaImagen = (e: ChangeEvent<HTMLInputElement>) => {
-        const archivo = e.target.files?.[0];
-        if (!archivo) return;
-        const lector = new FileReader();
-        lector.onloadend = () => { 
-            if (lector.result) setFormProducto(prev => ({ ...prev, imagenUrl: lector.result!.toString() })); 
-        };
-        lector.readAsDataURL(archivo);
+    const eliminarCategoria = async (id: number) => {
+        if (!window.confirm('¿Remover categoría?')) return;
+        try {
+            await api.delete(`/categorias/${id}`);
+            if (categoriaFiltroActiva === id) setCategoriaFiltroActiva(null);
+            cargarSincronizacionMaster();
+        } catch (err: any) {
+            dispararErrorVisual("Restricción de Integridad", "Esta categoría cuenta con inventario asignado:", err.response?.data?.productos || []);
+        }
     };
 
-    if (cargando) return <div style={{ padding: '30px', textAlign: 'center', color: '#38bdf8' }}>Cargando catálogos...</div>;
+    const procesarSubidaImagen = async (e: ChangeEvent<HTMLInputElement>) => {
+        const archivo = e.target.files?.[0];
+        if (!archivo) return;
+
+        try {
+            setSubiendoImagen(true);
+            const formData = new FormData();
+            formData.append('archivo', archivo);
+
+            const res = await api.post('/uploads/producto', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.data && res.data.url) {
+                setFormProducto(prev => ({ ...prev, imagenUrl: res.data.url }));
+            }
+        } catch (err: any) {
+            dispararErrorVisual(
+                "Error al Subir Imagen", 
+                err.response?.data?.mensaje || "No se pudo subir la imagen al servidor. Verifique el formato y peso."
+            );
+        } finally {
+            setSubiendoImagen(false);
+            e.target.value = '';
+        }
+    };
+
+    const abrirModalVariaciones = (producto: Producto) => {
+        setProductoVariacionAbierto(producto);
+        setVariacionesModal(producto.variaciones || []);
+        setFiltroColorVariacion('Todos');
+        setVariacionEditandoIdx(null);
+        setNuevaVarNombre('');
+        setNuevaVarPrecioCosto(producto.precioCosto);
+        setNuevaVarPrecioVenta(producto.precioVenta);
+        setNuevaVarStock(0);
+    };
+
+    const agregarNuevaVariacionModal = () => {
+        if (!nuevaVarNombre.trim()) {
+            alert("Escriba el nombre o descripción de la variación.");
+            return;
+        }
+
+        const nueva: VariacionProducto = {
+            productoPadreId: productoVariacionAbierto?.id,
+            nombreVariacion: nuevaVarNombre.trim(),
+            color: nuevaVarNombre.trim(),
+            precioCosto: Number(nuevaVarPrecioCosto) || (productoVariacionAbierto?.precioCosto ?? 0),
+            precioVenta: Number(nuevaVarPrecioVenta) || (productoVariacionAbierto?.precioVenta ?? 0),
+            stockActual: Number(nuevaVarStock) || 0,
+            stockMinimo: 2,
+            estado: 'Activo'
+        };
+
+        setVariacionesModal(prev => [...prev, nueva]);
+        setNuevaVarNombre('');
+        setNuevaVarStock(0);
+    };
+
+    const guardarVariacionModal = (idx: number, campo: keyof VariacionProducto, valor: any) => {
+        setVariacionesModal(prev => {
+            const copia = [...prev];
+            copia[idx] = { ...copia[idx], [campo]: valor };
+            return copia;
+        });
+    };
+
+    const eliminarVariacionModal = (idx: number) => {
+        if (!window.confirm("¿Eliminar esta variación?")) return;
+        setVariacionesModal(prev => prev.filter((_, i) => i !== idx));
+        if (variacionEditandoIdx === idx) setVariacionEditandoIdx(null);
+    };
+
+    const guardarTodasVariacionesServidor = async () => {
+        if (!productoVariacionAbierto) return;
+
+        const payload = {
+            id: productoVariacionAbierto.id,
+            nombre: productoVariacionAbierto.nombre,
+            descripcion: productoVariacionAbierto.descripcion,
+            precioVenta: Number(productoVariacionAbierto.precioVenta) || 0,
+            precioCosto: Number(productoVariacionAbierto.precioCosto) || 0,
+            stockActual: 0,
+            stockMinimo: 0,
+            imagenUrl: productoVariacionAbierto.imagenUrl,
+            esDigital: productoVariacionAbierto.esDigital,
+            controlaStock: productoVariacionAbierto.controlaStock,
+            requiereServicio: productoVariacionAbierto.requiereServicio ?? false,
+            visibleEnCatalogo: true,
+            esSuscripcion: productoVariacionAbierto.esSuscripcion,
+            diasDuracion: Number(productoVariacionAbierto.diasDuracion) || 30,
+            garantiaDias: Number(productoVariacionAbierto.garantiaDias) || 0,
+            proveedor: productoVariacionAbierto.proveedor,
+            estado: productoVariacionAbierto.estado,
+            categoriaId: productoVariacionAbierto.categoriaId ? Number(productoVariacionAbierto.categoriaId) : null,
+            juegoId: productoVariacionAbierto.juegoId ? Number(productoVariacionAbierto.juegoId) : null,
+            tieneVariaciones: true,
+            variaciones: variacionesModal.map(v => ({
+                ...v,
+                precioCosto: Number(v.precioCosto) || 0,
+                precioVenta: Number(v.precioVenta) || 0,
+                stockActual: Number(v.stockActual) || 0,
+                stockMinimo: Number(v.stockMinimo) || 2
+            }))
+        };
+
+        try {
+            await api.put(`/products/${productoVariacionAbierto.id}`, payload);
+            alert("Variaciones guardadas exitosamente.");
+            setProductoVariacionAbierto(null);
+            cargarSincronizacionMaster();
+        } catch (err: any) {
+            dispararErrorVisual("Error al Guardar Variaciones", err.response?.data?.mensaje || "No se pudieron actualizar las variaciones.");
+        }
+    };
+
+    if (cargando) return <div className={styles.loading}>Sincronizando registros estructurales...</div>;
 
     return (
-        <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box', paddingBottom: '30px' }}>
-            
-            {/* ENCABEZADO Y BOTONES DE ACCIÓN */}
-            <div style={{ background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h3 style={{ color: '#38bdf8', margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Catálogos de Inventario</h3>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button 
-                        onClick={() => {
-                            if (mostrarFormularioProducto) limpiarFormularioProducto();
-                            setMostrarFormularioProducto(!mostrarFormularioProducto);
-                        }} 
-                        style={{ flex: 1, padding: '10px', background: mostrarFormularioProducto ? '#475569' : '#38bdf8', color: mostrarFormularioProducto ? '#fff' : '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                        {mostrarFormularioProducto ? <><FaTimes /> Cancelar</> : <><FaPlus /> Nuevo Producto</>}
-                    </button>
-
-                    <button 
-                        onClick={() => setMostrarEstructurasSecundarias(!mostrarEstructurasSecundarias)} 
-                        style={{ padding: '10px', background: '#0f172a', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                        <FaTags /> Categorías {mostrarEstructurasSecundarias ? <FaChevronUp size={10}/> : <FaChevronDown size={10}/>}
-                    </button>
+        <div className={styles.container}>
+            {/* 1. HEADER & ACCIONES */}
+            <header className={styles.header}>
+                <div>
+                    <h3 className={styles.title}>Catálogos Maestros</h3>
+                    <p className={styles.subtitle}>Gestión de productos físicos, digitales y cuentas streaming.</p>
                 </div>
+            </header>
+
+            <div className={styles.actionRow}>
+                <button 
+                    onClick={() => {
+                        if (mostrarFormularioProducto) limpiarFormularioProducto();
+                        setMostrarFormularioProducto(!mostrarFormularioProducto);
+                    }} 
+                    className={`${styles.btn} ${mostrarFormularioProducto ? styles.btnSecondary : styles.btnPrimary}`}
+                >
+                    {mostrarFormularioProducto ? <><FaTimes /> Cerrar Formulario</> : <><FaPlus /> Nuevo Producto</>}
+                </button>
+
+                <button 
+                    onClick={() => setMostrarEstructurasSecundarias(!mostrarEstructurasSecundarias)} 
+                    className={`${styles.btn} ${styles.btnSecondary}`}
+                >
+                    <FaTags /> Categorías y Juegos {mostrarEstructurasSecundarias ? <FaChevronUp size={11}/> : <FaChevronDown size={11}/>}
+                </button>
             </div>
 
-            {/* SECCIONES SECUNDARIAS (CATEGORÍAS Y JUEGOS) */}
+            {/* 2. ESTRUCTURAS SECUNDARIAS */}
             {mostrarEstructurasSecundarias && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1e293b', padding: '14px', borderRadius: '12px', border: '1px solid #334155' }}>
-                    <div>
-                        <h4 style={{ color: '#a855f7', margin: '0 0 8px 0', fontSize: '0.9rem', fontWeight: 700 }}><FaTags /> Categorías</h4>
-                        <form onSubmit={guardarCategoria} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <input type="text" placeholder="Nombre Categoría" value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem' }} required />
-                            <button type="submit" style={{ background: '#a855f7', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                <div className={styles.panelSubSections}>
+                    <div className={styles.panelSub}>
+                        <h4 className={styles.titlePurple}><FaTags /> {editandoCategoria ? 'Modificar' : 'Crear'} Categoría</h4>
+                        <form onSubmit={guardarCategoria} className={styles.formMini}>
+                            <input type="text" placeholder="Nombre (Ej: Consolas)" value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} className={styles.input} required />
+                            <input type="text" placeholder="URL Imagen" value={categoriaImagen} onChange={e => setCategoriaImagen(e.target.value)} className={styles.input} />
+                            <button type="submit" className={`${styles.btn} ${styles.btnPurple}`}>
                                 {editandoCategoria ? 'Actualizar' : 'Guardar'}
                             </button>
                         </form>
+                        <div className={styles.miniList}>
+                            {categorias.map(({ id, nombre, imagenUrl }) => (
+                                <div key={id} className={styles.miniListItem}>
+                                    <span>{nombre}</span>
+                                    <div className={styles.miniItemActions}>
+                                        <button onClick={() => { setEditandoCategoria(id); setNuevaCategoria(nombre); setCategoriaImagen(imagenUrl); }} className={styles.btnIconEdit}><FaEdit /></button>
+                                        <button onClick={() => eliminarCategoria(id)} className={styles.btnIconDelete}><FaTrash /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <div>
-                        <h4 style={{ color: '#f59e0b', margin: '0 0 8px 0', fontSize: '0.9rem', fontWeight: 700 }}><FaGamepad /> Juegos</h4>
-                        <form onSubmit={guardarJuego} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <input type="text" placeholder="Nombre Juego" value={nuevoJuego} onChange={e => setNuevoJuego(e.target.value)} style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem' }} required />
-                            <button type="submit" style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                    <div className={styles.panelSub}>
+                        <h4 className={styles.titleAmber}><FaGamepad /> {editandoJuego ? 'Modificar' : 'Registrar'} Juego</h4>
+                        <form onSubmit={guardarJuego} className={styles.formMini}>
+                            <input type="text" placeholder="Nombre (Ej: Free Fire)" value={nuevoJuego} onChange={e => setNuevoJuego(e.target.value)} className={styles.input} required />
+                            <input type="text" placeholder="URL Banner" value={juegoImagen} onChange={e => setJuegoImagen(e.target.value)} className={styles.input} />
+                            <button type="submit" className={`${styles.btn} ${styles.btnAmber}`}>
                                 {editandoJuego ? 'Actualizar' : 'Guardar'}
                             </button>
                         </form>
+                        <div className={styles.miniList}>
+                            {juegos.map(({ id, nombre, imagenUrl }) => (
+                                <div key={id} className={styles.miniListItem}>
+                                    <span>{nombre}</span>
+                                    <div className={styles.miniItemActions}>
+                                        <button onClick={() => { setEditandoJuego(id); setNuevoJuego(nombre); setJuegoImagen(imagenUrl); }} className={styles.btnIconEdit}><FaEdit /></button>
+                                        <button onClick={() => eliminarJuego(id)} className={styles.btnIconDelete}><FaTrash /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* FORMULARIO DE EDICIÓN Y REGISTRO COMPLETO */}
+            {/* 3. FORMULARIO PRODUCTO */}
             {mostrarFormularioProducto && (
-                <form onSubmit={guardarProducto} style={{ background: '#1e293b', border: '1px solid #38bdf8', padding: '14px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <h4 style={{ color: '#38bdf8', margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>
-                        <FaBoxOpen /> {editandoProductoId ? 'Modificando Ficha Técnica' : 'Nuevo Producto'}
+                <div className={styles.formCard}>
+                    <h4 className={styles.formCardTitle}>
+                        <FaBoxOpen /> {editandoProductoId ? 'Modificar Ficha Técnica' : 'Ficha de Asignación de Producto'}
                     </h4>
 
-                    <div>
-                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Nombre Comercial</label>
-                        <input type="text" name="nombre" value={formProducto.nombre} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                    </div>
-
-                    <div>
-                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Descripción / Notas</label>
-                        <textarea name="descripcion" value={formProducto.descripcion} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', resize: 'vertical' }} rows={2} />
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>P. Compra (C$)</label>
-                            <input type="number" name="precioCosto" value={formProducto.precioCosto || ''} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                        </div>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>P. Venta (C$)</label>
-                            <input type="number" name="precioVenta" value={formProducto.precioVenta || ''} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required />
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Categoría</label>
-                            <select name="categoriaId" value={formProducto.categoriaId} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
-                                <option value="">-- Seleccionar --</option>
-                                {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Proveedor</label>
-                            <select name="proveedor" value={formProducto.proveedor} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} required>
-                                <option value="">-- Seleccionar --</option>
-                                {listaProveedores.map(p => <option key={p.id} value={p.razonSocial}>{p.razonSocial}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Garantía (Días)</label>
-                            <input type="number" name="garantiaDias" value={formProducto.garantiaDias} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-                        </div>
-                        <div>
-                            <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Estado</label>
-                            <select name="estado" value={formProducto.estado} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }}>
-                                <option value="Activo">Activo</option>
-                                <option value="Pausado">Pausado</option>
-                                <option value="Agotado">Agotado</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Imagen URL o Subida */}
-                    <div>
-                        <label style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>Imagen del Producto</label>
-                        <input type="text" name="imagenUrl" placeholder="URL de la imagen (https://...)" value={formProducto.imagenUrl} onChange={handleProductoInputChange} style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box', marginBottom: '6px' }} />
-                        <input type="file" accept="image/*" onChange={procesarSubidaImagen} style={{ width: '100%', fontSize: '0.75rem', color: '#94a3b8' }} />
-                    </div>
-
-                    {/* Controles de tipo y stock */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #334155' }}>
-                        <label style={{ fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Producto Digital / Recarga?
-                        </label>
-                        
-                        <label style={{ fontSize: '0.75rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <input type="checkbox" name="controlaStock" checked={formProducto.controlaStock} onChange={handleProductoInputChange} /> ¿Controla Stock Físico?
-                        </label>
-
-                        {formProducto.controlaStock && (
-                            <div style={{ marginTop: '4px' }}>
-                                <label style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>Stock Inicial / Actual</label>
-                                <input type="number" name="stockActual" value={formProducto.stockActual} onChange={handleProductoInputChange} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
-                            </div>
-                        )}
-
-                        {formProducto.esDigital && (
-                            <label style={{ fontSize: '0.75rem', color: '#f43f5e', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 ¿Suscripción Streaming?
-                            </label>
-                        )}
-                    </div>
-
-                    <button type="submit" style={{ width: '100%', padding: '12px', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', marginTop: '4px' }}>
-                        {editandoProductoId ? 'Guardar Cambios' : 'Crear Producto'}
-                    </button>
-                </form>
-            )}
-
-            {/* BARRA MÓVIL DE CHIPS DE RUBROS */}
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                <button onClick={() => setRubroAdmin('todos')} style={{ background: rubroAdmin === 'todos' ? '#38bdf8' : '#1e293b', color: rubroAdmin === 'todos' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Todos</button>
-                <button onClick={() => setRubroAdmin('fisicos')} style={{ background: rubroAdmin === 'fisicos' ? '#38bdf8' : '#1e293b', color: rubroAdmin === 'fisicos' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Físicos</button>
-                <button onClick={() => setRubroAdmin('digitales')} style={{ background: rubroAdmin === 'digitales' ? '#38bdf8' : '#1e293b', color: rubroAdmin === 'digitales' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Digitales</button>
-                <button onClick={() => setRubroAdmin('streaming')} style={{ background: rubroAdmin === 'streaming' ? '#38bdf8' : '#1e293b', color: rubroAdmin === 'streaming' ? '#0f172a' : '#94a3b8', border: '1px solid #334155', padding: '6px 12px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer' }}>Streaming</button>
-            </div>
-
-            {/* CHIPS DE FILTRO POR CATEGORÍAS */}
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                <button 
-                    onClick={() => setCategoriaFiltroActiva(null)} 
-                    style={{ background: categoriaFiltroActiva === null ? '#a855f7' : '#0f172a', color: categoriaFiltroActiva === null ? '#fff' : '#94a3b8', border: '1px solid #334155', padding: '4px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                >
-                    Todas las Categorías
-                </button>
-                {categorias.map(c => (
-                    <button 
-                        key={c.id} 
-                        onClick={() => setCategoriaFiltroActiva(c.id)} 
-                        style={{ background: categoriaFiltroActiva === c.id ? '#a855f7' : '#0f172a', color: categoriaFiltroActiva === c.id ? '#fff' : '#94a3b8', border: '1px solid #334155', padding: '4px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                    >
-                        {c.nombre}
-                    </button>
-                ))}
-            </div>
-
-            {/* BÚSQUEDA INPUT */}
-            <div style={{ position: 'relative' }}>
-                <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
-                <input 
-                    type="text" 
-                    placeholder="Filtrar por coincidencia..." 
-                    value={filtroProd} 
-                    onChange={e => setFiltroProd(e.target.value)} 
-                    style={{ width: '100%', padding: '10px 12px 10px 38px', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', color: '#fff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-                />
-            </div>
-
-            {/* FEED MÓVIL DE TARJETAS DE PRODUCTOS CON IMAGEN Y AJUSTE DE STOCK */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {prodsFiltrados.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '30px', color: '#64748b', background: '#1e293b', borderRadius: '12px' }}>
-                        No hay productos en esta selección.
-                    </div>
-                ) : (
-                    prodsFiltrados.map((p) => (
-                        <div key={p.id} style={{ background: '#1e293b', padding: '12px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            
-                            {/* Cabecera con Imagen y Nombre */}
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <div style={{ width: '56px', height: '56px', borderRadius: '8px', background: '#0f172a', border: '1px solid #334155', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {p.imagenUrl ? (
-                                        <img src={p.imagenUrl} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <FaImage style={{ color: '#475569', fontSize: '1.2rem' }} />
-                                    )}
-                                </div>
-
-                                <div style={{ flex: 1 }}>
-                                    <strong style={{ color: '#fff', fontSize: '0.9rem', display: 'block', lineHeight: '1.2' }}>{p.nombre}</strong>
-                                    <small style={{ color: '#38bdf8', fontSize: '0.72rem', display: 'block', marginTop: '2px' }}>
-                                        {p.esSuscripcion ? '📺 Streaming' : p.esDigital ? '🎮 Digital' : `Proveedor: ${p.proveedor || 'N/A'}`}
-                                    </small>
-                                    <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
-                                        Garantía: {p.garantiaDias} días
-                                    </small>
-                                </div>
-
-                                <div style={{ textAlign: 'right' }}>
-                                    <strong style={{ color: '#10b981', fontSize: '0.95rem', display: 'block' }}>C$ {p.precioVenta}</strong>
-                                    <small style={{ color: '#64748b', fontSize: '0.68rem' }}>Costo: C$ {p.precioCosto}</small>
-                                </div>
+                    <form onSubmit={(e) => guardarProducto(e, false)} className={styles.formGridUnified}>
+                        <div className={styles.formColumn}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Nombre Comercial *</label>
+                                <input type="text" name="nombre" value={formProducto.nombre} onChange={handleProductoInputChange} className={styles.input} required />
                             </div>
 
-                            {/* Fila de Ajuste de Stock en Tiempo Real */}
-                            {p.controlaStock && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '8px 10px', borderRadius: '8px', border: '1px solid #334155' }}>
-                                    <span style={{ color: '#cbd5e1', fontSize: '0.75rem', fontWeight: 600 }}>Stock Disponible:</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <button 
-                                            onClick={() => ajustarStockRapido(p, -1)} 
-                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                        >
-                                            <FaMinusCircle />
-                                        </button>
-                                        <strong style={{ color: p.stockActual <= 2 ? '#ef4444' : '#38bdf8', fontSize: '0.95rem' }}>{p.stockActual} u.</strong>
-                                        <button 
-                                            onClick={() => ajustarStockRapido(p, 1)} 
-                                            style={{ background: 'transparent', border: 'none', color: '#10b981', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                        >
-                                            <FaPlusCircle />
-                                        </button>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Descripción</label>
+                                <textarea name="descripcion" value={formProducto.descripcion} onChange={handleProductoInputChange} placeholder="Detalles o especificaciones..." className={styles.textarea} rows={2} />
+                            </div>
+
+                            {!formProducto.tieneVariaciones && (
+                                <div className={styles.formRowDual}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>P. Compra (C$)</label>
+                                        <input type="number" step="any" name="precioCosto" value={formProducto.precioCosto} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>P. Venta (C$)</label>
+                                        <input type="number" step="any" name="precioVenta" value={formProducto.precioVenta} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
                                     </div>
                                 </div>
                             )}
+                        </div>
 
-                            {/* Botones de Acción */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '8px' }}>
-                                <span style={{ background: p.estado === 'Pausado' ? 'rgba(245, 158, 11, 0.2)' : p.estado === 'Agotado' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', color: p.estado === 'Pausado' ? '#f59e0b' : p.estado === 'Agotado' ? '#ef4444' : '#10b981', padding: '2px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700 }}>
-                                    {p.estado || 'Activo'}
-                                </span>
-                                
-                                <div style={{ display: 'flex', gap: '6px' }}>
-                                    {p.esSuscripcion && (
-                                        <button onClick={() => abrirGestionPerfiles(p)} style={{ background: '#047688', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                                            <FaTv /> Perfiles
-                                        </button>
-                                    )}
-                                    <button onClick={() => editarProducto(p)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Editar</button>
-                                    <button onClick={() => eliminarProducto(p.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}><FaTrash /></button>
-                                </div>
+                        <div className={styles.formColumn}>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Categoría *</label>
+                                <select name="categoriaId" value={formProducto.categoriaId} onChange={handleProductoInputChange} className={styles.select} required>
+                                    <option value="">-- Seleccionar --</option>
+                                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                </select>
                             </div>
 
-                            {/* PANEL DESPLEGABLE COMPLETO DE PERFILES Y CUENTAS DE STREAMING */}
-                            {productoIdPerfilAbierto === p.id && (
-                                <div style={{ background: '#0f172a', padding: '12px', borderRadius: '10px', border: '1px solid #047688', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <strong style={{ color: '#38bdf8', fontSize: '0.82rem' }}>Pantallas de {p.nombre}</strong>
-                                        <button onClick={() => setProductoIdPerfilAbierto(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><FaTimes /></button>
-                                    </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}><FaTruck /> Proveedor *</label>
+                                <select name="proveedor" value={formProducto.proveedor} onChange={handleProductoInputChange} className={styles.select} required>
+                                    <option value="">-- Seleccionar Proveedor --</option>
+                                    {listaProveedores.map(p => <option key={p.id} value={p.razonSocial}>{p.razonSocial}</option>)}
+                                </select>
+                            </div>
 
-                                    {/* Selector de Modo: Carga Perfil Individual vs Cuenta Completa (Lote) */}
-                                    <div style={{ display: 'flex', gap: '6px', background: '#1e293b', padding: '4px', borderRadius: '6px' }}>
-                                        <button type="button" onClick={() => setModoIngreso('individual')} style={{ flex: 1, padding: '6px', borderRadius: '4px', border: 'none', background: modoIngreso === 'individual' ? '#047688' : 'transparent', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>👤 Perfil Individual</button>
-                                        <button type="button" onClick={() => setModoIngreso('completa')} style={{ flex: 1, padding: '6px', borderRadius: '4px', border: 'none', background: modoIngreso === 'completa' ? '#047688' : 'transparent', color: '#fff', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>📺 Cuenta Completa</button>
-                                    </div>
+                            <div className={styles.formRowDual}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}><FaShieldAlt /> Garantía (días)</label>
+                                    <input type="number" name="garantiaDias" min={0} value={formProducto.garantiaDias} onChange={handleProductoInputChange} className={styles.input} />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Estado</label>
+                                    <select name="estado" value={formProducto.estado} onChange={handleProductoInputChange} className={styles.select}>
+                                        <option value="Activo">Activo</option>
+                                        <option value="Pausado">Pausado</option>
+                                        <option value="Agotado">Agotado</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
 
-                                    {/* Sub-formulario Carga Perfil Individual */}
-                                    {modoIngreso === 'individual' ? (
-                                        <form onSubmit={agregarPerfilManual} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <input type="text" value={perfNombre} onChange={e => setPerfNombre(e.target.value)} placeholder="Nombre Perfil (Ej: Perfil 1)" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} required />
-                                            <input type="text" value={perfPin} onChange={e => setPerfPin(e.target.value)} placeholder="PIN (Ej: 1234)" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} maxLength={6} />
-                                            <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} placeholder="Correo Electrónico Cuenta" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} required />
-                                            <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} placeholder="Contraseña Cuenta" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} required />
-                                            <button type="submit" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>+ Cargar Perfil</button>
-                                        </form>
-                                    ) : (
-                                        /* Sub-formulario Carga Cuenta Completa (Generación Multipantalla) */
-                                        <form onSubmit={agregarCuentaCompletaManual} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} placeholder="Correo Electrónico Cuenta" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} required />
-                                            <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} placeholder="Clave Global" style={{ background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} required />
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Cant. Pantallas:</small>
-                                                <input type="number" value={cantidadPerfiles} onChange={e => setCantidadPerfiles(Number(e.target.value))} style={{ flex: 1, background: '#1e293b', border: '1px solid #334155', color: '#fff', padding: '6px', borderRadius: '6px', fontSize: '0.75rem' }} min={1} max={10} />
+                        <div className={styles.formColumn}>
+                            <div className={styles.togglesBlock}>
+                                <label className={styles.checkboxLabel}>
+                                    <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Recarga / Digital?
+                                </label>
+                                
+                                <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
+                                    <input type="checkbox" name="controlaStock" checked={formProducto.controlaStock} onChange={handleProductoInputChange} /> <FaBoxes size={11} /> ¿Controla Stock Físico?
+                                </label>
+
+                                {formProducto.esDigital && (
+                                    <div className={styles.streamingSubOptions}>
+                                        <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
+                                            <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 Suscripción (Streaming)
+                                        </label>
+                                        {formProducto.esSuscripcion && (
+                                            <div className={styles.formGroup}>
+                                                <label className={styles.labelRed}>Días de Vigencia</label>
+                                                <input type="number" name="diasDuracion" min={1} value={formProducto.diasDuracion} onChange={handleProductoInputChange} className={styles.input} />
                                             </div>
-                                            <button type="submit" style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>📺 Auto-generar Lote</button>
-                                        </form>
-                                    )}
-
-                                    {/* Barra de Filtro y Ordenamiento de Perfiles */}
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: '#1e293b', padding: '6px', borderRadius: '6px' }}>
-                                        <input 
-                                            type="text" 
-                                            placeholder="🔍 Buscar perfil, correo o PIN..." 
-                                            value={busquedaPerfil} 
-                                            onChange={e => setBusquedaPerfil(e.target.value)} 
-                                            style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '0.72rem' }}
-                                        />
-                                        <select 
-                                            value={ordenPerfil} 
-                                            onChange={e => setOrdenPerfil(e.target.value)} 
-                                            style={{ background: '#0f172a', color: '#fff', border: '1px solid #334155', padding: '4px', borderRadius: '4px', fontSize: '0.7rem' }}
-                                        >
-                                            <option value="a-z">A - Z</option>
-                                            <option value="disponibles">Libres</option>
-                                            <option value="ocupados">Ocupados</option>
-                                        </select>
-                                    </div>
-
-                                    {/* Lista Dinámica de Pantallas con Edición de Info */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {perfilesFiltradosYOrdenados.length === 0 ? (
-                                            <div style={{ color: '#64748b', fontSize: '0.75rem', textAlign: 'center', padding: '10px' }}>Sin perfiles registrados o coincidentes.</div>
-                                        ) : (
-                                            perfilesFiltradosYOrdenados.map(perfil => {
-                                                const esEditando = perfilEditandoId === perfil.id;
-                                                return (
-                                                    <div key={perfil.id} style={{ background: perfil.ocupado ? '#2d1e24' : '#142820', border: `1px solid ${perfil.ocupado ? '#ef4444' : '#10b981'}`, padding: '8px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            {esEditando ? (
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={perfilEditandoDatos.ExtNombrePerfil} 
-                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} 
-                                                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }} 
-                                                                />
-                                                            ) : (
-                                                                <strong style={{ color: '#fff', fontSize: '0.78rem' }}>{perfil.nombrePerfil}</strong>
-                                                            )}
-                                                            
-                                                            <span style={{ color: perfil.ocupado ? '#ef4444' : '#10b981', fontSize: '0.68rem', fontWeight: 700 }}>
-                                                                {perfil.ocupado ? 'OCUPADO' : 'LIBRE'}
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Campos editables o vista de lectura */}
-                                                        {esEditando ? (
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
-                                                                <input 
-                                                                    type="email" 
-                                                                    value={perfilEditandoDatos.correoCuenta} 
-                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, correoCuenta: e.target.value})} 
-                                                                    placeholder="Correo"
-                                                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.72rem' }} 
-                                                                />
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={perfilEditandoDatos.passwordCuenta} 
-                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, passwordCuenta: e.target.value})} 
-                                                                    placeholder="Contraseña"
-                                                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.72rem' }} 
-                                                                />
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={perfilEditandoDatos.pin} 
-                                                                    onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} 
-                                                                    placeholder="PIN"
-                                                                    style={{ background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '4px', borderRadius: '4px', fontSize: '0.72rem' }} 
-                                                                    maxLength={6}
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
-                                                                <div>✉️ {perfil.correoCuenta}</div>
-                                                                <div>🔑 PIN: <strong style={{ color: '#fb923c' }}>{perfil.pin || 'Sin PIN'}</strong></div>
-                                                            </div>
-                                                        )}
-
-                                                        {perfil.ocupado && (
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px', background: 'rgba(239, 68, 68, 0.1)', padding: '4px', borderRadius: '4px' }}>
-                                                                <span style={{ color: '#f87171', fontSize: '0.7rem' }}><FaUser size={10} /> {perfil.nombreCliente || 'Cliente'}</span>
-                                                                <button onClick={() => liberarPerfilCliente(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', cursor: 'pointer' }}>Liberar</button>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Botones de Edición / Guardar / Eliminar Lote */}
-                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginTop: '4px' }}>
-                                                            {esEditando ? (
-                                                                <>
-                                                                    <button onClick={guardarCambiosPerfil} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Guardar</button>
-                                                                    <button onClick={() => setPerfilEditandoId(null)} style={{ background: '#475569', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>Cerrar</button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <button onClick={() => comenzarEdicionPerfil(perfil)} style={{ background: '#f59e0b', color: '#0f172a', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}><FaEdit /> Editar</button>
-                                                                    
-                                                                    {perfil.accountGroupKey && !perfil.ocupado && (
-                                                                        <button onClick={() => removerCuentaCompletaManual(perfil.accountGroupKey!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }} title="Eliminar todo el lote de pantallas de esta cuenta">
-                                                                            <FaBoxes /> Lote
-                                                                        </button>
-                                                                    )}
-
-                                                                    {!perfil.ocupado && (
-                                                                        <button onClick={() => removerPerfilManual(perfil.id)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>
-                                                                            <FaTrash />
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </div>
-
-                                                    </div>
-                                                );
-                                            })
                                         )}
                                     </div>
+                                )}
+                            </div>
+
+                            {formProducto.esDigital && (
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Juego Asociado (Opcional)</label>
+                                    <select name="juegoId" value={formProducto.juegoId} onChange={handleProductoInputChange} className={styles.select}>
+                                        <option value="">-- Ninguno --</option>
+                                        {juegos.map(j => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+                                    </select>
                                 </div>
                             )}
+
+                            {!formProducto.tieneVariaciones && formProducto.controlaStock && (
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Stock Inicial</label>
+                                    <input type="number" name="stockActual" value={formProducto.stockActual} onChange={handleProductoInputChange} className={styles.input} required />
+                                </div>
+                            )}
+
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Imagen del Producto</label>
+                                <input type="file" accept="image/*" onChange={procesarSubidaImagen} className={styles.fileInput} disabled={subiendoImagen} />
+                                {subiendoImagen && <small className={styles.textCyan}>Subiendo imagen...</small>}
+                            </div>
+                        </div>
+
+                        {/* TOGGLE VARIACIONES */}
+                        <div className={styles.variacionesSection}>
+                            <label className={styles.checkboxLabelCyan}>
+                                <input 
+                                    type="checkbox" 
+                                    name="tieneVariaciones" 
+                                    checked={formProducto.tieneVariaciones} 
+                                    onChange={e => setFormProducto(prev => ({ ...prev, tieneVariaciones: e.target.checked }))} 
+                                /> 
+                                🎨 ¿Este producto maneja múltiples variaciones?
+                            </label>
+
+                            {formProducto.tieneVariaciones && (
+                                <div className={styles.variacionesPanel}>
+                                    <h5 className={styles.variacionesPanelTitle}>Añadir Opciones al Producto</h5>
+                                    
+                                    <div className={styles.variacionesInputGrid}>
+                                        <input type="text" id="vNombre" placeholder="Presentación (Ej: Azul 128GB)" className={styles.input} />
+                                        <input type="number" id="vPrecioCosto" placeholder="Costo C$" className={styles.input} />
+                                        <input type="number" id="vPrecioVenta" placeholder="Venta C$" className={styles.input} />
+                                        <input type="number" id="vStock" placeholder="Stock" className={styles.input} />
+                                        
+                                        <button 
+                                            type="button" 
+                                            className={styles.btnAddVar}
+                                            onClick={() => {
+                                                const nom = (document.getElementById('vNombre') as HTMLInputElement).value;
+                                                const pc = Number((document.getElementById('vPrecioCosto') as HTMLInputElement).value) || formProducto.precioCosto;
+                                                const pv = Number((document.getElementById('vPrecioVenta') as HTMLInputElement).value) || formProducto.precioVenta;
+                                                const stk = Number((document.getElementById('vStock') as HTMLInputElement).value) || 0;
+
+                                                if (!nom) { alert('Escriba un nombre para la opción'); return; }
+
+                                                setFormProducto(prev => ({
+                                                    ...prev,
+                                                    variaciones: [...prev.variaciones, {
+                                                        nombreVariacion: nom,
+                                                        color: nom,
+                                                        precioCosto: pc,
+                                                        precioVenta: pv,
+                                                        stockActual: stk,
+                                                        stockMinimo: 2,
+                                                        estado: 'Activo'
+                                                    }]
+                                                }));
+
+                                                (document.getElementById('vNombre') as HTMLInputElement).value = '';
+                                            }}
+                                        >
+                                            <FaPlus /> Añadir
+                                        </button>
+                                    </div>
+
+                                    {formProducto.variaciones.length > 0 && (
+                                        <div className={styles.tableResponsive}>
+                                            <table className={styles.table}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Opción</th>
+                                                        <th>Compra</th>
+                                                        <th>Venta</th>
+                                                        <th>Stock</th>
+                                                        <th style={{ textAlign: 'center' }}>Quitar</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {formProducto.variaciones.map((v, idx) => (
+                                                        <tr key={idx}>
+                                                            <td><strong>{v.nombreVariacion}</strong></td>
+                                                            <td>C$ {v.precioCosto}</td>
+                                                            <td className={styles.textCyan}>C$ {v.precioVenta}</td>
+                                                            <td>{v.stockActual} u.</td>
+                                                            <td style={{ textAlign: 'center' }}>
+                                                                <button 
+                                                                    type="button" 
+                                                                    className={styles.btnIconDelete}
+                                                                    onClick={() => setFormProducto(prev => ({
+                                                                        ...prev,
+                                                                        variaciones: prev.variaciones.filter((_, i) => i !== idx)
+                                                                    }))}
+                                                                >
+                                                                    <FaTrash />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ACCIONES FORMULARIO */}
+                        <div className={styles.formFooterActions}>
+                            <button type="submit" className={`${styles.btn} ${editandoProductoId ? styles.btnWarning : styles.btnPrimary}`} disabled={subiendoImagen}>
+                                {editandoProductoId ? 'Actualizar Producto' : 'Guardar Producto'}
+                            </button>
+                            
+                            {!editandoProductoId && (
+                                <button 
+                                    type="button" 
+                                    onClick={(e) => guardarProducto(e, true)} 
+                                    className={`${styles.btn} ${styles.btnIndigo}`} 
+                                    disabled={subiendoImagen}
+                                >
+                                    <FaCopy /> Guardar y Crear Otro
+                                </button>
+                            )}
+
+                            <button type="button" onClick={() => { limpiarFormularioProducto(); setMostrarFormularioProducto(false); }} className={`${styles.btn} ${styles.btnSecondary}`}>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* 4. FILTROS POR RUBRO Y BÚSQUEDA */}
+            <div className={styles.filterSection}>
+                <div className={styles.rubrosScroll}>
+                    <button onClick={() => setRubroAdmin('todos')} className={`${styles.pillRubro} ${rubroAdmin === 'todos' ? styles.rubroActiveBlue : ''}`}><FaLayerGroup /> Todos</button>
+                    <button onClick={() => setRubroAdmin('fisicos')} className={`${styles.pillRubro} ${rubroAdmin === 'fisicos' ? styles.rubroActiveTeal : ''}`}><FaBoxes /> Físicos</button>
+                    <button onClick={() => setRubroAdmin('digitales')} className={`${styles.pillRubro} ${rubroAdmin === 'digitales' ? styles.rubroActiveCyan : ''}`}><FaGamepad /> Digitales</button>
+                    <button onClick={() => setRubroAdmin('streaming')} className={`${styles.pillRubro} ${rubroAdmin === 'streaming' ? styles.rubroActiveRose : ''}`}><FaTv /> Streaming</button>
+                </div>
+
+                <div className={styles.pillsScroll}>
+                    <button onClick={() => setCategoriaFiltroActiva(null)} className={`${styles.pillMini} ${categoriaFiltroActiva === null ? styles.pillActivePurple : ''}`}><FaThList /> Categorías</button>
+                    {categorias.map(c => <button key={c.id} onClick={() => setCategoriaFiltroActiva(c.id)} className={`${styles.pillMini} ${categoriaFiltroActiva === c.id ? styles.pillActivePurple : ''}`}>{c.nombre}</button>)}
+                </div>
+
+                <div className={styles.pillsScroll}>
+                    <button onClick={() => setJuegoFiltroActivo(null)} className={`${styles.pillMini} ${juegoFiltroActivo === null ? styles.pillActiveAmber : ''}`}>⭐ Títulos</button>
+                    {juegos.map(j => <button key={j.id} onClick={() => setJuegoFiltroActivo(j.id)} className={`${styles.pillMini} ${juegoFiltroActivo === j.id ? styles.pillActiveAmber : ''}`}>{j.nombre}</button>)}
+                </div>
+
+                <div className={styles.searchBox}>
+                    <FaSearch className={styles.searchIcon} />
+                    <input type="text" placeholder="Buscar por nombre de producto..." value={filtroProd} onChange={e => setFiltroProd(e.target.value)} className={styles.searchInput} />
+                    {filtroProd && <button onClick={() => setFiltroProd('')} className={styles.clearSearchBtn}><FaTimes /></button>}
+                </div>
+            </div>
+
+            {/* 5. VISTA MÓVIL / TABLET: CARDS */}
+            <div className={styles.mobileCardsFeed}>
+                {prodsPaginados.length === 0 ? (
+                    <div className={styles.emptyText}>No hay productos coincidentes.</div>
+                ) : (
+                    prodsPaginados.map(p => (
+                        <div key={p.id} className={styles.productCardTouch}>
+                            <div className={styles.productCardTop}>
+                                <div className={styles.productImgWrap}>
+                                    {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
+                                </div>
+                                <div className={styles.productDetailsWrap}>
+                                    <strong className={styles.productTitle}>{p.nombre}</strong>
+                                    <div className={styles.productBadgesRow}>
+                                        <span className={styles.badgeType}>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : '🎮 Digital') : '📦 Físico'}</span>
+                                        <span className={`${styles.badgeStatus} ${p.estado === 'Activo' ? styles.statusGreen : styles.statusAmber}`}>{p.estado || 'Activo'}</span>
+                                        {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
+                                    </div>
+                                    <div className={styles.productPricesRow}>
+                                        <span className={styles.priceSale}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</span>
+                                        <small className={styles.priceCost}>Costo: {p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</small>
+                                        <small className={styles.productStockText}>
+                                            Stock: {p.tieneVariaciones 
+                                                ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                                : (p.controlaStock ? `${p.stockActual} u.` : 'Infinito')}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={styles.productCardActions}>
+                                <button onClick={() => abrirHistorialProducto(p)} className={styles.btnActionSecondary} title="Ventas"><FaHistory /> Historial</button>
+                                {p.tieneVariaciones && <button onClick={() => abrirModalVariaciones(p)} className={styles.btnActionAmber}><FaPalette /> Variantes ({p.variaciones?.length || 0})</button>}
+                                {p.esSuscripcion && <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnActionTeal}><FaTv /> Pantallas</button>}
+                                <button onClick={() => editarProducto(p)} className={styles.btnActionSecondary} title="Editar"><FaEdit /></button>
+                                <button onClick={() => clonarProducto(p)} className={styles.btnActionSecondary} title="Clonar"><FaCopy /></button>
+                                <button onClick={() => eliminarProducto(p.id)} className={styles.btnActionDanger} title="Eliminar"><FaTrash /></button>
+                            </div>
                         </div>
                     ))
                 )}
             </div>
 
-            {/* MODAL ERROR */}
-            {errorModal.visible && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: '14px', padding: '16px', width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
-                        <h4 style={{ color: '#f87171', margin: 0 }}>{errorModal.mensaje}</h4>
-                        <p style={{ color: '#e2e8f0', fontSize: '0.82rem', margin: 0 }}>{errorModal.detalles}</p>
-                        <button onClick={() => setErrorModal(prev => ({ ...prev, visible: false }))} style={{ background: '#334155', color: '#fff', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', marginTop: '6px', fontSize: '0.85rem' }}>
-                            Entendido
+            {/* 6. VISTA ESCRITORIO: TABLA COMPLETA >= 1024px */}
+            <div className={styles.desktopTableWrap}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>
+                            <th>Foto</th>
+                            <th>Producto</th>
+                            <th>P. Compra</th>
+                            <th>P. Venta</th>
+                            <th>Vigencia</th>
+                            <th>Garantía</th>
+                            <th>Proveedor</th>
+                            <th>Estado</th>
+                            <th>Stock</th>
+                            <th style={{ textAlign: 'center' }}>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {prodsPaginados.map((p) => (
+                            <tr key={p.id}>
+                                <td>{p.imagenUrl ? <img src={p.imagenUrl} alt="P" className={styles.tableImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}</td>
+                                <td onClick={() => abrirHistorialProducto(p)} className={styles.tdLink}>
+                                    <strong>{p.nombre}</strong>
+                                    <small className={styles.textMuted}>
+                                        {p.esDigital ? (p.esSuscripcion ? 'Streaming' : 'Digital') : 'Físico'} 
+                                        {p.tieneVariaciones && ' • Variantes'}
+                                    </small>
+                                </td>
+                                <td className={styles.textMuted}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</td>
+                                <td className={styles.textCyan}><strong>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</strong></td>
+                                <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} d` : 'N/A'}</td>
+                                <td>{p.garantiaDias > 0 ? `${p.garantiaDias} d` : 'N/A'}</td>
+                                <td>{p.proveedor || 'N/A'}</td>
+                                <td><span className={`${styles.badgeStatus} ${p.estado === 'Activo' ? styles.statusGreen : styles.statusAmber}`}>{p.estado || 'Activo'}</span></td>
+                                <td>
+                                    {p.tieneVariaciones 
+                                        ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                        : (p.controlaStock ? `${p.stockActual} u.` : 'Inf')}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                    <div className={styles.tableActionsRow}>
+                                        <button onClick={() => abrirHistorialProducto(p)} className={styles.btnIconAction} title="Historial"><FaHistory /></button>
+                                        {p.tieneVariaciones && <button onClick={() => abrirModalVariaciones(p)} className={styles.btnIconAmber} title="Variaciones"><FaPalette /></button>}
+                                        {p.esSuscripcion && <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnIconTeal} title="Perfiles"><FaTv /></button>}
+                                        <button onClick={() => editarProducto(p)} className={styles.btnIconAction} title="Editar"><FaEdit /></button>
+                                        <button onClick={() => clonarProducto(p)} className={styles.btnIconAction} title="Clonar"><FaCopy /></button>
+                                        <button onClick={() => eliminarProducto(p.id)} className={styles.btnIconDelete} title="Eliminar"><FaTrash /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* 7. CONTROLES DE PAGINACIÓN */}
+            {totalPaginas > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155', marginTop: '8px' }}>
+                    <small style={{ color: '#94a3b8' }}>
+                        Página <strong>{paginaActual}</strong> de <strong>{totalPaginas}</strong> ({prodsFiltrados.length} productos)
+                    </small>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <button 
+                            onClick={() => { setPaginaActual(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                            disabled={paginaActual === 1}
+                            className={styles.btn}
+                            style={{ background: '#0f172a', border: '1px solid #334155', padding: '6px 12px', opacity: paginaActual === 1 ? 0.4 : 1 }}
+                        >
+                            <FaChevronLeft />
                         </button>
+                        <button 
+                            onClick={() => { setPaginaActual(prev => Math.min(prev + 1, totalPaginas)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                            disabled={paginaActual === totalPaginas}
+                            className={styles.btn}
+                            style={{ background: '#0f172a', border: '1px solid #334155', padding: '6px 12px', opacity: paginaActual === totalPaginas ? 0.4 : 1 }}
+                        >
+                            <FaChevronRight />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL PANTALLAS STREAMING */}
+            {productoPerfilAbierto && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContentWide}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}><FaTv /> Pantallas: {productoPerfilAbierto.nombre}</h3>
+                            <button onClick={() => setProductoPerfilAbierto(null)} className={styles.modalCloseBtn}><FaTimes /></button>
+                        </div>
+
+                        <div className={styles.panelMiniLoad}>
+                            <div className={styles.tabsModoIngreso}>
+                                <button type="button" onClick={() => setModoIngreso('individual')} className={`${styles.btnTabModo} ${modoIngreso === 'individual' ? styles.btnTabModoActive : ''}`}>👤 Individual</button>
+                                <button type="button" onClick={() => setModoIngreso('completa')} className={`${styles.btnTabModo} ${modoIngreso === 'completa' ? styles.btnTabModoActive : ''}`}>📺 Lote Completo</button>
+                            </div>
+
+                            {modoIngreso === 'individual' ? (
+                                <form onSubmit={agregarPerfilManual} className={styles.formPerfilesGrid}>
+                                    <input type="text" value={perfNombre} onChange={e => setPerfNombre(e.target.value)} className={styles.input} placeholder="Nombre Perfil" required />
+                                    <input type="text" value={perfPin} onChange={e => setPerfPin(e.target.value)} className={styles.input} placeholder="PIN" maxLength={6} />
+                                    <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} className={styles.input} placeholder="Correo Cuenta" required />
+                                    <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} className={styles.input} placeholder="Contraseña" required />
+                                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}><FaPlus /> Añadir</button>
+                                </form>
+                            ) : (
+                                <form onSubmit={agregarCuentaCompletaManual} className={styles.formPerfilesGrid}>
+                                    <input type="email" value={perfCorreo} onChange={e => setPerfCorreo(e.target.value)} className={styles.input} placeholder="Correo Electrónico" required />
+                                    <input type="text" value={perfPassword} onChange={e => setPerfPassword(e.target.value)} className={styles.input} placeholder="Clave Global" required />
+                                    <input type="number" value={cantidadPerfiles} onChange={e => setCantidadPerfiles(Number(e.target.value))} className={styles.input} min={1} max={10} placeholder="Cant. Pantallas" />
+                                    <button type="submit" className={`${styles.btn} ${styles.btnIndigo}`}><FaTv /> Auto-generar</button>
+                                </form>
+                            )}
+                        </div>
+
+                        <div className={styles.perfilesSearchRow}>
+                            <div className={styles.searchBox}>
+                                <FaSearch className={styles.searchIcon} />
+                                <input type="text" placeholder="Buscar perfil, correo, cliente o PIN..." value={busquedaPerfil} onChange={e => setBusquedaPerfil(e.target.value)} className={styles.searchInput} />
+                            </div>
+                            <select value={ordenPerfil} onChange={e => setOrdenPerfil(e.target.value)} className={styles.selectAuto}>
+                                <option value="a-z">A - Z</option>
+                                <option value="z-a">Z - A</option>
+                                <option value="disponibles">Libres primero</option>
+                                <option value="ocupados">Ocupados primero</option>
+                            </select>
+                        </div>
+
+                        <div className={styles.perfilesGrid}>
+                            {perfilesFiltradosYOrdenados.map((perfil) => {
+                                const esEditando = perfilEditandoId === perfil.id;
+                                return (
+                                    <div key={perfil.id} className={`${styles.perfilCard} ${perfil.ocupado ? styles.perfilOcupado : styles.perfilLibre}`}>
+                                        <div className={styles.perfilCardHeader}>
+                                            {esEditando ? (
+                                                <input type="text" value={perfilEditandoDatos.ExtNombrePerfil} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, ExtNombrePerfil: e.target.value})} className={styles.inputMini} />
+                                            ) : (
+                                                <strong>{perfil.nombrePerfil}</strong>
+                                            )}
+                                            
+                                            <div className={styles.perfilActionsTop}>
+                                                {perfil.accountGroupKey && !perfil.ocupado && !esEditando && (
+                                                    <button type="button" onClick={() => removerCuentaCompletaManual(perfil.accountGroupKey!)} className={styles.btnIconDelete} title="Eliminar Lote"><FaBoxes size={11} /></button>
+                                                )}
+                                                {!perfil.ocupado && !esEditando && (
+                                                    <button type="button" onClick={() => removerPerfilManual(perfil.id)} className={styles.btnIconDelete} title="Eliminar"><FaTrash size={11} /></button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.perfilDetails}>
+                                            {esEditando ? (
+                                                <div className={styles.perfilEditInputs}>
+                                                    <input type="email" value={perfilEditandoDatos.correoCuenta} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, correoCuenta: e.target.value})} className={styles.inputMini} />
+                                                    <input type="text" value={perfilEditandoDatos.passwordCuenta} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, passwordCuenta: e.target.value})} className={styles.inputMini} />
+                                                    <input type="text" value={perfilEditandoDatos.pin} onChange={e => setPerfilEditandoDatos({...perfilEditandoDatos, pin: e.target.value})} className={styles.inputMini} maxLength={6} placeholder="PIN" />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <small className={styles.textEllipsis}>✉️ {perfil.correoCuenta}</small>
+                                                    <small>🔑 PIN: <strong className={styles.textOrange}>{perfil.pin || '0000'}</strong></small>
+                                                </>
+                                            )}
+
+                                            {perfil.ocupado && (
+                                                <div className={styles.ocupadoBox}>
+                                                    <span>👤 {perfil.nombreCliente || `Cliente #${perfil.idClienteAsignado}`}</span>
+                                                    <button type="button" onClick={() => liberarPerfilCliente(perfil.id)} className={styles.btnLiberar}>Liberar</button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className={styles.perfilCardFooter}>
+                                            {esEditando ? (
+                                                <>
+                                                    <button type="button" onClick={guardarCambiosPerfil} className={styles.btnSaveMini}>Guardar</button>
+                                                    <button type="button" onClick={() => setPerfilEditandoId(null)} className={styles.btnCancelMini}>Cerrar</button>
+                                                </>
+                                            ) : (
+                                                <button type="button" onClick={() => comenzarEdicionPerfil(perfil)} className={styles.btnEditMini}>Editar</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL HISTORIAL DE VENTAS */}
+            {productoHistorial && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContentWide}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}><FaHistory /> Historial: {productoHistorial.nombre}</h3>
+                            <button onClick={() => setProductoHistorial(null)} className={styles.modalCloseBtn}><FaTimes /></button>
+                        </div>
+
+                        <div className={styles.searchBox}>
+                            <FaSearch className={styles.searchIcon} />
+                            <input type="text" placeholder="Buscar venta, cliente, cajero..." value={busquedaHistorial} onChange={e => setBusquedaHistorial(e.target.value)} className={styles.searchInput} />
+                        </div>
+
+                        <div className={styles.salesListScroll}>
+                            {cargandoHistorial ? (
+                                <div className={styles.loading}>Cargando ventas...</div>
+                            ) : ventasFiltradas.length === 0 ? (
+                                <div className={styles.emptyText}>No hay registros de ventas.</div>
+                            ) : (
+                                ventasFiltradas.map((h, i) => (
+                                    <div key={i} className={styles.saleItemCard}>
+                                        <div className={styles.saleItemHeader}>
+                                            <strong>Factura #{h.ventaId}</strong>
+                                            <span className={styles.saleDate}>{h.fecha}</span>
+                                        </div>
+                                        <div className={styles.saleItemDetails}>
+                                            <span>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin tel'})</span>
+                                            <div className={styles.salePriceRow}>
+                                                <span>{h.cantidad}x C$ {h.precioUnitario}</span>
+                                                <strong className={styles.textCyan}>Total: C$ {h.subTotal}</strong>
+                                            </div>
+                                            <small className={styles.textMuted}>Pago: {h.metodoPago} • Cajero: {h.operador}</small>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL VARIACIONES */}
+            {productoVariacionAbierto && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContentWide}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}><FaPalette /> Variantes: {productoVariacionAbierto.nombre}</h3>
+                            <button onClick={() => setProductoVariacionAbierto(null)} className={styles.modalCloseBtn}><FaTimes /></button>
+                        </div>
+
+                        <div className={styles.addVarBox}>
+                            <input type="text" placeholder="Opción (Ej: 128GB Negro)" value={nuevaVarNombre} onChange={e => setNuevaVarNombre(e.target.value)} className={styles.input} />
+                            <div className={styles.addVarInputsRow}>
+                                <input type="number" placeholder="Costo" value={nuevaVarPrecioCosto} onChange={e => setNuevaVarPrecioCosto(e.target.value === '' ? '' : Number(e.target.value))} className={styles.input} />
+                                <input type="number" placeholder="Venta" value={nuevaVarPrecioVenta} onChange={e => setNuevaVarPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} className={styles.input} />
+                                <input type="number" placeholder="Stock" value={nuevaVarStock} onChange={e => setNuevaVarStock(e.target.value === '' ? '' : Number(e.target.value))} className={styles.input} />
+                                <button type="button" onClick={agregarNuevaVariacionModal} className={`${styles.btn} ${styles.btnPrimary}`}><FaPlus /> Añadir</button>
+                            </div>
+                        </div>
+
+                        <div className={styles.variationsListScroll}>
+                            {variacionesModal.map((varItem, idxReal) => {
+                                const esEditando = variacionEditandoIdx === idxReal;
+                                return (
+                                    <div key={idxReal} className={styles.varCardTouch}>
+                                        <div className={styles.varCardTop}>
+                                            {esEditando ? (
+                                                <input type="text" value={varItem.nombreVariacion} onChange={e => guardarVariacionModal(idxReal, 'nombreVariacion', e.target.value)} className={styles.inputMini} />
+                                            ) : (
+                                                <strong>{varItem.nombreVariacion}</strong>
+                                            )}
+                                            
+                                            <div className={styles.miniItemActions}>
+                                                <button type="button" onClick={() => setVariacionEditandoIdx(esEditando ? null : idxReal)} className={styles.btnIconEdit}>{esEditando ? <FaSave /> : <FaEdit />}</button>
+                                                <button type="button" onClick={() => eliminarVariacionModal(idxReal)} className={styles.btnIconDelete}><FaTrash /></button>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.varCardDetailsRow}>
+                                            <div>
+                                                <small>Costo: </small>
+                                                {esEditando ? <input type="number" value={varItem.precioCosto} onChange={e => guardarVariacionModal(idxReal, 'precioCosto', Number(e.target.value) || 0)} className={styles.inputMini} /> : <span>C$ {varItem.precioCosto}</span>}
+                                            </div>
+                                            <div>
+                                                <small>Venta: </small>
+                                                {esEditando ? <input type="number" value={varItem.precioVenta} onChange={e => guardarVariacionModal(idxReal, 'precioVenta', Number(e.target.value) || 0)} className={styles.inputMini} /> : <strong className={styles.textCyan}>C$ {varItem.precioVenta}</strong>}
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.varStockCounterRow}>
+                                            <small>Existencias:</small>
+                                            <div className={styles.counterWrap}>
+                                                <button type="button" onClick={() => varItem.stockActual > 0 && guardarVariacionModal(idxReal, 'stockActual', varItem.stockActual - 1)} className={styles.btnCounterMinus}>-</button>
+                                                <span className={styles.counterValue}>{varItem.stockActual}</span>
+                                                <button type="button" onClick={() => guardarVariacionModal(idxReal, 'stockActual', varItem.stockActual + 1)} className={styles.btnCounterPlus}>+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className={styles.modalFooterActions}>
+                            <button type="button" className={`${styles.btn} ${styles.btnSecondary}`} onClick={() => setProductoVariacionAbierto(null)}>Cerrar</button>
+                            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={guardarTodasVariacionesServidor}><FaSave /> Guardar Cambios</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ERRORES */}
+            {errorModal.visible && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContentError}>
+                        <div className={styles.modalHeader}>
+                            <h4 className={styles.titleRed}><FaTimes /> {errorModal.mensaje}</h4>
+                            <button onClick={() => setErrorModal(prev => ({ ...prev, visible: false }))} className={styles.modalCloseBtn}><FaTimes /></button>
+                        </div>
+                        <p className={styles.errorDesc}>{errorModal.detalles}</p>
+                        {errorModal.elementosVinculados.length > 0 && (
+                            <div className={styles.linkedItemsBox}>
+                                {errorModal.elementosVinculados.map((item, idx) => (
+                                    <div key={idx} className={styles.linkedItem}>{item}</div>
+                                ))}
+                            </div>
+                        )}
+                        <div className={styles.modalActionsEnd}>
+                            <button onClick={() => setErrorModal(prev => ({ ...prev, visible: false }))} className={`${styles.btn} ${styles.btnSecondary}`}>Entendido</button>
+                        </div>
                     </div>
                 </div>
             )}
