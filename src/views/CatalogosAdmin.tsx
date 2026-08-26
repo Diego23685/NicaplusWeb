@@ -4,7 +4,7 @@ import {
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
     FaBoxes, FaSearch, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory,
-    FaChevronLeft, FaChevronRight, FaInfoCircle, FaFileInvoiceDollar, FaCheckCircle
+    FaChevronLeft, FaChevronRight, FaInfoCircle
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -121,6 +121,7 @@ export const CatalogosAdmin: React.FC = () => {
 
     // MODAL DETALLES & HISTORIAL DE VENTAS UNIFICADO
     const [productoDetalleModal, setProductoDetalleModal] = useState<Producto | null>(null);
+    const [tabModal, setTabModal] = useState<'ficha' | 'historial'>('ficha');
     const [historialVentas, setHistorialVentas] = useState<HistorialVentaItem[]>([]);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const [busquedaHistorial, setBusquedaHistorial] = useState('');
@@ -295,12 +296,13 @@ export const CatalogosAdmin: React.FC = () => {
 
     const abrirDetalleCompleto = async (producto: Producto) => {
         setProductoDetalleModal(producto);
+        setTabModal('ficha');
         setBusquedaHistorial('');
         setCargandoHistorial(true);
         try {
             const res = await api.get(`/products/${producto.id}/historial-ventas`);
             setHistorialVentas(res.data || []);
-        } catch (err: any) {
+        } catch {
             setHistorialVentas([]);
         } finally {
             setCargandoHistorial(false);
@@ -1185,21 +1187,27 @@ export const CatalogosAdmin: React.FC = () => {
             )}
 
             {/* =========================================================
-               MODAL COMPLETO: FICHA TÉCNICA + HISTORIAL DE VENTAS
+               MODAL ADAPTABLE: FICHA TÉCNICA / HISTORIAL DE VENTAS
                ========================================================= */}
             {productoDetalleModal && (
                 <div className={styles.modalOverlay}>
-                    <div className={styles.modalContentWide} style={{ maxWidth: '780px' }}>
+                    <div className={styles.modalContentWide} style={{ maxWidth: '750px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                         
                         {/* HEADER MODAL */}
                         <div className={styles.modalHeader}>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    {productoDetalleModal.imagenUrl ? <img src={productoDetalleModal.imagenUrl} alt="P" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <FaImage style={{ color: '#475569', fontSize: '1.4rem' }} />}
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', minWidth: 0 }}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '10px', overflow: 'hidden', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {productoDetalleModal.imagenUrl ? (
+                                        <img src={productoDetalleModal.imagenUrl} alt="P" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <FaImage style={{ color: '#475569', fontSize: '1.4rem' }} />
+                                    )}
                                 </div>
-                                <div>
-                                    <h3 className={styles.modalTitle} style={{ margin: 0 }}>{productoDetalleModal.nombre}</h3>
-                                    <small style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                <div style={{ minWidth: 0 }}>
+                                    <h3 className={styles.modalTitle} style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {productoDetalleModal.nombre}
+                                    </h3>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
                                         {productoDetalleModal.esDigital ? (productoDetalleModal.esSuscripcion ? 'Streaming Recurrente' : 'Digital') : 'Artículo Físico'} • Estado: <strong style={{ color: productoDetalleModal.estado === 'Activo' ? '#4ade80' : '#f59e0b' }}>{productoDetalleModal.estado}</strong>
                                     </small>
                                 </div>
@@ -1207,119 +1215,166 @@ export const CatalogosAdmin: React.FC = () => {
                             <button onClick={() => setProductoDetalleModal(null)} className={styles.modalCloseBtn}><FaTimes /></button>
                         </div>
 
-                        {/* RESUMEN FINANCIERO & ESPECIFICACIONES */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', background: '#0f172a', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
-                            <div>
-                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO COSTO</small>
-                                <h4 style={{ margin: '2px 0 0 0', color: '#cbd5e1', fontSize: '1.1rem' }}>
-                                    {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioCosto.toLocaleString()}`}
-                                </h4>
-                            </div>
-
-                            <div>
-                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO VENTA</small>
-                                <h4 style={{ margin: '2px 0 0 0', color: '#38bdf8', fontSize: '1.1rem' }}>
-                                    {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioVenta.toLocaleString()}`}
-                                </h4>
-                            </div>
-
-                            {!productoDetalleModal.tieneVariaciones && (
-                                <div>
-                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>MARGEN ESTIMADO</small>
-                                    <h4 style={{ margin: '2px 0 0 0', color: '#4ade80', fontSize: '1.1rem' }}>
-                                        C$ {(productoDetalleModal.precioVenta - productoDetalleModal.precioCosto).toLocaleString()}
-                                    </h4>
-                                </div>
-                            )}
-
-                            <div>
-                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>STOCK ACTUAL</small>
-                                <h4 style={{ margin: '2px 0 0 0', color: '#f8fafc', fontSize: '1.1rem' }}>
-                                    {productoDetalleModal.tieneVariaciones 
-                                        ? `${(productoDetalleModal.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                        : (productoDetalleModal.controlaStock ? `${productoDetalleModal.stockActual} u.` : 'Infinito')}
-                                </h4>
-                            </div>
+                        {/* SUB-PESTAÑAS TÁCTILES DEL MODAL */}
+                        <div style={{ display: 'flex', gap: '6px', background: '#0f172a', padding: '6px', borderRadius: '10px', border: '1px solid #334155', margin: '4px 0 10px 0' }}>
+                            <button
+                                type="button"
+                                onClick={() => setTabModal('ficha')}
+                                style={{
+                                    flex: 1,
+                                    minHeight: '44px',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    background: tabModal === 'ficha' ? '#0284c7' : 'transparent',
+                                    color: tabModal === 'ficha' ? '#fff' : '#94a3b8',
+                                    fontWeight: 800,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                📋 Ficha Técnica
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTabModal('historial')}
+                                style={{
+                                    flex: 1,
+                                    minHeight: '44px',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    background: tabModal === 'historial' ? '#0284c7' : 'transparent',
+                                    color: tabModal === 'historial' ? '#fff' : '#94a3b8',
+                                    fontWeight: 800,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <FaHistory /> Historial ({historialVentas.length})
+                            </button>
                         </div>
 
-                        {/* DETALLES DE PROVEEDOR, GARANTÍA Y DESCRIPCIÓN */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', background: '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
-                            <div>
-                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTruck /> PROVEEDOR HOMOLOGADO</small>
-                                <strong style={{ color: '#f8fafc', fontSize: '0.9rem' }}>{productoDetalleModal.proveedor || 'No especificado'}</strong>
-                            </div>
-
-                            <div>
-                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaShieldAlt /> GARANTÍA OFICIAL</small>
-                                <strong style={{ color: '#fb923c', fontSize: '0.9rem' }}>{productoDetalleModal.garantiaDias > 0 ? `${productoDetalleModal.garantiaDias} días` : 'Sin garantía'}</strong>
-                            </div>
-
-                            {productoDetalleModal.esDigital && productoDetalleModal.esSuscripcion && (
-                                <div>
-                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTv /> VIGENCIA STREAMING</small>
-                                    <strong style={{ color: '#f43f5e', fontSize: '0.9rem' }}>{productoDetalleModal.diasDuracion} días por ciclo</strong>
-                                </div>
-                            )}
-
-                            <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #334155', paddingTop: '8px' }}>
-                                <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>DESCRIPCIÓN TÉCNICA / NOTAS</small>
-                                <p style={{ margin: '3px 0 0 0', color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.4' }}>
-                                    {productoDetalleModal.descripcion || 'Sin descripción detallada.'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* BUSCADOR DENTRO DEL HISTORIAL */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                            <h4 style={{ margin: 0, color: '#38bdf8', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <FaHistory /> Historial de Ventas ({historialVentas.length})
-                            </h4>
-                        </div>
-
-                        <div className={styles.searchBox} style={{ minHeight: '42px' }}>
-                            <FaSearch className={styles.searchIcon} />
-                            <input 
-                                type="text" 
-                                placeholder="Buscar cliente, cajero o factura #..." 
-                                value={busquedaHistorial} 
-                                onChange={e => setBusquedaHistorial(e.target.value)} 
-                                className={styles.searchInput} 
-                            />
-                            {busquedaHistorial && <button onClick={() => setBusquedaHistorial('')} className={styles.clearSearchBtn}><FaTimes /></button>}
-                        </div>
-
-                        {/* LISTA DE VENTAS */}
-                        <div className={styles.salesListScroll}>
-                            {cargandoHistorial ? (
-                                <div className={styles.loading}>Cargando ventas...</div>
-                            ) : ventasFiltradas.length === 0 ? (
-                                <div className={styles.emptyText}>No hay registros de ventas para este artículo.</div>
-                            ) : (
-                                ventasFiltradas.map((h, i) => (
-                                    <div key={i} className={styles.saleItemCard}>
-                                        <div className={styles.saleItemHeader}>
-                                            <strong>Factura #{h.ventaId}</strong>
-                                            <span className={styles.saleDate}>{h.fecha}</span>
+                        {/* CUERPO DEL MODAL CON SCROLL FLUIDO */}
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
+                            
+                            {/* PESTAÑA 1: FICHA TÉCNICA */}
+                            {tabModal === 'ficha' && (
+                                <>
+                                    {/* RESUMEN FINANCIERO */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', background: '#0f172a', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
+                                        <div>
+                                            <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO COSTO</small>
+                                            <h4 style={{ margin: '2px 0 0 0', color: '#cbd5e1', fontSize: '1.2rem', fontWeight: 800 }}>
+                                                {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioCosto.toLocaleString()}`}
+                                            </h4>
                                         </div>
-                                        <div className={styles.saleItemDetails}>
-                                            <span>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin teléfono'})</span>
-                                            <div className={styles.salePriceRow}>
-                                                <span>{h.cantidad}x C$ {h.precioUnitario.toLocaleString()}</span>
-                                                <strong className={styles.textCyan}>Total: C$ {h.subTotal.toLocaleString()}</strong>
+
+                                        <div>
+                                            <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO VENTA</small>
+                                            <h4 style={{ margin: '2px 0 0 0', color: '#38bdf8', fontSize: '1.2rem', fontWeight: 900 }}>
+                                                {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioVenta.toLocaleString()}`}
+                                            </h4>
+                                        </div>
+
+                                        {!productoDetalleModal.tieneVariaciones && (
+                                            <div>
+                                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>MARGEN ESTIMADO</small>
+                                                <h4 style={{ margin: '2px 0 0 0', color: '#4ade80', fontSize: '1.2rem', fontWeight: 800 }}>
+                                                    C$ {(productoDetalleModal.precioVenta - productoDetalleModal.precioCosto).toLocaleString()}
+                                                </h4>
                                             </div>
-                                            <small className={styles.textMuted}>Pago: {h.metodoPago} • Cajero: {h.operador}</small>
+                                        )}
+
+                                        <div>
+                                            <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>STOCK ACTUAL</small>
+                                            <h4 style={{ margin: '2px 0 0 0', color: '#f8fafc', fontSize: '1.2rem', fontWeight: 800 }}>
+                                                {productoDetalleModal.tieneVariaciones 
+                                                    ? `${(productoDetalleModal.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                                    : (productoDetalleModal.controlaStock ? `${productoDetalleModal.stockActual} u.` : 'Infinito')}
+                                            </h4>
                                         </div>
                                     </div>
-                                ))
+
+                                    {/* PROVEEDOR, GARANTÍA Y NOTAS */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
+                                            <div>
+                                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTruck /> PROVEEDOR</small>
+                                                <strong style={{ color: '#f8fafc', fontSize: '0.95rem' }}>{productoDetalleModal.proveedor || 'No especificado'}</strong>
+                                            </div>
+
+                                            <div>
+                                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaShieldAlt /> GARANTÍA OFICIAL</small>
+                                                <strong style={{ color: '#fb923c', fontSize: '0.95rem' }}>{productoDetalleModal.garantiaDias > 0 ? `${productoDetalleModal.garantiaDias} días` : 'Sin garantía'}</strong>
+                                            </div>
+
+                                            {productoDetalleModal.esDigital && productoDetalleModal.esSuscripcion && (
+                                                <div>
+                                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTv /> VIGENCIA STREAMING</small>
+                                                    <strong style={{ color: '#f43f5e', fontSize: '0.95rem' }}>{productoDetalleModal.diasDuracion} días por ciclo</strong>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div style={{ borderTop: '1px solid #334155', paddingTop: '8px' }}>
+                                            <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>DESCRIPCIÓN TÉCNICA / NOTAS</small>
+                                            <p style={{ margin: '4px 0 0 0', color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.45' }}>
+                                                {productoDetalleModal.descripcion || 'Sin descripción detallada.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </>
                             )}
+
+                            {/* PESTAÑA 2: HISTORIAL DE VENTAS */}
+                            {tabModal === 'historial' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div className={styles.searchBox} style={{ minHeight: '48px' }}>
+                                        <FaSearch className={styles.searchIcon} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Buscar cliente, cajero o factura #..." 
+                                            value={busquedaHistorial} 
+                                            onChange={e => setBusquedaHistorial(e.target.value)} 
+                                            className={styles.searchInput} 
+                                        />
+                                        {busquedaHistorial && <button onClick={() => setBusquedaHistorial('')} className={styles.clearSearchBtn}><FaTimes /></button>}
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {cargandoHistorial ? (
+                                            <div className={styles.loading}>Cargando ventas...</div>
+                                        ) : ventasFiltradas.length === 0 ? (
+                                            <div className={styles.emptyText}>No hay registros de ventas para este artículo.</div>
+                                        ) : (
+                                            ventasFiltradas.map((h, i) => (
+                                                <div key={i} className={styles.saleItemCard}>
+                                                    <div className={styles.saleItemHeader}>
+                                                        <strong>Factura #{h.ventaId}</strong>
+                                                        <span className={styles.saleDate}>{h.fecha}</span>
+                                                    </div>
+                                                    <div className={styles.saleItemDetails}>
+                                                        <span style={{ fontWeight: 700 }}>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin teléfono'})</span>
+                                                        <div className={styles.salePriceRow}>
+                                                            <span>{h.cantidad}x C$ {h.precioUnitario.toLocaleString()}</span>
+                                                            <strong className={styles.textCyan} style={{ fontSize: '1.05rem' }}>Total: C$ {h.subTotal.toLocaleString()}</strong>
+                                                        </div>
+                                                        <small className={styles.textMuted}>Pago: {h.metodoPago} • Atendió: {h.operador}</small>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
 
-                        {/* BOTÓN CERRAR */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #334155', paddingTop: '10px' }}>
+                        {/* FOOTER MODAL */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: '6px' }}>
                             <button 
                                 type="button" 
                                 className={`${styles.btn} ${styles.btnSecondary}`} 
-                                style={{ minHeight: '44px', flex: 'none', padding: '0 20px' }}
+                                style={{ minHeight: '48px', flex: 'none', padding: '0 24px', fontSize: '0.95rem' }}
                                 onClick={() => setProductoDetalleModal(null)}
                             >
                                 Cerrar Ficha
