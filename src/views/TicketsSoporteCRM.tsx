@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { 
     FaExclamationTriangle, FaSave, FaClock, FaTimes, FaTools, 
-    FaUser, FaPlus, FaChevronUp, FaFilter, FaCheckCircle, 
+    FaUser, FaPlus, FaChevronUp, FaCheckCircle, 
     FaSearch, FaCommentDots
 } from 'react-icons/fa';
 import styles from '../assets/styles/TicketsSoporteCRM.module.css';
@@ -17,7 +17,7 @@ export const TicketsSoporteCRM: React.FC = () => {
     const [filtroEstado, setFiltroEstado] = useState<string>('Todos');
     const [busquedaTicket, setBusquedaTicket] = useState('');
 
-    // FORMULARIO: CREAR TICKET
+    // FORMULARIO: CREAR TICKET nuevo
     const [idCliente, setIdCliente] = useState('');
     const [tipoTicket, setTipoTicket] = useState('Garantía');
     const [descripcionFalla, setDescripcionFalla] = useState('');
