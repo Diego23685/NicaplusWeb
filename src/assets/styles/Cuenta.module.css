@@ -1,16 +1,20 @@
 /* =========================================================
-   CONTENEDOR BASE
+   CONTENEDOR BASE & RESET CUENTAS (AMPLIADO TÁCTIL)
    ========================================================= */
 .cuentasContainer {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: 0.85rem;
+    padding: 0.85rem;
     max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
     color: #f1f5f9;
     box-sizing: border-box;
     font-family: inherit;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
 }
 
 /* 1. Header & Pestañas */
@@ -20,16 +24,17 @@
     top: 0;
     z-index: 20;
     background: #0b1120;
-    padding-bottom: 0.25rem;
+    padding-bottom: 0.35rem;
+    width: 100%;
 }
 
 .subModuloTabs {
     display: flex;
     width: 100%;
-    gap: 0.4rem;
+    gap: 0.5rem;
     background: #0f172a;
-    padding: 0.35rem;
-    border-radius: 10px;
+    padding: 0.45rem;
+    border-radius: 12px;
     border: 1px solid #334155;
 }
 
@@ -38,12 +43,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 0.65rem 0.5rem;
+    gap: 0.5rem;
+    min-height: 48px; /* Touch target ampliado */
+    padding: 0.75rem 0.5rem;
     background: transparent;
     border: none;
     color: #94a3b8;
-    font-size: 0.85rem;
+    font-size: 0.95rem; /* Aumentado */
     font-weight: 700;
     border-radius: 8px;
     cursor: pointer;
@@ -54,62 +60,72 @@
 .tabBtnCobrarActive {
     background: #0284c7;
     color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tabBtnPagarActive {
     background: #d97706;
     color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* 2. Barra de resumen y filtros */
 .summaryBar {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.75rem;
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
+    box-sizing: border-box;
 }
 
 .summaryInfo {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
 }
 
 .summaryLabel {
-    font-size: 0.75rem;
+    font-size: 0.85rem; /* Aumentado */
     color: #94a3b8;
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .summaryAmount {
-    font-size: 1.35rem;
-    font-weight: 800;
+    font-size: 1.75rem; /* Aumentado para visibilidad rápida */
+    font-weight: 900;
     color: #38bdf8;
 }
 
 .controlsRow {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    width: 100%;
 }
 
 .selectFilter {
     background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 8px;
+    border: 2px solid #334155;
+    border-radius: 10px;
     color: #f8fafc;
-    padding: 0.55rem;
-    font-size: 0.85rem;
+    min-height: 48px; /* Touch target ampliado */
+    padding: 0 0.85rem;
+    font-size: 0.95rem; /* Evita zoom automático en Safari */
     outline: none;
     cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .buttonsActionGroup {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.5rem;
+    width: 100%;
 }
 
 .btnAction {
@@ -117,10 +133,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    padding: 0.6rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
+    gap: 0.45rem;
+    min-height: 48px; /* Touch target ampliado */
+    padding: 0.75rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.9rem; /* Aumentado */
     font-weight: 700;
     border: none;
     cursor: pointer;
@@ -131,32 +148,35 @@
 .btnCuentaPagar { background: #d97706; color: #fff; }
 
 /* =========================================================
-   3. VISTA MÓVIL (FEED DE CARDS)
+   3. VISTA MÓVIL (FEED DE CARDS TÁCTILES)
    ========================================================= */
 .mobileCardsFeed {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
+    width: 100%;
 }
 
 .accountCard {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.75rem;
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    box-sizing: border-box;
 }
 
 .accountCardHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .accountId {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     font-weight: 800;
     color: #38bdf8;
 }
@@ -164,111 +184,122 @@
 .accountCardBody {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.25rem;
 }
 
 .cardTitle {
-    font-size: 0.9rem;
+    font-size: 1.05rem; /* Aumentado */
     color: #f8fafc;
+    font-weight: 800;
 }
 
 .cardSubTitle {
-    font-size: 0.75rem;
+    font-size: 0.85rem; /* Aumentado */
     color: #94a3b8;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
 }
 
 .accountFinancials {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.4rem;
+    gap: 0.5rem;
     background: #0f172a;
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
     border: 1px solid #334155;
 }
 
 .financialCol {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.15rem;
 }
 
 .financialLabel {
-    font-size: 0.65rem;
+    font-size: 0.75rem; /* Aumentado */
     color: #94a3b8;
     font-weight: 700;
+    text-transform: uppercase;
+}
+
+.financialCol strong {
+    font-size: 1rem; /* Aumentado */
 }
 
 .accountDates {
     display: flex;
     justify-content: space-between;
-    font-size: 0.7rem;
+    font-size: 0.8rem; /* Aumentado */
     color: #94a3b8;
+    flex-wrap: wrap;
+    gap: 0.35rem;
 }
 
 .dateItem {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.35rem;
 }
 
 .btnAbonarMobile {
     width: 100%;
-    padding: 0.65rem;
+    min-height: 48px; /* Botón de abono grande para pulgares */
+    padding: 0.75rem 1rem;
     border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 700;
+    border-radius: 10px;
+    font-size: 0.95rem; /* Aumentado */
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    gap: 0.45rem;
     cursor: pointer;
     touch-action: manipulation;
+    margin-top: 0.25rem;
 }
 
 .emptyCard {
     text-align: center;
-    padding: 2.5rem 1rem;
+    padding: 3rem 1rem;
     background: #1e293b;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #334155;
     color: #64748b;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
 /* Badges de estado */
 .badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.5rem;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
     border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 700;
+    font-size: 0.75rem; /* Aumentado */
+    font-weight: 800;
+    text-transform: uppercase;
 }
 
-.badgePagado { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.badgePendiente { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-.badgeVencido { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.badgePagado { background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+.badgePendiente { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+.badgeVencido { background: rgba(239, 68, 68, 0.18); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
 
-.saldoPendiente { color: #f87171; font-weight: 700; }
-.saldoSaldado { color: #4ade80; font-weight: 700; }
-.fechaVencida { color: #ef4444 !important; font-weight: 700; }
+.saldoPendiente { color: #f87171; font-weight: 800; }
+.saldoSaldado { color: #4ade80; font-weight: 800; }
+.fechaVencida { color: #ef4444 !important; font-weight: 800; }
 
 .btnAbonarCobrar { background: #0284c7; color: #fff; }
 .btnAbonarPagar { background: #d97706; color: #fff; }
 
 /* =========================================================
-   4. VISTA ESCRITORIO (TABLA)
+   4. VISTA ESCRITORIO (TABLA >= 1024px)
    ========================================================= */
 .tableContainer {
     display: none;
     background: #1e293b;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #334155;
     overflow-x: auto;
 }
@@ -276,35 +307,35 @@
 .table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     text-align: left;
 }
 
 .table th {
     background: #0f172a;
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     color: #94a3b8;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     border-bottom: 1px solid #334155;
 }
 
 .table td {
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     border-bottom: 1px solid rgba(51, 65, 85, 0.5);
     vertical-align: middle;
 }
 
-.idCell { color: #38bdf8; font-weight: 700; }
+.idCell { color: #38bdf8; font-weight: 800; }
 .bold { font-weight: 700; color: #f8fafc; }
-.subText { font-size: 0.7rem; color: #94a3b8; }
+.subText { font-size: 0.8rem; color: #94a3b8; }
 .subTextBlue { color: #38bdf8; }
 
 .btnAbonar {
-    padding: 0.45rem 0.85rem;
+    padding: 0.55rem 1rem;
     border: none;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
 }
@@ -326,14 +357,14 @@
 .modalForm {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 12px;
+    border-radius: 14px;
     width: 100%;
-    max-width: 440px;
-    padding: 1.25rem;
+    max-width: 460px;
+    padding: 1.35rem;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
 }
 
 .modalHeader {
@@ -345,10 +376,11 @@
 
 .modalTitle {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.15rem;
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
 }
 
 .titlePagar { color: #f59e0b; }
@@ -360,30 +392,31 @@
     border: none;
     color: #94a3b8;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 1.25rem;
+    padding: 0.3rem;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.35rem;
 }
 
 .label {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: #94a3b8;
 }
 
 .input, .select {
     width: 100%;
-    height: 40px;
+    min-height: 48px; /* Altura estándar táctil */
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #fff;
-    padding: 0 0.6rem;
-    font-size: 0.85rem;
+    padding: 0 0.75rem;
+    font-size: 0.95rem; /* Evita zoom en iPhone */
     box-sizing: border-box;
     outline: none;
 }
@@ -391,30 +424,37 @@
 .saldoOverviewBox {
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 0.6rem;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
+.saldoOverviewBox small {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
 .saldoDestacado {
-    font-size: 1.1rem;
+    font-size: 1.35rem;
+    font-weight: 900;
     color: #f87171;
 }
 
 .modalActions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     margin-top: 0.5rem;
 }
 
 .btnSubmit, .btnCancel {
     flex: 1;
-    height: 42px;
+    min-height: 48px;
     border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.95rem;
+    font-weight: 800;
     border: none;
     cursor: pointer;
     touch-action: manipulation;
@@ -439,6 +479,20 @@
     .controlsRow {
         flex-direction: row;
         align-items: center;
+        width: auto;
+    }
+
+    .selectFilter {
+        width: 220px;
+    }
+
+    .buttonsActionGroup {
+        width: auto;
+    }
+
+    .btnAction {
+        flex: initial;
+        padding: 0.75rem 1.25rem;
     }
 
     .mobileCardsFeed {
@@ -449,7 +503,7 @@
 
 @media (min-width: 1024px) {
     .cuentasContainer {
-        padding: 1rem;
+        padding: 1.25rem;
     }
 
     .mobileCardsFeed {

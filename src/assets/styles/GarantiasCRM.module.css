@@ -1,24 +1,28 @@
 /* =========================================================
-   CONTENEDOR BASE & LAYOUT
+   CONTENEDOR BASE & LAYOUT (AMPLIADO TÁCTIL)
    ========================================================= */
 .container {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: 0.85rem;
+    padding: 0.85rem;
     max-width: 1440px;
+    width: 100%;
     margin: 0 auto;
     color: #f1f5f9;
     box-sizing: border-box;
     font-family: inherit;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 /* Header */
 .header {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .headerTitleWrap {
@@ -28,87 +32,150 @@
 
 .title {
     margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: 1.35rem; /* Aumentado */
+    font-weight: 800;
     color: #f8fafc;
 }
 
 .subtitle {
-    margin: 0.15rem 0 0 0;
-    font-size: 0.75rem;
+    margin: 0.2rem 0 0 0;
+    font-size: 0.85rem; /* Aumentado */
     color: #94a3b8;
 }
 
 .perdidaCard {
     background: #1e293b;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 8px;
-    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 12px;
+    padding: 0.85rem 1rem; /* Ampliado */
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .perdidaLabel {
-    font-size: 0.7rem;
+    font-size: 0.8rem; /* Aumentado */
     color: #94a3b8;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
 }
 
 .perdidaMonto {
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 1.45rem; /* Aumentado */
+    font-weight: 900;
     color: #ef4444;
 }
 
 /* =========================================================
-   PESTAÑAS TOUCH
+   PESTAÑAS TÁCTILES GRANDES (AJUSTE PERFECTO EN 3 BOTONES)
    ========================================================= */
 .tabsHeader {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Divide exactamente en 3 columnas iguales */
     gap: 0.35rem;
     background: #0f172a;
     padding: 0.35rem;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #334155;
     position: sticky;
     top: 0;
     z-index: 20;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .tabBtn {
-    flex: 1;
+    width: 100%;
+    min-width: 0; /* Previene desbordamiento */
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    padding: 0.65rem 0.35rem;
+    min-height: 48px;
+    padding: 0.65rem 0.25rem;
     background: transparent;
     border: none;
     color: #94a3b8;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.82rem; /* Tamaño optimizado para evitar cortes en pantallas angostas */
+    font-weight: 800;
     border-radius: 8px;
     cursor: pointer;
     touch-action: manipulation;
     transition: all 0.2s ease;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tabBtnActive {
     background: #0284c7;
     color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tabBtnActiveOrange {
     background: #d97706;
     color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tabBtnActiveBlue {
     background: #581c7e;
     color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================
+   BREAKPOINTS: TABLETS & DESKTOP
+   ========================================================= */
+@media (min-width: 768px) {
+    .header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .formGroupDual {
+        flex-direction: row;
+    }
+
+    .formGroupDual .formGroup {
+        flex: 1;
+    }
+
+    .actionsDual {
+        flex-direction: row;
+    }
+
+    .actionsDual .btnPrint,
+    .actionsDual .btnWhatsapp {
+        flex: 1;
+    }
+
+    .tabBtn {
+        font-size: 0.95rem;
+        padding: 0.75rem 1rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: 1.25rem;
+    }
+
+    /* Mantenemos visible la barra de navegación para control total */
+    .tabsHeader {
+        display: grid;
+    }
+
+    .contentWrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .historyFeed {
+        max-height: 520px;
+    }
 }
 
 /* =========================================================
@@ -117,33 +184,34 @@
 .contentWrapper {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.85rem;
 }
 
 .panelCard {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 0.75rem;
+    border-radius: 14px;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
+    box-sizing: border-box;
 }
 
 .cardHeaderWithAction {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
 }
 
 .panelTitle {
     margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: 1.05rem; /* Aumentado */
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
 }
 
 .titleBlue { color: #38bdf8; }
@@ -153,56 +221,59 @@
     background: #0f172a;
     border: 1px solid #334155;
     color: #38bdf8;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.35rem 0.6rem;
-    border-radius: 6px;
+    font-size: 0.85rem; /* Aumentado */
+    font-weight: 700;
+    min-height: 42px;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
+    touch-action: manipulation;
 }
 
 /* Formulario desplegable para plantilla */
 .formPlantilla {
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 0.65rem;
+    border-radius: 10px;
+    padding: 0.85rem;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.6rem;
 }
 
 .plantillaHeader {
-    font-size: 0.8rem;
+    font-size: 0.95rem; /* Aumentado */
     color: #38bdf8;
+    font-weight: 800;
 }
 
 .formGrid {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
 }
 
 .formGroupDual {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.35rem;
 }
 
 .label, .labelRed, .labelGreen {
-    font-size: 0.75rem;
+    font-size: 0.85rem; /* Aumentado */
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.35rem;
 }
 
 .label { color: #94a3b8; }
@@ -211,74 +282,81 @@
 
 .input, .select, .textarea {
     width: 100%;
+    min-height: 48px; /* Altura estándar táctil */
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #fff;
-    padding: 0.55rem;
-    font-size: 0.85rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem; /* Evita zoom en Safari iOS */
     box-sizing: border-box;
     outline: none;
 }
 
 .inputCost {
     color: #4ade80;
-    font-weight: 800;
+    font-weight: 900;
+    font-size: 1.1rem;
 }
 
 .textarea {
+    min-height: 90px;
+    padding: 0.75rem;
     resize: vertical;
+    line-height: 1.45;
 }
 
 .plantillaResumenBox {
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 0.6rem;
+    border-radius: 10px;
+    padding: 0.85rem;
 }
 
 .plantillaResumenTitle {
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.95rem; /* Aumentado */
+    font-weight: 800;
     color: #38bdf8;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.25rem;
+    gap: 0.45rem;
+    margin-bottom: 0.35rem;
 }
 
 .plantillaResumenText {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: 0.85rem; /* Aumentado */
     color: #cbd5e1;
-    line-height: 1.35;
+    line-height: 1.45;
 }
 
-/* Botones de acción */
+/* Botones de acción táctiles grandes */
 .actionsDual {
     display: flex;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
+    flex-direction: column; /* En columna en móviles para ganar ancho */
+    gap: 0.6rem;
+    margin-top: 0.35rem;
 }
 
 .btnPrint, .btnWhatsapp, .btnSubmitReposicion, .btnSavePlantilla {
-    height: 42px;
-    border-radius: 8px;
+    min-height: 50px; /* Touch target ampliado */
+    border-radius: 10px;
     border: none;
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.95rem; /* Aumentado */
+    font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     touch-action: manipulation;
+    width: 100%;
 }
 
-.btnPrint { flex: 1; background: #0284c7; color: #fff; }
-.btnWhatsapp { flex: 1; background: #22c55e; color: #fff; }
-.btnSubmitReposicion { width: 100%; background: #d97706; color: #fff; margin-top: 0.25rem; }
-.btnSavePlantilla { width: 100%; background: #334155; color: #38bdf8; height: 38px; }
+.btnPrint { background: #0284c7; color: #fff; }
+.btnWhatsapp { background: #22c55e; color: #fff; }
+.btnSubmitReposicion { background: #d97706; color: #fff; margin-top: 0.35rem; }
+.btnSavePlantilla { background: #334155; color: #38bdf8; min-height: 48px; }
 
 /* =========================================================
    HISTORIAL FEED
@@ -286,46 +364,48 @@
 .historyFeed {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    max-height: calc(100vh - 220px);
+    gap: 0.65rem;
+    max-height: calc(100vh - 240px);
     overflow-y: auto;
 }
 
 .historyCard {
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 0.65rem;
+    border-radius: 10px;
+    padding: 0.85rem 1rem; /* Tarjetas más amplias */
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
 }
 
 .historyCardHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .historyTitle {
-    font-size: 0.85rem;
+    font-size: 0.95rem; /* Aumentado */
+    font-weight: 800;
     color: #38bdf8;
 }
 
 .historyCost {
-    font-size: 0.85rem;
-    font-weight: 800;
+    font-size: 1rem; /* Aumentado */
+    font-weight: 900;
     color: #ef4444;
 }
 
 .historyDetailsBox {
     background: #1e293b;
-    padding: 0.4rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem; /* Aumentado */
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.3rem;
 }
 
 .historyLineRed { color: #f87171; }
@@ -333,25 +413,29 @@
 
 .historyDetailsBox code {
     background: #0f172a;
-    padding: 0.1rem 0.3rem;
+    padding: 0.15rem 0.4rem;
     border-radius: 4px;
     font-family: monospace;
+    font-size: 0.85rem;
 }
 
 .historyMeta {
     display: flex;
     justify-content: space-between;
-    font-size: 0.7rem;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    font-size: 0.8rem; /* Aumentado */
     color: #94a3b8;
-    border-top: 1px solid rgba(51, 65, 85, 0.4);
-    padding-top: 0.3rem;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    padding-top: 0.45rem;
 }
 
 .emptyText {
     text-align: center;
-    padding: 2.5rem 1rem;
+    padding: 3.5rem 1rem;
     color: #64748b;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
 .textGreen { color: #10b981; }
@@ -363,15 +447,15 @@
     align-items: center;
     justify-content: center;
     height: 50vh;
-    gap: 0.75rem;
+    gap: 0.85rem;
     color: #38bdf8;
-    font-size: 0.85rem;
+    font-size: 1rem;
 }
 
 .loaderPulse {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #38bdf8;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #38bdf8;
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -394,6 +478,15 @@
     }
 
     .formGroupDual .formGroup {
+        flex: 1;
+    }
+
+    .actionsDual {
+        flex-direction: row;
+    }
+
+    .actionsDual .btnPrint,
+    .actionsDual .btnWhatsapp {
         flex: 1;
     }
 }

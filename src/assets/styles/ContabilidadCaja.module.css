@@ -1,17 +1,21 @@
 /* =========================================================
-   CONTENEDOR BASE & LAYOUT
+   CONTENEDOR BASE & LAYOUT (AMPLIADO TÁCTIL)
    ========================================================= */
 .container {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: 0.85rem;
+    padding: 0.85rem;
     max-width: 1440px;
+    width: 100%;
     margin: 0 auto;
     color: #f1f5f9;
     box-sizing: border-box;
     font-family: inherit;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .header {
@@ -21,14 +25,14 @@
 
 .title {
     margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: 1.35rem; /* Aumentado */
+    font-weight: 800;
     color: #f8fafc;
 }
 
 .subtitle {
-    margin: 0.15rem 0 0 0;
-    font-size: 0.75rem;
+    margin: 0.2rem 0 0 0;
+    font-size: 0.85rem; /* Aumentado */
     color: #94a3b8;
 }
 
@@ -38,41 +42,45 @@
 .metricsGrid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    gap: 0.65rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .card {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.65rem;
+    border-radius: 12px;
+    padding: 0.85rem 1rem; /* Ampliado */
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.3rem;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .cardLabel {
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: 0.75rem; /* Aumentado */
+    font-weight: 800;
     color: #94a3b8;
     text-transform: uppercase;
 }
 
 .card h3 {
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 1.35rem; /* Aumentado */
+    font-weight: 900;
 }
 
 .subtext {
-    font-size: 0.65rem;
-    color: #64748b;
+    font-size: 0.75rem; /* Aumentado */
+    color: #94a3b8;
 }
 
-.cardUtilidadDiaria { border-left: 3px solid #10b981; }
-.cardUtilidadMensual { border-left: 3px solid #38bdf8; }
-.cardCostoCompras { border-left: 3px solid #a855f7; }
-.cardGastosOperativos { border-left: 3px solid #ef4444; }
+.cardUtilidadDiaria { border-left: 4px solid #10b981; }
+.cardUtilidadMensual { border-left: 4px solid #38bdf8; }
+.cardCostoCompras { border-left: 4px solid #a855f7; }
+.cardGastosOperativos { border-left: 4px solid #ef4444; }
 
 /* =========================================================
    FORMULARIO ACCORDION
@@ -80,7 +88,7 @@
 .formAccordionWrap {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
 }
 
@@ -89,12 +97,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    min-height: 52px; /* Touch target grande */
+    padding: 0.85rem 1.15rem;
     background: #1e293b;
     border: none;
     color: #38bdf8;
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 1rem; /* Aumentado */
+    font-weight: 800;
     cursor: pointer;
     touch-action: manipulation;
 }
@@ -102,14 +111,14 @@
 .accordionTitle {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.55rem;
 }
 
 .formContent {
-    padding: 0.75rem 1rem 1rem 1rem;
+    padding: 0.85rem 1.15rem 1.25rem 1.15rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
     border-top: 1px solid #334155;
 }
 
@@ -120,78 +129,84 @@
 .formRowDual {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: 0.65rem;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.35rem;
 }
 
 .label {
-    font-size: 0.75rem;
+    font-size: 0.85rem; /* Aumentado */
     font-weight: 700;
     color: #94a3b8;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
 }
 
 .input, .select {
     width: 100%;
-    height: 38px;
+    min-height: 48px; /* Altura estándar táctil */
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #fff;
-    padding: 0 0.55rem;
-    font-size: 0.85rem;
+    padding: 0 0.75rem;
+    font-size: 0.95rem; /* Evita zoom en Safari iOS */
     box-sizing: border-box;
     outline: none;
 }
 
 .inputMonto {
     color: #4ade80;
-    font-weight: 700;
+    font-weight: 800;
+    font-size: 1.05rem;
 }
 
 .btnSubmit {
-    height: 42px;
+    min-height: 52px; /* Botón de acción principal grande */
     background: #0284c7;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 700;
+    border-radius: 10px;
+    font-size: 1rem; /* Aumentado */
+    font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     touch-action: manipulation;
+    margin-top: 0.35rem;
 }
 
 /* =========================================================
-   BARRA DE FILTROS TEMPORALES
+   BARRA DE FILTROS TEMPORALES (RESPONSIVE SIN DESBORDE)
    ========================================================= */
 .filtersBar {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.6rem;
+    border-radius: 12px;
+    padding: 0.85rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .quickPillsRow {
     display: flex;
-    gap: 0.35rem;
+    gap: 0.45rem;
     overflow-x: auto;
-    padding-bottom: 0.2rem;
+    padding-bottom: 0.35rem;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
     align-items: center;
+    width: 100%;
 }
 
 .quickPillsRow::-webkit-scrollbar { display: none; }
@@ -200,23 +215,29 @@
     background: #0f172a;
     border: 1px solid #334155;
     color: #cbd5e1;
-    padding: 0.4rem 0.65rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    min-height: 44px;
+    padding: 0.6rem 0.95rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
+    touch-action: manipulation;
+    flex-shrink: 0;
 }
 
 .monthNavBox {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.35rem;
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 6px;
-    padding: 0.2rem 0.4rem;
+    border-radius: 8px;
+    padding: 0.35rem 0.6rem;
     margin-left: auto;
+    min-height: 44px;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .btnNavMonth {
@@ -224,48 +245,85 @@
     border: none;
     color: #38bdf8;
     cursor: pointer;
-    padding: 0.2rem 0.4rem;
+    padding: 0.4rem;
+    font-size: 1rem;
     display: flex;
     align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
 }
 
 .monthLabel {
-    font-size: 0.7rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 800;
     color: #e2e8f0;
 }
 
+/* Grilla en 2 filas en móvil para garantizar visibilidad total */
 .customDateRangeRow {
     display: flex;
-    gap: 0.4rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .dateInput {
-    flex: 1;
-    height: 34px;
+    flex: 1 1 calc(50% - 1.25rem);
+    min-width: 0;
+    min-height: 46px;
     background: #0f172a;
     border: 1px solid #334155;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #fff;
-    padding: 0 0.4rem;
-    font-size: 0.75rem;
+    padding: 0 0.5rem;
+    font-size: 0.9rem;
     outline: none;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.textMuted {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
 }
 
 .btnFilterSubmit {
+    width: 100%; /* Ocupa el ancho completo abajo en móviles */
     background: #0284c7;
     color: #fff;
     border: none;
-    border-radius: 6px;
-    padding: 0 0.75rem;
-    height: 34px;
-    font-size: 0.75rem;
-    font-weight: 700;
+    border-radius: 8px;
+    min-height: 48px;
+    font-size: 0.95rem;
+    font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    justify-content: center;
+    gap: 0.5rem;
+    touch-action: manipulation;
+    box-sizing: border-box;
+}
+
+/* En tablets y desktop vuelve a una sola fila horizontal */
+@media (min-width: 640px) {
+    .customDateRangeRow {
+        flex-wrap: nowrap;
+    }
+
+    .dateInput {
+        flex: 1;
+    }
+
+    .btnFilterSubmit {
+        width: auto;
+        padding: 0 1.25rem;
+        min-height: 46px;
+    }
 }
 
 /* =========================================================
@@ -274,52 +332,58 @@
 .mobileFeed {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
+    width: 100%;
 }
 
 .movementCard {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.65rem;
+    border-radius: 12px;
+    padding: 0.95rem 1rem; /* Tarjetas más amplias */
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.55rem;
+    box-sizing: border-box;
 }
 
-.cardIngreso { border-left: 3px solid #10b981; }
-.cardEgreso { border-left: 3px solid #ef4444; }
+.cardIngreso { border-left: 4px solid #10b981; }
+.cardEgreso { border-left: 4px solid #ef4444; }
 
 .movementCardHeader {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .movementTitleWrap {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.2rem;
     min-width: 0;
+    flex: 1;
 }
 
 .movementTitle {
-    font-size: 0.85rem;
+    font-size: 0.95rem; /* Aumentado */
     color: #f8fafc;
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
     word-break: break-word;
 }
 
 .movementConcept {
-    font-size: 0.7rem;
+    font-size: 0.8rem; /* Aumentado */
     color: #94a3b8;
+    font-weight: 600;
 }
 
 .movementAmount {
-    font-size: 0.95rem;
+    font-size: 1.15rem; /* Aumentado */
+    font-weight: 900;
     white-space: nowrap;
 }
 
@@ -327,49 +391,55 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 1px solid rgba(51, 65, 85, 0.4);
-    padding-top: 0.35rem;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    padding-top: 0.5rem;
 }
 
 .movementDate {
-    font-size: 0.7rem;
-    color: #64748b;
+    font-size: 0.8rem; /* Aumentado */
+    color: #94a3b8;
 }
 
 .movementActions, .tableActions {
     display: flex;
-    gap: 0.35rem;
+    gap: 0.45rem;
 }
 
 .btnActionEdit, .btnActionDelete {
     border: none;
-    border-radius: 4px;
-    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    min-height: 40px; /* Touch target ampliado */
+    min-width: 40px;
+    padding: 0.5rem 0.75rem;
     cursor: pointer;
     color: #fff;
     display: flex;
     align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    touch-action: manipulation;
 }
 
 .btnActionEdit { background: #3b82f6; }
 .btnActionDelete { background: #ef4444; }
 
 .systemBadge {
-    font-size: 0.65rem;
-    color: #64748b;
+    font-size: 0.75rem; /* Aumentado */
+    color: #94a3b8;
     background: #0f172a;
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
     font-style: italic;
+    font-weight: 700;
 }
 
 .emptyFeed {
     text-align: center;
-    padding: 2.5rem 1rem;
+    padding: 3.5rem 1rem;
     color: #64748b;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     background: #1e293b;
-    border-radius: 10px;
+    border-radius: 12px;
 }
 
 /* =========================================================
@@ -378,7 +448,7 @@
 .desktopTableWrap {
     display: none;
     background: #1e293b;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #334155;
     overflow-x: auto;
 }
@@ -386,29 +456,29 @@
 .table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     text-align: left;
 }
 
 .table th {
     background: #0f172a;
-    padding: 0.65rem 0.85rem;
+    padding: 0.85rem 1rem;
     color: #94a3b8;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     border-bottom: 1px solid #334155;
 }
 
 .table td {
-    padding: 0.65rem 0.85rem;
+    padding: 0.85rem 1rem;
     border-bottom: 1px solid rgba(51, 65, 85, 0.4);
     vertical-align: middle;
 }
 
-.rowIngreso td:first-child { border-left: 3px solid #10b981; }
-.rowEgreso td:first-child { border-left: 3px solid #ef4444; }
+.rowIngreso td:first-child { border-left: 4px solid #10b981; }
+.rowEgreso td:first-child { border-left: 4px solid #ef4444; }
 
-.txtMonto { font-weight: 800; text-align: right; }
+.txtMonto { font-weight: 900; font-size: 1rem; text-align: right; }
 
 /* Utilidades */
 .textGreen { color: #10b981; }
@@ -416,7 +486,7 @@
 .textPurple { color: #a855f7; }
 .textRed { color: #ef4444; }
 .textAmber { color: #f59e0b; }
-.textMuted { color: #94a3b8; font-size: 0.75rem; }
+.textMuted { color: #94a3b8; font-size: 0.8rem; }
 
 /* =========================================================
    MODAL DE EDICIÓN
@@ -435,44 +505,45 @@
 .modalBox {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 12px;
+    border-radius: 14px;
     width: 100%;
-    max-width: 440px;
-    padding: 1.25rem;
+    max-width: 460px;
+    padding: 1.35rem;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
 }
 
 .modalHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 0.25rem;
 }
 
-.modalTitle { margin: 0; font-size: 1rem; color: #38bdf8; }
-.modalCloseBtn { background: none; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; }
+.modalTitle { margin: 0; font-size: 1.15rem; color: #38bdf8; font-weight: 800; }
+.modalCloseBtn { background: none; border: none; color: #94a3b8; font-size: 1.25rem; cursor: pointer; padding: 0.3rem; }
 
 .modalForm {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
 }
 
 .modalActions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     margin-top: 0.5rem;
 }
 
 .btnSaveModal, .btnCancelModal {
     flex: 1;
-    height: 40px;
-    border-radius: 8px;
+    min-height: 48px; /* Botones de acción táctiles grandes */
+    border-radius: 10px;
     border: none;
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.95rem; /* Aumentado */
+    font-weight: 800;
     cursor: pointer;
     touch-action: manipulation;
 }
@@ -487,15 +558,15 @@
     align-items: center;
     justify-content: center;
     height: 50vh;
-    gap: 0.75rem;
+    gap: 0.85rem;
     color: #38bdf8;
-    font-size: 0.85rem;
+    font-size: 1rem;
 }
 
 .loaderPulse {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #38bdf8;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #38bdf8;
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;

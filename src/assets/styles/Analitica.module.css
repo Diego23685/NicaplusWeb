@@ -1,20 +1,22 @@
 /* =========================================================
-   CONTENEDOR BASE & RESET ANTI-DESBORDE
+   CONTENEDOR BASE & RESET ANTI-DESBORDE (AMPLIADO TÁCTIL)
    ========================================================= */
 .container {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem;
+    gap: 0.85rem;
+    padding: 0.85rem;
     max-width: 1440px;
     width: 100%;
     margin: 0 auto;
     color: #f1f5f9;
     box-sizing: border-box;
     font-family: inherit;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
     min-height: 100vh;
     min-width: 0;
-    overflow-x: hidden; /* Evita que cualquier elemento empuje la pantalla hacia la derecha */
+    overflow-x: hidden;
 }
 
 /* =========================================================
@@ -23,10 +25,10 @@
 .headerPanel {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.85rem;
     background: #1e293b;
-    padding: 0.85rem;
-    border-radius: 12px;
+    padding: 1rem;
+    border-radius: 14px;
     border: 1px solid #334155;
     box-sizing: border-box;
     width: 100%;
@@ -42,19 +44,19 @@
 
 .title {
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.35rem; /* Aumentado */
+    font-weight: 800;
     color: #38bdf8;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     word-break: break-word;
 }
 
 .controlsWrap {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
     width: 100%;
     box-sizing: border-box;
 }
@@ -62,11 +64,11 @@
 .filterBox {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.45rem;
     background: #0f172a;
-    padding: 0.45rem 0.6rem;
-    border-radius: 8px;
-    border: 1px solid #334155;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    border: 2px solid #334155;
     width: 100%;
     box-sizing: border-box;
     flex-wrap: wrap;
@@ -74,7 +76,7 @@
 
 .filterIcon {
     color: #38bdf8;
-    font-size: 0.85rem;
+    font-size: 1.05rem;
     flex-shrink: 0;
 }
 
@@ -82,18 +84,18 @@
     background: #1e293b;
     color: #fff;
     border: 1px solid #334155;
-    border-radius: 6px;
+    border-radius: 8px;
     outline: none;
     cursor: pointer;
-    font-size: 0.8rem;
-    padding: 0.4rem 0.5rem;
-    flex: 1;
-    min-width: 110px;
+    font-size: 0.95rem; /* Aumentado para evitar auto-zoom */
+    font-weight: 700;
+    min-height: 44px; /* Touch target ampliado */
+    padding: 0 0.65rem;
+    flex: 1 1 calc(50% - 0.5rem);
     box-sizing: border-box;
 }
 
 .selectType {
-    font-weight: 700;
     color: #38bdf8;
 }
 
@@ -105,77 +107,80 @@
 .dateRangeInputs {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.45rem;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 0.25rem;
+    margin-top: 0.35rem;
 }
 
 .dateInput {
     background: #1e293b;
     color: #fff;
     border: 1px solid #334155;
-    border-radius: 6px;
-    padding: 0.35rem;
-    font-size: 0.75rem;
+    border-radius: 8px;
+    min-height: 46px; /* Altura estándar táctil */
+    padding: 0 0.5rem;
+    font-size: 0.9rem; /* Aumentado */
     flex: 1;
     min-width: 0;
     text-align: center;
     box-sizing: border-box;
+    outline: none;
 }
 
 .rangeDivider {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #94a3b8;
     flex-shrink: 0;
 }
 
 .actionButtons {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.5rem;
     width: 100%;
 }
 
 .btnPrint {
     flex: 1;
-    height: 38px;
+    min-height: 48px; /* Touch target estándar */
     background: #10b981;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 700;
+    border-radius: 10px;
+    font-size: 0.95rem; /* Aumentado */
+    font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     touch-action: manipulation;
 }
 
 .btnSync {
-    width: 44px;
-    height: 38px;
+    width: 52px;
+    min-height: 48px; /* Touch target estándar */
     background: #38bdf8;
     color: #0f172a;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
+    font-size: 1.15rem;
     touch-action: manipulation;
     flex-shrink: 0;
 }
 
 /* =========================================================
-   GRIDS DE KPIS (CENTRADO Y COMPACTO)
+   GRIDS DE KPIS (CENTRADO Y AMPLIADO TÁCTIL)
    ========================================================= */
 .gridKpis {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    gap: 0.65rem;
     width: 100%;
     box-sizing: border-box;
 }
@@ -183,30 +188,31 @@
 .kpiCard {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.65rem;
+    border-radius: 12px;
+    padding: 0.85rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     min-width: 0;
     box-sizing: border-box;
+    min-height: 85px;
 }
 
 .kpiIconWrap {
-    font-size: 1.1rem;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    font-size: 1.35rem; /* Aumentado */
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
 
-.iconGreen { color: #10b981; background: rgba(16, 185, 129, 0.15); }
-.iconAmber { color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
-.iconRed { color: #ef4444; background: rgba(239, 68, 68, 0.15); }
-.iconRose { color: #f43f5e; background: rgba(244, 63, 94, 0.15); }
+.iconGreen { color: #10b981; background: rgba(16, 185, 129, 0.18); }
+.iconAmber { color: #f59e0b; background: rgba(245, 158, 11, 0.18); }
+.iconRed { color: #ef4444; background: rgba(239, 68, 68, 0.18); }
+.iconRose { color: #f43f5e; background: rgba(244, 63, 94, 0.18); }
 
 .kpiInfo {
     display: flex;
@@ -219,8 +225,8 @@
 
 .kpiTitle {
     color: #94a3b8;
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: 0.75rem; /* Aumentado */
+    font-weight: 800;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
@@ -228,18 +234,18 @@
 }
 
 .kpiValue {
-    margin: 0.1rem 0;
+    margin: 0.15rem 0;
     color: #fff;
-    font-size: 0.95rem;
-    font-weight: 800;
+    font-size: 1.15rem; /* Aumentado */
+    font-weight: 900;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .kpiSubtitle {
-    color: #64748b;
-    font-size: 0.65rem;
+    color: #94a3b8;
+    font-size: 0.75rem; /* Aumentado */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -251,7 +257,7 @@
 .gridDetalles {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 0.85rem;
     width: 100%;
     box-sizing: border-box;
 }
@@ -259,11 +265,11 @@
 .detailCard {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 10px;
-    padding: 0.75rem;
+    border-radius: 14px;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
@@ -271,11 +277,11 @@
 
 .cardHeaderTitle {
     margin: 0;
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 1.05rem; /* Aumentado */
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
 }
 
 .textCyan { color: #38bdf8; }
@@ -287,7 +293,7 @@
 .detailList {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.35rem;
     width: 100%;
 }
 
@@ -295,10 +301,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
+    padding: 0.65rem 0;
     border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-    font-size: 0.8rem;
-    gap: 0.5rem;
+    font-size: 0.95rem; /* Aumentado */
+    gap: 0.6rem;
 }
 
 .detailItem:last-child {
@@ -318,13 +324,14 @@
     color: #f8fafc;
     flex-shrink: 0;
     text-align: right;
+    font-weight: 800;
 }
 
 .detailItemStacked {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
-    padding: 0.5rem 0;
+    gap: 0.25rem;
+    padding: 0.65rem 0;
     border-bottom: 1px solid rgba(51, 65, 85, 0.4);
 }
 
@@ -333,22 +340,22 @@
 }
 
 .clientName {
-    font-weight: 600;
-    font-size: 0.8rem;
+    font-weight: 700;
+    font-size: 0.95rem; /* Aumentado */
     color: #f8fafc;
     word-break: break-word;
 }
 
 .serviceMeta {
-    font-size: 0.7rem;
+    font-size: 0.82rem; /* Aumentado */
     color: #94a3b8;
     word-break: break-word;
 }
 
 .emptyListText, .emptyListTextGreen {
-    font-size: 0.75rem;
+    font-size: 0.9rem; /* Aumentado */
     text-align: center;
-    padding: 1.5rem 0;
+    padding: 2rem 0;
 }
 
 .emptyListText { color: #64748b; }
@@ -357,47 +364,49 @@
 /* Estados */
 .loadingBox {
     color: #38bdf8;
-    padding: 2.5rem 1rem;
+    padding: 3rem 1rem;
     text-align: center;
     background: #1e293b;
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid #334155;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
 .loadingIcon {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
 }
 
 .errorBox {
     color: #f43f5e;
-    padding: 0.75rem 1rem;
+    padding: 0.95rem 1.15rem;
     background: #1e293b;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #f43f5e;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
+    gap: 0.6rem;
+    font-size: 0.9rem;
 }
 
 .errorContent {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
 }
 
 .btnRetry {
     background: #f43f5e;
     color: #fff;
     border: none;
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 0.75rem;
+    min-height: 42px;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 0.85rem;
     cursor: pointer;
+    touch-action: manipulation;
 }
 
 .spin {
@@ -407,7 +416,7 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* =========================================================
-   BREAKPOINTS: TABLETS Y ESCRITORIO
+   BREAKPOINTS: TABLETS Y ESCRITORIO (>= 768px / >= 1024px)
    ========================================================= */
 @media (min-width: 768px) {
     .headerPanel {
@@ -426,6 +435,11 @@
         width: auto;
     }
 
+    .selectType, .selectDetail {
+        flex: initial;
+        min-width: 130px;
+    }
+
     .dateRangeInputs {
         width: auto;
         margin-top: 0;
@@ -437,6 +451,7 @@
 
     .btnPrint {
         flex: initial;
+        padding: 0 1.25rem;
     }
 
     .gridKpis {
