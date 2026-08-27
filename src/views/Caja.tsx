@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import api from '../services/api';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
   FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
-  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup, FaShieldAlt
+  FaTags, FaThList, FaExclamationTriangle, FaBoxes, FaGamepad, FaTv, FaLayerGroup, FaShieldAlt, FaShareAlt
 } from 'react-icons/fa';
 import styles from '../assets/styles/Caja.module.css';
 
@@ -22,11 +23,13 @@ export interface VariacionProducto {
 interface Producto {
     id: number;
     nombre: string;
+    descripcion?: string;
     precioVenta: number;
     precioCosto: number;
     stockActual: number;
     imagenUrl: string;
     esDigital: boolean;
+    esCodigoDigital?: boolean;
     requiereServicio: boolean;
     esSuscripcion: boolean;
     categoriaId: number | null;
@@ -47,6 +50,7 @@ interface ItemCarrito {
     idProducto: number;
     idVariacion?: number | null;
     nombre: string;
+    descripcion?: string;
     cantidad: number;
     precioUnitario: number;
     precioCostoUnitario: number;
@@ -99,6 +103,16 @@ const calcularDiasRealesEntreFechas = (fechaInicioStr: string, fechaFinStr: stri
     return Math.max(1, Math.round(diferenciaMs / (1000 * 60 * 60 * 24)));
 };
 
+const extraerListaCodigos = (metaStr: string): string[] => {
+    if (!metaStr) return [];
+    return metaStr
+        .split(/[\n|\|]+/)
+        .map(linea => linea.trim())
+        .filter(linea => Boolean(linea))
+        .map(linea => linea.replace(/^C[ÓO]DIGO(\s*DISPONIBLE)?:\s*/i, '').trim())
+        .filter(linea => Boolean(linea));
+};
+
 export const enviarWhatsAppVenta = (datosVenta: any) => {
     if (!datosVenta || !datosVenta.detalles) {
         alert("No hay datos de venta válidos para enviar.");
@@ -133,13 +147,13 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
         "",
         separador,
         "",
-        "🔒 *DETALLE DE PRODUCTOS & GARANTÍA*",
+        "📦 *DETALLE DE PRODUCTOS & SERVICIOS*",
         ""
     ];
 
     let descuentoTotalAcumulado = 0;
 
-    const procesarBloqueCredencial = (metaStr: string, indiceCredencial?: number) => {
+    const procesarBloqueCredencialStreaming = (metaStr: string, indiceCredencial?: number) => {
         if (!metaStr) return;
         let accesosReales = metaStr.trim();
         
@@ -181,11 +195,21 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     };
 
     datosVenta.detalles.forEach((item: any, idx: number) => {
+        const meta = item.metadataDigital || item.metadata || '';
+        const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
+
         lineas.push(`*Artículo ${idx + 1}:* ${item.nombre || 'Servicio/Producto'}`);
-        lineas.push(`   🔹 *Cantidad:* ${item.cantidad}`);
         
-        const gDias = item.garantiaDias !== undefined ? item.garantiaDias : 0;
-        lineas.push(`   🛡️ *Garantía:* ${gDias > 0 ? `${gDias} días` : 'Sin garantía'}`);
+        if (item.descripcion && item.descripcion.trim() && item.descripcion !== 'Sin descripción') {
+            lineas.push(`   ℹ️ _${item.descripcion.trim()}_`);
+        }
+
+        lineas.push(`   🔹 *Cantidad:* ${item.cantidad}`);
+
+        if (!esCodigo) {
+            const gDias = item.garantiaDias !== undefined ? item.garantiaDias : 0;
+            lineas.push(`   🛡️ *Garantía:* ${gDias > 0 ? `${gDias} días` : 'Sin garantía'}`);
+        }
 
         if (item.descuento && item.descuento > 0) {
             const descPorItem = item.descuento * item.cantidad;
@@ -193,16 +217,20 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
             lineas.push(`   🎁 *Descuento aplicado:* -C$ ${descPorItem}`);
         }
 
-        const meta = item.metadataDigital || item.metadata || '';
-        if (meta) {
+        if (esCodigo) {
+            const codigos = extraerListaCodigos(meta);
+            lineas.push(`   🔑 *Código(s) Asignado(s):*`);
+            codigos.forEach(cod => {
+                lineas.push(`   \`${cod}\``);
+            });
+        } else if (meta) {
             const cuentasMultiples = meta.split(/\r?\n|;/).filter((c: string) => c.trim().length > 0);
-
             if (cuentasMultiples.length > 1) {
                 cuentasMultiples.forEach((bloqueMeta: string, subIdx: number) => {
-                    procesarBloqueCredencial(bloqueMeta, subIdx);
+                    procesarBloqueCredencialStreaming(bloqueMeta, subIdx);
                 });
             } else {
-                procesarBloqueCredencial(meta);
+                procesarBloqueCredencialStreaming(meta);
             }
         }
         lineas.push("");
@@ -228,9 +256,9 @@ export const enviarWhatsAppVenta = (datosVenta: any) => {
     lineas.push("");
     lineas.push(separador);
     lineas.push("");
-    lineas.push("📌 *TÉRMINOS DE GARANTÍA Y OPERACIÓN*:");
-    lineas.push("- Conserve este comprobante para hacer efectiva su garantía.");
-    lineas.push("- Las caídas de perfiles o accesos deben reportarse dentro del periodo de vigencia.");
+    lineas.push("📌 *TÉRMINOS Y CONDICIONES*:");
+    lineas.push("- Los códigos digitales deben ser canjeados de inmediato.");
+    lineas.push("- Para servicios con garantía, conserve este comprobante digital.");
     lineas.push("");
     lineas.push("¡Muchas gracias por su preferencia! 🤝");
 
@@ -250,7 +278,6 @@ export const imprimirTicketTermico = (datosVenta: any) => {
     let descuentoTotalAcumulado = 0;
     const metodoUsado = datosVenta.metodoPagoCongelado || "Efectivo";
     const totalReal = datosVenta.totalCongelado || datosVenta.detalles.reduce((sum: number, i: any) => sum + i.subTotal, 0);
-
     const logoUrl = `${window.location.origin}/LogoNica.png`;
 
     const contenidoTicket = `
@@ -259,85 +286,38 @@ export const imprimirTicketTermico = (datosVenta: any) => {
         <head>
             <title>Factura Nicaplus</title>
             <style>
-                @page { 
-                    margin: 0; 
-                }
-                * {
-                    box-sizing: border-box;
-                    font-size: 12px !important;
-                    font-weight: 700 !important;
-                    color: #000000 !important;
-                }
-                html, body {
-                    width: 100%;
-                    margin: 0;
-                    padding: 0;
-                }
-                body { 
-                    font-family: 'Courier New', Courier, monospace; 
-                    width: 100%; 
-                    padding: 8px 4px; 
-                    line-height: 1.25;
-                    text-align: center;
-                }
-                .ticket-wrapper {
-                    width: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .ticket-logo {
-                    max-width: 40%;
-                    max-height: 45px;
-                    height: auto;
-                    margin-bottom: 4px;
-                    filter: grayscale(100%) contrast(150%);
-                }
+                @page { margin: 0; }
+                * { box-sizing: border-box; font-size: 12px !important; font-weight: 700 !important; color: #000000 !important; }
+                html, body { width: 100%; margin: 0; padding: 0; }
+                body { font-family: 'Courier New', Courier, monospace; width: 100%; padding: 8px 4px; line-height: 1.25; text-align: center; }
+                .ticket-wrapper { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+                .ticket-logo { max-width: 40%; max-height: 45px; height: auto; margin-bottom: 4px; filter: grayscale(100%) contrast(150%); }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
                 .text-left { text-align: left; }
-                .linea { 
-                    border-bottom: 2px dashed #000; 
-                    margin: 6px 0; 
-                    width: 100%;
-                }
-                table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                }
-                .tabla-detalles td, .tabla-detalles th { 
-                    vertical-align: top; 
-                    padding: 2px 0; 
-                }
+                .linea { border-bottom: 2px dashed #000; margin: 6px 0; width: 100%; }
+                table { width: 100%; border-collapse: collapse; }
+                .tabla-detalles td, .tabla-detalles th { vertical-align: top; padding: 2px 0; }
+                .codigo-box { font-family: 'Courier New', monospace; font-size: 11px !important; letter-spacing: 0.5px; padding: 1px 0; word-break: break-all; }
             </style>
         </head>
         <body>
             <div class="ticket-wrapper">
-                <!-- LOGO ENCABEZADO -->
                 <img src="${logoUrl}" alt="Logo Nicaplus" class="ticket-logo" />
-
-                <!-- ENCABEZADO CENTRADO -->
                 <div class="text-center" style="width: 100%;">
                     NICAPLUS GAMING<br>
                     Tienda Digital y Taller Técnico<br>
                     León, Nicaragua<br>
                     Tel: +505 8888-8888
                 </div>
-                
                 <div class="linea"></div>
-                
-                <!-- DATOS FACTURA -->
                 <div class="text-left" style="width: 100%;">
                     Factura: #000${datosVenta.ventaId || 1}<br>
                     Fecha: ${new Date().toLocaleDateString('es-NI')}<br>
                     Condición: ${escapeHtml(metodoUsado.toUpperCase())}<br>
                     Cliente: ${escapeHtml((datosVenta.cliente?.nombre || "Mostrador").substring(0, 24))}
                 </div>
-                
                 <div class="linea"></div>
-                
-                <!-- TABLA DE DETALLES -->
                 <table class="tabla-detalles">
                     <thead>
                         <tr>
@@ -350,17 +330,29 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                             const descPorItem = (item.descuento || 0) * item.cantidad;
                             descuentoTotalAcumulado += descPorItem;
                             const gDias = item.garantiaDias !== undefined ? item.garantiaDias : 0;
-                            
+                            const meta = item.metadataDigital || '';
+                            const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
+                            const listaCodigos = esCodigo ? extraerListaCodigos(meta) : [];
+
                             return `
                                 <tr>
-                                    <td align="left">${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 22))}</td>
+                                    <td align="left">${item.cantidad}x ${escapeHtml((item.nombre || 'Producto').substring(0, 24))}</td>
                                     <td align="right">C$ ${item.subTotal}</td>
                                 </tr>
+                                ${item.descripcion && item.descripcion.trim() && item.descripcion !== 'Sin descripción' ? `
+                                <tr>
+                                    <td colspan="2" align="left" style="padding-left: 6px; font-size: 10px !important; color: #333 !important;">
+                                        ${escapeHtml(item.descripcion.trim())}
+                                    </td>
+                                </tr>
+                                ` : ''}
+                                ${!esCodigo ? `
                                 <tr>
                                     <td colspan="2" align="left" style="padding-left: 6px;">
                                         Garantía: ${gDias > 0 ? `${gDias} días` : 'Sin garantía'}
                                     </td>
                                 </tr>
+                                ` : ''}
                                 ${item.descuento && item.descuento > 0 ? `
                                 <tr>
                                     <td colspan="2" align="left" style="padding-left: 6px;">
@@ -368,21 +360,24 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                                     </td>
                                 </tr>
                                 ` : ''}
-                                ${item.metadataDigital ? `
+                                ${esCodigo ? `
                                 <tr>
-                                    <td colspan="2" align="left" style="padding-left: 6px; word-break: break-all;">
-                                        ID: ${escapeHtml(item.metadataDigital.replace(/^DIAS:\d+\|/, ''))}
+                                    <td colspan="2" align="left" style="padding-left: 6px; padding-top: 2px;">
+                                        ${listaCodigos.map(c => `<div class="codigo-box">🔑 ${escapeHtml(c)}</div>`).join('')}
                                     </td>
                                 </tr>
-                                ` : ''}
+                                ` : (meta ? `
+                                <tr>
+                                    <td colspan="2" align="left" style="padding-left: 6px; word-break: break-all;">
+                                        ID: ${escapeHtml(meta.replace(/^DIAS:\d+\|/, ''))}
+                                    </td>
+                                </tr>
+                                ` : '')}
                             `;
                         }).join('')}
                     </tbody>
                 </table>
-                
                 <div class="linea"></div>
-                
-                <!-- TOTALES -->
                 <table style="width: 100%;">
                     ${descuentoTotalAcumulado > 0 ? `
                     <tr>
@@ -407,14 +402,11 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                 ` : ''}
 
                 <div class="linea"></div>
-                
-                <!-- PIE DE PAGINA CENTRADO -->
                 <div class="text-center" style="margin-top: 6px; width: 100%;">
                     FIRMA DEL CLIENTE<br><br>
                     ______________________<br><br>   
-
                     ¡Gracias por tu preferencia!<br>
-                    Conserve este ticket para su garantía.
+                    Canjee sus códigos de inmediato.
                 </div>
             </div>
         </body>
@@ -453,11 +445,12 @@ export const Caja: React.FC = () => {
     const [mostrarModalDespacho, setMostrarModalDespacho] = useState(false);
     const [datosUltimaVenta, setDatosUltimaVenta] = useState<any>(null);
     const [diasCredito, setDiasCredito] = useState(15);
+    const [generandoImagen, setGenerandoImagen] = useState(false);
 
     const [mensajeErrorModal, setMensajeErrorModal] = useState<string | null>(null);
-
-    // MODAL DE SELECCIÓN DE VARIANTE
     const [productoParaSeleccionarVariante, setProductoParaSeleccionarVariante] = useState<Producto | null>(null);
+
+    const ticketRenderRef = useRef<HTMLDivElement>(null);
 
     const mostrarError = (mensaje: string) => {
         setMensajeErrorModal(mensaje);
@@ -544,6 +537,7 @@ export const Caja: React.FC = () => {
                 idProducto: productoPadre.id,
                 idVariacion: variante.id,
                 nombre: `${productoPadre.nombre} (${variante.nombreVariacion})`,
+                descripcion: productoPadre.descripcion || '',
                 cantidad: 1,
                 precioUnitario: variante.precioVenta,
                 precioCostoUnitario: variante.precioCosto,
@@ -570,35 +564,34 @@ export const Caja: React.FC = () => {
             let credencialesActualizadas = existe.metadataDigital;
             let listaIdsPerfiles = existe.idsPerfiles || [];
 
-            if (producto.esDigital) {
+            if (producto.esSuscripcion || producto.esCodigoDigital) {
                 try {
-                    const paramsIgnorados = listaIdsPerfiles.join(',');
+                    const paramsIgnorados = listaIdsPerfiles.filter(Boolean).join(',');
 
                     const res = await api.get(`/products/${producto.id}/siguiente-credencial`, {
                         params: { ignorados: paramsIgnorados }
                     });
 
-                    if (res.data && res.data.disponible && res.data.metadataDigital) {
+                    if (res.data && res.data.disponible && res.data.metadataDigital && res.data.idPerfil) {
                         const nuevaCredencial = res.data.metadataDigital.trim();
                         credencialesActualizadas = credencialesActualizadas 
                             ? `${credencialesActualizadas}\n${nuevaCredencial}`
                             : nuevaCredencial;
 
-                        if (res.data.idPerfil) {
-                            listaIdsPerfiles = [...listaIdsPerfiles, res.data.idPerfil];
-                        }
+                        listaIdsPerfiles = [...listaIdsPerfiles, res.data.idPerfil];
                     } else {
-                        mostrarError(`No hay más credenciales o perfiles disponibles para "${producto.nombre}".`);
+                        const tipoTexto = producto.esCodigoDigital ? "códigos" : "perfiles";
+                        mostrarError(`⚠️ Stock límite alcanzado: No existen más ${tipoTexto} disponibles para "${producto.nombre}".`);
                         return;
                     }
                 } catch (error) {
                     console.error('Error al solicitar credencial:', error);
-                    mostrarError('Ocurrió un problema al consultar el inventario de cuentas.');
+                    mostrarError('Ocurrió un problema al consultar el inventario de códigos/cuentas.');
                     return;
                 }
             }
 
-            setCarrito(carrito.map(item => {
+            setCarrito(prev => prev.map(item => {
                 if (item.idProducto === producto.id && !item.idVariacion) {
                     const nuevaCant = item.cantidad + 1;
                     return { 
@@ -618,13 +611,20 @@ export const Caja: React.FC = () => {
                 return;
             }
 
-            const metadataDigital = producto.esDigital ? (producto.metadataDigital || '') : '';
-            const idsIniciales = (producto.esDigital && producto.primerPerfilId) ? [producto.primerPerfilId] : [];
+            if ((producto.esSuscripcion || producto.esCodigoDigital) && producto.stockActual < 1) {
+                const tipoTexto = producto.esCodigoDigital ? "códigos" : "perfiles";
+                mostrarError(`No hay ${tipoTexto} disponibles para "${producto.nombre}".`);
+                return;
+            }
+
+            const metadataDigital = producto.metadataDigital || '';
+            const idsIniciales = (producto.primerPerfilId && producto.primerPerfilId > 0) ? [producto.primerPerfilId] : [];
 
             setCarrito(prevCarrito => [...prevCarrito, {
                 idProducto: producto.id,
                 idVariacion: null,
                 nombre: producto.nombre,
+                descripcion: producto.descripcion || '',
                 cantidad: 1,
                 precioUnitario: producto.precioVenta,
                 precioCostoUnitario: producto.precioCosto,
@@ -744,16 +744,54 @@ export const Caja: React.FC = () => {
 
     const limpiarCarrito = useCallback(() => setCarrito([]), []);
 
+    // COMPARTIR DIRECTAMENTE A WHATSAPP O COPIAR AL PORTAPAPELES
+    const compartirFacturaWhatsApp = async () => {
+        if (!ticketRenderRef.current) return;
+        try {
+            setGenerandoImagen(true);
+            const canvas = await html2canvas(ticketRenderRef.current, {
+                scale: 3,
+                backgroundColor: '#ffffff',
+                useCORS: true
+            });
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+                const file = new File([blob], `Factura_000${datosUltimaVenta?.ventaId || '1'}.png`, { type: 'image/png' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Factura #${datosUltimaVenta?.ventaId}`,
+                        text: `Factura de compra - Nicaplus Gaming`
+                    });
+                } else {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    alert("📋 Imagen copiada al portapapeles. Pégala directamente con Ctrl+V en WhatsApp Web.");
+                    const tel = datosUltimaVenta?.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
+                    window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
+                }
+            }, 'image/png');
+        } catch (error) {
+            console.error("Error al compartir imagen:", error);
+            mostrarError("No se pudo generar el archivo para compartir.");
+        } finally {
+            setGenerandoImagen(false);
+        }
+    };
+
     const finalizarVenta = async () => {
         if (carrito.length === 0) return;
 
         const faltaMetadata = carrito.some(item => {
             const p = productos.find(prod => prod.id === item.idProducto);
-            return (p?.esDigital || p?.esSuscripcion) && !item.metadataDigital.trim();
+            return (p?.esSuscripcion || p?.esCodigoDigital) && !item.metadataDigital.trim();
         });
 
         if (faltaMetadata) {
-            mostrarError("Debe ingresar las credenciales de acceso o referencia para los productos seleccionados.");
+            mostrarError("Debe ingresar o seleccionar las credenciales/códigos correspondientes para los productos digitales.");
             return;
         }
 
@@ -802,6 +840,7 @@ export const Caja: React.FC = () => {
                 return {
                     ...item,
                     nombre: itemCarritoOriginal ? itemCarritoOriginal.nombre : "Producto General",
+                    descripcion: itemCarritoOriginal ? itemCarritoOriginal.descripcion : "",
                     diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30,
                     garantiaDias: itemCarritoOriginal ? itemCarritoOriginal.garantiaDias : (item.garantiaDias ?? 0),
                     metadataDigital: item.metadataDigital || itemCarritoOriginal?.metadataDigital || ''
@@ -975,10 +1014,32 @@ export const Caja: React.FC = () => {
                                         </div>
 
                                         <div className={styles.productBadges}>
-                                            <span className={`${styles.badge} ${p.tieneVariaciones ? styles.badgeVariantes : p.esDigital ? (p.esSuscripcion ? styles.badgeRecurrente : styles.badgeDigital) : p.requiereServicio ? styles.badgeServicio : styles.badgeFisico}`}>
-                                                {p.tieneVariaciones ? "🎨 Variantes" : p.esSuscripcion ? "Streaming" : p.esDigital ? "Digital" : p.requiereServicio ? "Servicio" : "Físico"}
+                                            <span className={`${styles.badge} ${
+                                                p.tieneVariaciones 
+                                                    ? styles.badgeVariantes 
+                                                    : p.esSuscripcion 
+                                                        ? styles.badgeRecurrente 
+                                                        : p.esCodigoDigital 
+                                                            ? styles.badgeDigital 
+                                                            : p.esDigital 
+                                                                ? styles.badgeDigital 
+                                                                : p.requiereServicio 
+                                                                    ? styles.badgeServicio 
+                                                                    : styles.badgeFisico
+                                            }`}>
+                                                {p.tieneVariaciones 
+                                                    ? "🎨 Variantes" 
+                                                    : p.esSuscripcion 
+                                                        ? "📺 Streaming" 
+                                                        : p.esCodigoDigital 
+                                                            ? "🔑 Código" 
+                                                            : p.esDigital 
+                                                                ? "🎮 Digital" 
+                                                                : p.requiereServicio 
+                                                                    ? "🛠️ Servicio" 
+                                                                    : "📦 Físico"}
                                             </span>
-                                            {!p.esDigital && !p.requiereServicio && (
+                                            {(!p.esDigital || p.esCodigoDigital) && !p.requiereServicio && (
                                                 <small className={`${styles.stockText} ${!p.tieneVariaciones && p.stockActual <= 3 ? styles.stockCritical : ''}`}>
                                                     {p.tieneVariaciones 
                                                         ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.`
@@ -1012,7 +1073,15 @@ export const Caja: React.FC = () => {
                                                 <small className={styles.productRowSub}>
                                                     {p.tieneVariaciones 
                                                         ? `🎨 Variantes (${p.variaciones?.length || 0} opciones)`
-                                                        : p.esSuscripcion ? "📺 Streaming" : p.esDigital ? "🎮 Recarga Digital" : p.requiereServicio ? "Servicio Técnico" : `Disponibles: ${p.stockActual}`}
+                                                        : p.esSuscripcion 
+                                                            ? "📺 Streaming" 
+                                                            : p.esCodigoDigital 
+                                                                ? `🔑 Códigos Disp: ${p.stockActual}` 
+                                                                : p.esDigital 
+                                                                    ? "🎮 Recarga Digital" 
+                                                                    : p.requiereServicio 
+                                                                        ? "Servicio Técnico" 
+                                                                        : `Disponibles: ${p.stockActual}`}
                                                 </small>
                                             </div>
                                         </div>
@@ -1057,7 +1126,9 @@ export const Caja: React.FC = () => {
                                                     <FaTimes size={14} />
                                                 </button>
                                                 <span className={styles.cartItemName}>
-                                                    {item.nombre} {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}>(📺)</span>}
+                                                    {item.nombre} 
+                                                    {pBase?.esSuscripcion && <span style={{ color: '#ef4444' }}> (📺)</span>}
+                                                    {pBase?.esCodigoDigital && <span style={{ color: '#10b981' }}> (🔑)</span>}
                                                 </span>
                                             </div>
                                             <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap' }}>C$ {item.subTotal}</strong>
@@ -1104,19 +1175,21 @@ export const Caja: React.FC = () => {
                                                 />
                                             </div>
 
-                                            <div className={styles.controlGroup}>
-                                                <span className={styles.cartLabel} style={{ color: '#fb923c' }}><FaShieldAlt size={9} /> Gar(d):</span>
-                                                <input 
-                                                    type="number" 
-                                                    min={0} 
-                                                    value={item.garantiaDias === 0 ? '' : item.garantiaDias} 
-                                                    onFocus={(e) => e.target.select()}
-                                                    onChange={(e) => cambiarGarantiaManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
-                                                    placeholder="0"
-                                                    className={styles.smallInput} 
-                                                    title="Días de garantía para este artículo"
-                                                />
-                                            </div>
+                                            {!pBase?.esCodigoDigital && (
+                                                <div className={styles.controlGroup}>
+                                                    <span className={styles.cartLabel} style={{ color: '#fb923c' }}><FaShieldAlt size={9} /> Gar(d):</span>
+                                                    <input 
+                                                        type="number" 
+                                                        min={0} 
+                                                        value={item.garantiaDias === 0 ? '' : item.garantiaDias} 
+                                                        onFocus={(e) => e.target.select()}
+                                                        onChange={(e) => cambiarGarantiaManual(item.idProducto, item.idVariacion, e.target.value === '' ? 0 : Number(e.target.value))} 
+                                                        placeholder="0"
+                                                        className={styles.smallInput} 
+                                                        title="Días de garantía para este artículo"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
 
                                         {pBase?.esSuscripcion && (
@@ -1160,12 +1233,12 @@ export const Caja: React.FC = () => {
 
                                         {pBase?.esDigital && (
                                             <div style={{ marginTop: '6px' }}>
-                                                <small style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                                                    🔒 Credenciales Asignadas (Auto):
+                                                <small style={{ color: pBase.esCodigoDigital ? '#10b981' : '#38bdf8', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                    {pBase.esCodigoDigital ? '🔑 Códigos Asignados (Auto):' : '🔒 Credenciales / Datos de Entrega:'}
                                                 </small>
                                                 <textarea 
                                                     rows={2}
-                                                    placeholder="No hay credenciales registradas en el inventario..."
+                                                    placeholder={pBase.esCodigoDigital ? "No hay códigos disponibles en inventario..." : "Ingrese los accesos o datos del servicio..."}
                                                     value={item.metadataDigital} 
                                                     onChange={(e) => actualizarMetadata(item.idProducto, item.idVariacion, e.target.value)} 
                                                     className={styles.metaInput} 
@@ -1392,18 +1465,154 @@ export const Caja: React.FC = () => {
                                     Venta genérica de mostrador: No vinculada a número de WhatsApp para envío directo.
                                 </div>
                             )}
+
+                            <button 
+                                onClick={compartirFacturaWhatsApp} 
+                                disabled={generandoImagen}
+                                className={`${styles.modalBtn}`}
+                                style={{ background: '#0284c7', color: '#fff' }}
+                            >
+                                <FaShareAlt size={16} /> {generandoImagen ? 'Generando imagen...' : 'Compartir Factura (Imagen PNG)'}
+                            </button>
+
                             <button 
                                 onClick={() => imprimirTicketTermico(datosUltimaVenta)} 
                                 className={`${styles.modalBtn} ${styles.btnPrint}`}
                             >
                                 <FaPrint /> Imprimir Copia Física (Ticketera)
                             </button>
+                            
                             <button 
                                 onClick={() => { setMostrarModalDespacho(false); setDatosUltimaVenta(null); }} 
                                 className={`${styles.modalBtn} ${styles.btnClose}`}
                             >
                                 Cerrar Caja POS y Siguiente Venta
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* RENDER INVISIBLE PARA CONVERSIÓN A IMAGEN (HTML2CANVAS) */}
+            {datosUltimaVenta && (
+                <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+                    <div 
+                        ref={ticketRenderRef} 
+                        style={{
+                            width: '380px',
+                            background: '#ffffff',
+                            color: '#000000',
+                            padding: '24px 18px',
+                            fontFamily: "'Courier New', Courier, monospace",
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            lineHeight: 1.3
+                        }}
+                    >
+                        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                            <img 
+                                src={`${window.location.origin}/LogoNica.png`} 
+                                alt="Logo" 
+                                style={{ maxWidth: '140px', maxHeight: '55px', height: 'auto', filter: 'grayscale(100%) contrast(150%)', marginBottom: '6px' }}
+                                crossOrigin="anonymous" 
+                            />
+                            <div style={{ fontSize: '14px', fontWeight: 900 }}>NICAPLUS GAMING</div>
+                            <div>Tienda Digital y Taller Técnico</div>
+                            <div>León, Nicaragua | Tel: +505 8888-8888</div>
+                        </div>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <div>
+                            <div>Factura: #000{datosUltimaVenta.ventaId || 1}</div>
+                            <div>Fecha: {new Date().toLocaleDateString('es-NI')}</div>
+                            <div>Condición: {(datosUltimaVenta.metodoPagoCongelado || 'Efectivo').toUpperCase()}</div>
+                            <div>Cliente: {datosUltimaVenta.cliente?.nombre || 'Mostrador'}</div>
+                        </div>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                            <thead>
+                                <tr>
+                                    <th align="left" style={{ paddingBottom: '4px' }}>Cant/Desc</th>
+                                    <th align="right" style={{ paddingBottom: '4px' }}>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {datosUltimaVenta.detalles.map((item: any, idx: number) => {
+                                    const meta = item.metadataDigital || '';
+                                    const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
+                                    const listaCodigos = esCodigo ? extraerListaCodigos(meta) : [];
+
+                                    return (
+                                        <React.Fragment key={idx}>
+                                            <tr>
+                                                <td align="left">{item.cantidad}x {item.nombre}</td>
+                                                <td align="right">C$ {item.subTotal}</td>
+                                            </tr>
+                                            {item.descripcion && item.descripcion.trim() && item.descripcion !== 'Sin descripción' && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', color: '#444' }}>
+                                                        {item.descripcion.trim()}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {!esCodigo && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
+                                                        Garantía: {item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {item.descuento > 0 && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
+                                                        (Descto: -C$ {item.descuento * item.cantidad})
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {esCodigo ? (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', paddingTop: '2px' }}>
+                                                        {listaCodigos.map((c, cIdx) => (
+                                                            <div key={cIdx} style={{ fontFamily: "'Courier New', monospace", fontSize: '12px', letterSpacing: '0.5px' }}>
+                                                                🔑 {c}
+                                                            </div>
+                                                        ))}
+                                                    </td>
+                                                </tr>
+                                            ) : (meta && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', wordBreak: 'break-all' }}>
+                                                        ID: {meta.replace(/^DIAS:\d+\|/, '')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                                <tr>
+                                    <td align="left">TOTAL:</td>
+                                    <td align="right" style={{ fontSize: '15px', fontWeight: 900 }}>
+                                        C$ {datosUltimaVenta.totalCongelado || datosUltimaVenta.detalles.reduce((acc: number, d: any) => acc + (d.subTotal || 0), 0)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                            <div>¡Gracias por su compra!</div>
+                            <div style={{ fontSize: '11px' }}>Canjee sus códigos o conserve su ticket.</div>
                         </div>
                     </div>
                 </div>

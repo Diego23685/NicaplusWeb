@@ -3,7 +3,8 @@ import api from '../services/api';
 import { 
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
-    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory
+    FaCheckCircle, FaBoxes, FaSearch, FaFilter, FaTv, FaLayerGroup, FaCopy, 
+    FaPalette, FaSave, FaHistory, FaKey
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -33,6 +34,7 @@ interface Producto {
     stockActual: number;
     imagenUrl: string;
     esDigital: boolean;
+    esCodigoDigital?: boolean;
     esSuscripcion: boolean;
     controlaStock: boolean;
     requiereServicio?: boolean;
@@ -60,6 +62,17 @@ interface PerfilCuenta {
     accountGroupKey?: string;
 }
 
+interface CodigoDigital {
+    id: number;
+    idProducto: number;
+    idVariacion: number | null;
+    clave: string;
+    vendido: boolean;
+    estado: string;
+    fechaVenta: string | null;
+    idVenta: number | null;
+}
+
 interface HistorialVentaItem {
     ventaId: number;
     fecha: string;
@@ -85,6 +98,7 @@ const productoFormInicial = {
     stockActual: 0,
     imagenUrl: '',
     esDigital: false,
+    esCodigoDigital: false,
     esSuscripcion: false,
     controlaStock: true,
     categoriaId: '',
@@ -131,7 +145,7 @@ export const CatalogosAdmin: React.FC = () => {
     const [nuevaVarPrecioVenta, setNuevaVarPrecioVenta] = useState<number | ''>('');
     const [nuevaVarStock, setNuevaVarStock] = useState<number | ''>('');
 
-    // GESTIÓN DE PERFILES Y CUENTAS BATCH
+    // GESTIÓN DE PERFILES Y CUENTAS BATCH (STREAMING)
     const [productoIdPerfilAbierto, setProductoIdPerfilAbierto] = useState<number | null>(null);
     const [perfilesActuales, setPerfilesActuales] = useState<PerfilCuenta[]>([]);
     const [perfilEditandoId, setPerfilEditandoId] = useState<number | null>(null);
@@ -147,6 +161,14 @@ export const CatalogosAdmin: React.FC = () => {
     const [perfPin, setPerfPin] = useState('');
     const [perfCorreo, setPerfCorreo] = useState('');
     const [perfPassword, setPerfPassword] = useState('');
+
+    // GESTIÓN DE CÓDIGOS DIGITALES (XBOX, STEAM, ETC.)
+    const [productoCodigosAbierto, setProductoCodigosAbierto] = useState<Producto | null>(null);
+    const [codigosActuales, setCodigosActuales] = useState<CodigoDigital[]>([]);
+    const [textoBatchCodigos, setTextoBatchCodigos] = useState('');
+    const [filtroEstadoCodigos, setFiltroEstadoCodigos] = useState<'disponibles' | 'todos' | 'vendidos'>('disponibles');
+    const [busquedaCodigo, setBusquedaCodigo] = useState('');
+    const [cargandoCodigos, setCargandoCodigos] = useState(false);
 
     // ESTRUCTURAS AUXILIARES
     const [editandoJuego, setEditandoJuego] = useState<number | null>(null);
@@ -254,6 +276,16 @@ export const CatalogosAdmin: React.FC = () => {
         );
     }, [historialVentas, busquedaHistorial]);
 
+    const codigosFiltrados = useMemo(() => {
+        return codigosActuales.filter(c => {
+            const coincideTexto = c.clave.toLowerCase().includes(busquedaCodigo.toLowerCase().trim());
+            let coincideEstado = true;
+            if (filtroEstadoCodigos === 'disponibles') coincideEstado = !c.vendido && c.estado === 'Disponible';
+            if (filtroEstadoCodigos === 'vendidos') coincideEstado = c.vendido || c.estado === 'Vendido';
+            return coincideTexto && coincideEstado;
+        });
+    }, [codigosActuales, busquedaCodigo, filtroEstadoCodigos]);
+
     const handleProductoInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         let valorFinal: any = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -268,6 +300,7 @@ export const CatalogosAdmin: React.FC = () => {
             if (name === 'esDigital' && valorFinal) {
                 nuevoEstado.controlaStock = false;
             } else if (name === 'esDigital' && !valorFinal) {
+                nuevoEstado.esCodigoDigital = false;
                 nuevoEstado.esSuscripcion = false;
                 nuevoEstado.juegoId = '';
                 nuevoEstado.controlaStock = true;
@@ -292,6 +325,56 @@ export const CatalogosAdmin: React.FC = () => {
         }
     };
 
+    // OPERACIONES CÓDIGOS DIGITALES
+    const abrirModalCodigos = async (producto: Producto) => {
+        setProductoCodigosAbierto(producto);
+        setTextoBatchCodigos('');
+        setBusquedaCodigo('');
+        setFiltroEstadoCodigos('disponibles');
+        setCargandoCodigos(true);
+
+        try {
+            const res = await api.get(`/CodigosDigitales/producto/${producto.id}?soloDisponibles=false`);
+            setCodigosActuales(res.data);
+        } catch (err: any) {
+            dispararErrorVisual("Error al Cargar Códigos", err.response?.data?.mensaje || "No se pudo recuperar la lista de seriales.");
+            setCodigosActuales([]);
+        } finally {
+            setCargandoCodigos(false);
+        }
+    };
+
+    const guardarCodigosMasivos = async () => {
+        if (!productoCodigosAbierto) return;
+
+        const lineas = textoBatchCodigos
+            .split(/[\n,]+/)
+            .map(l => l.trim())
+            .filter(Boolean);
+
+        if (lineas.length === 0) {
+            alert("Pegue al menos un código válido.");
+            return;
+        }
+
+        try {
+            const res = await api.post('/CodigosDigitales/masivo', {
+                idProducto: productoCodigosAbierto.id,
+                codigos: lineas
+            });
+
+            alert(res.data?.mensaje || `Se agregaron ${lineas.length} códigos con éxito.`);
+            setTextoBatchCodigos('');
+
+            const resCodigos = await api.get(`/CodigosDigitales/producto/${productoCodigosAbierto.id}?soloDisponibles=false`);
+            setCodigosActuales(resCodigos.data);
+            cargarSincronizacionMaster();
+        } catch (err: any) {
+            dispararErrorVisual("Error al Guardar Códigos", err.response?.data?.mensaje || "No se pudieron guardar los códigos.");
+        }
+    };
+
+    // OPERACIONES PERFILES STREAMING
     const abrirGestionPerfiles = async (producto: Producto) => {
         if (productoIdPerfilAbierto === producto.id) {
             setProductoIdPerfilAbierto(null);
@@ -499,6 +582,7 @@ export const CatalogosAdmin: React.FC = () => {
             stockActual: producto.stockActual,
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
+            esCodigoDigital: producto.esCodigoDigital || false,
             esSuscripcion: producto.esSuscripcion || false,
             controlaStock: producto.controlaStock ?? true,
             categoriaId: producto.categoriaId?.toString() || '',
@@ -524,6 +608,7 @@ export const CatalogosAdmin: React.FC = () => {
             stockActual: producto.controlaStock ? producto.stockActual : 0,
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
+            esCodigoDigital: producto.esCodigoDigital || false,
             esSuscripcion: producto.esSuscripcion || false,
             controlaStock: producto.controlaStock ?? true,
             categoriaId: producto.categoriaId?.toString() || '',
@@ -597,7 +682,6 @@ export const CatalogosAdmin: React.FC = () => {
         }
     };
 
-    // SUBIDA FÍSICA DIRECTA AL ENDPOINT /api/uploads/producto
     const procesarSubidaImagen = async (e: ChangeEvent<HTMLInputElement>) => {
         const archivo = e.target.files?.[0];
         if (!archivo) return;
@@ -688,6 +772,7 @@ export const CatalogosAdmin: React.FC = () => {
             stockMinimo: 0,
             imagenUrl: productoVariacionAbierto.imagenUrl,
             esDigital: productoVariacionAbierto.esDigital,
+            esCodigoDigital: productoVariacionAbierto.esCodigoDigital ?? false,
             controlaStock: productoVariacionAbierto.controlaStock,
             requiereServicio: productoVariacionAbierto.requiereServicio ?? false,
             visibleEnCatalogo: true,
@@ -725,7 +810,7 @@ export const CatalogosAdmin: React.FC = () => {
             <div className={styles.header}>
                 <div>
                     <h3 className={styles.title}>Catálogos Maestros de Configuración</h3>
-                    <p className={styles.subtitle}>Estructuración global de Inventario, Rubros Digitales y Streaming.</p>
+                    <p className={styles.subtitle}>Estructuración global de Inventario, Rubros Digitales, Códigos y Streaming.</p>
                 </div>
             </div>
 
@@ -875,20 +960,44 @@ export const CatalogosAdmin: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '12px 0 0 0' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '12px 0 0 0' }}>
                                 <label className={styles.checkboxLabel}>
-                                    <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Recarga / Producto Digital?
-                                </label>
-                                
-                                <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
-                                    <input type="checkbox" name="controlaStock" checked={formProducto.controlaStock} onChange={handleProductoInputChange} /> <FaBoxes size={12} /> ¿Controla Stock / Inventario Físico?
+                                    <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> 
+                                    🌐 ¿Es Producto Digital / Servicio?
                                 </label>
 
                                 {formProducto.esDigital && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
-                                        <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
-                                            <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 ¿Es Suscripción Recurrente (Streaming)?
+                                    <div style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label className={styles.checkboxLabel} style={{ color: '#10b981' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                name="esCodigoDigital" 
+                                                checked={formProducto.esCodigoDigital} 
+                                                disabled={formProducto.esSuscripcion}
+                                                onChange={e => setFormProducto(prev => ({ 
+                                                    ...prev, 
+                                                    esCodigoDigital: e.target.checked,
+                                                    ...(e.target.checked ? { esSuscripcion: false } : {})
+                                                }))} 
+                                            /> 
+                                            🔑 Maneja Pool de Códigos / Seriales (Xbox, Steam, etc.)
                                         </label>
+
+                                        <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                name="esSuscripcion" 
+                                                checked={formProducto.esSuscripcion} 
+                                                disabled={formProducto.esCodigoDigital}
+                                                onChange={e => setFormProducto(prev => ({ 
+                                                    ...prev, 
+                                                    esSuscripcion: e.target.checked,
+                                                    ...(e.target.checked ? { esCodigoDigital: false } : {})
+                                                }))} 
+                                            /> 
+                                            🔄 Es Suscripción Streaming (Pantallas / Perfiles)
+                                        </label>
+
                                         {formProducto.esSuscripcion && (
                                             <div style={{ paddingLeft: '20px' }}>
                                                 <label style={{ fontSize: '0.75rem', color: '#fca5a5', display: 'block' }}>Días de Vigencia</label>
@@ -897,6 +1006,17 @@ export const CatalogosAdmin: React.FC = () => {
                                         )}
                                     </div>
                                 )}
+
+                                <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        name="controlaStock" 
+                                        checked={formProducto.controlaStock} 
+                                        disabled={formProducto.esCodigoDigital || formProducto.esSuscripcion}
+                                        onChange={handleProductoInputChange} 
+                                    /> 
+                                    <FaBoxes size={12} /> ¿Controla Stock Numérico?
+                                </label>
                             </div>
                         </div>
 
@@ -914,7 +1034,7 @@ export const CatalogosAdmin: React.FC = () => {
                                 {!formProducto.tieneVariaciones && (
                                     <div style={{ marginTop: '10px' }}>
                                         <label className={styles.label}>
-                                            {formProducto.controlaStock ? 'Existencias Físicas o Lote' : 'Stock (Inhabilitado)'}
+                                            {formProducto.controlaStock ? 'Existencias Físicas o Lote' : 'Stock (Inhabilitado / Automático)'}
                                         </label>
                                         <input 
                                             type="number" 
@@ -1082,7 +1202,7 @@ export const CatalogosAdmin: React.FC = () => {
                         className={styles.btn} 
                         style={{ background: rubroAdmin === 'digitales' ? '#38bdf8' : '#1e293b', color: '#fff', fontSize: '0.85rem' }}
                     >
-                        <FaGamepad /> 🎮 Digitales / Recargas
+                        <FaGamepad /> 🎮 Digitales / Códigos
                     </button>
                     <button 
                         onClick={() => setRubroAdmin('streaming')} 
@@ -1141,11 +1261,17 @@ export const CatalogosAdmin: React.FC = () => {
                                             <strong style={{ color: '#38bdf8', textDecoration: 'underline' }}>{p.nombre}</strong><br/>
                                             <small style={{ color: '#94a3b8' }}>
                                                 {p.descripcion ? (p.descripcion.length > 50 ? `${p.descripcion.substring(0, 50)}...` : p.descripcion) : 'Sin descripción'}<br/>
-                                                <span style={{ color: '#0ea5e9' }}>{p.esDigital ? 'Módulo Digital' : 'Físico'}</span>
+                                                <span style={{ color: '#0ea5e9' }}>
+                                                    {p.esDigital 
+                                                        ? (p.esSuscripcion 
+                                                            ? 'Módulo Streaming' 
+                                                            : (p.esCodigoDigital ? '🔑 Pool de Códigos' : '🎮 Recarga / Digital Directo')) 
+                                                        : 'Físico'}
+                                                </span>
                                                 {p.esSuscripcion && <span style={{ color: '#f43f5e', marginLeft: '6px', fontWeight: 'bold' }}>[📺 Streaming / Recurrente]</span>}
                                                 {p.tieneVariaciones && <span style={{ color: '#f59e0b', marginLeft: '6px', fontWeight: 'bold' }}>[🎨 Variantes]</span>}
-                                                <span style={{ color: p.controlaStock ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
-                                                    {p.controlaStock ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
+                                                <span style={{ color: p.controlaStock || p.esCodigoDigital ? '#4ade80' : '#a855f7', marginLeft: '6px' }}>
+                                                    {p.controlaStock || p.esCodigoDigital ? '[📦 Con Inventario]' : '[♾️ Sin Stock]'}
                                                 </span>
                                             </small>
                                         </td>
@@ -1163,10 +1289,10 @@ export const CatalogosAdmin: React.FC = () => {
                                                 color: p.estado === 'Pausado' ? '#f59e0b' : p.estado === 'Agotado' ? '#ef4444' : '#4ade80'
                                             }}>{p.estado || 'Activo'}</span>
                                         </td>
-                                        <td style={{ color: !p.controlaStock ? '#a855f7' : p.esDigital ? '#4ade80' : '#fff', fontWeight: '600' }}>
+                                        <td style={{ color: !p.controlaStock && !p.esDigital ? '#a855f7' : '#4ade80', fontWeight: '600' }}>
                                             {p.tieneVariaciones 
                                                 ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u. (Total)`
-                                                : (p.controlaStock ? `${p.stockActual} u.` : 'N/A')}
+                                                : `${p.stockActual} u.`}
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
@@ -1187,6 +1313,18 @@ export const CatalogosAdmin: React.FC = () => {
                                                         title="CRUD y Stock de Variantes"
                                                     >
                                                         <FaPalette /> Variantes ({p.variaciones?.length || 0})
+                                                    </button>
+                                                )}
+
+                                                {/* BOTÓN GESTIÓN DE CÓDIGOS DIGITALES */}
+                                                {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
+                                                    <button 
+                                                        onClick={() => abrirModalCodigos(p)} 
+                                                        className={styles.btn} 
+                                                        style={{ background: '#10b981', color: '#fff', padding: '6px 10px', borderRadius: '4px' }}
+                                                        title="Gestión de Códigos / Licencias"
+                                                    >
+                                                        <FaKey /> Códigos ({p.stockActual})
                                                     </button>
                                                 )}
 
@@ -1337,7 +1475,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                                                                 >
                                                                                                     <FaBoxes size={10} />
                                                                                                 </button>
-                                                             </>
+                                                                                            </>
                                                                                         )}
                                                                                     </div>
                                                                                 )}
@@ -1414,6 +1552,160 @@ export const CatalogosAdmin: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* MODAL GESTIÓN DE CÓDIGOS DIGITALES (XBOX, MINECRAFT, STEAM) */}
+            {productoCodigosAbierto && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent} style={{ maxWidth: '750px', borderColor: '#10b981', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <FaKey /> Pool de Códigos: {productoCodigosAbierto.nombre}
+                                </h3>
+                                <small style={{ color: '#94a3b8' }}>Agrega lotes de seriales. El sistema despachará uno automáticamente en cada venta.</small>
+                            </div>
+                            <button 
+                                onClick={() => setProductoCodigosAbierto(null)} 
+                                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem' }}
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        {/* PANEL DE CARGA MASIVA */}
+                        <div style={{ background: '#0f172a', padding: '12px', borderRadius: '8px', border: '1px solid #334155', margin: '14px 0' }}>
+                            <h5 style={{ margin: '0 0 6px 0', color: '#38bdf8', fontSize: '0.85rem' }}>
+                                📥 Cargar Nuevos Códigos / Seriales (Pega uno por línea o separados por coma)
+                            </h5>
+                            <textarea 
+                                rows={3}
+                                placeholder="XXXXX-XXXXX-XXXXX-XXXXX&#10;YYYYY-YYYYY-YYYYY-YYYYY&#10;ZZZZZ-ZZZZZ-ZZZZZ-ZZZZZ"
+                                value={textoBatchCodigos}
+                                onChange={e => setTextoBatchCodigos(e.target.value)}
+                                className={styles.textarea}
+                                style={{ fontFamily: 'monospace', fontSize: '0.85rem', marginBottom: '8px' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                    Códigos detectados: <strong style={{ color: '#10b981' }}>{textoBatchCodigos.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).length}</strong>
+                                </span>
+                                <button 
+                                    type="button" 
+                                    onClick={guardarCodigosMasivos}
+                                    className={styles.btn} 
+                                    style={{ background: '#10b981', color: '#fff', padding: '6px 14px', fontSize: '0.8rem' }}
+                                >
+                                    <FaPlus /> Agregar al Stock
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* BARRA DE FILTRADO Y BÚSQUEDA */}
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '10px', background: '#1e293b', padding: '8px 12px', borderRadius: '8px', border: '1px solid #334155' }}>
+                            <div style={{ flex: 1, minWidth: '180px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FaSearch style={{ color: '#10b981' }} />
+                                <input 
+                                    type="text" 
+                                    placeholder="🔍 Buscar serial..." 
+                                    value={busquedaCodigo} 
+                                    onChange={e => setBusquedaCodigo(e.target.value)} 
+                                    className={styles.input} 
+                                    style={{ margin: 0, padding: '4px 8px', fontSize: '0.8rem' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setFiltroEstadoCodigos('disponibles')}
+                                    className={styles.btn} 
+                                    style={{ padding: '4px 8px', fontSize: '0.75rem', background: filtroEstadoCodigos === 'disponibles' ? '#10b981' : '#334155', color: '#fff' }}
+                                >
+                                    Disponibles ({codigosActuales.filter(c => !c.vendido && c.estado === 'Disponible').length})
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setFiltroEstadoCodigos('vendidos')}
+                                    className={styles.btn} 
+                                    style={{ padding: '4px 8px', fontSize: '0.75rem', background: filtroEstadoCodigos === 'vendidos' ? '#ef4444' : '#334155', color: '#fff' }}
+                                >
+                                    Vendidos ({codigosActuales.filter(c => c.vendido || c.estado === 'Vendido').length})
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setFiltroEstadoCodigos('todos')}
+                                    className={styles.btn} 
+                                    style={{ padding: '4px 8px', fontSize: '0.75rem', background: filtroEstadoCodigos === 'todos' ? '#3b82f6' : '#334155', color: '#fff' }}
+                                >
+                                    Todos ({codigosActuales.length})
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* LISTA DE CÓDIGOS */}
+                        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #334155', borderRadius: '8px' }}>
+                            {cargandoCodigos ? (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>Consultando códigos...</div>
+                            ) : codigosFiltrados.length === 0 ? (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                                    No hay códigos registrados con este criterio.
+                                </div>
+                            ) : (
+                                <table className={styles.table} style={{ fontSize: '0.85rem' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Clave / Serial</th>
+                                            <th>Estado</th>
+                                            <th>Factura #</th>
+                                            <th>Fecha Venta</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {codigosFiltrados.map((cod, i) => (
+                                            <tr key={cod.id} style={{ background: cod.vendido ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)' }}>
+                                                <td style={{ color: '#94a3b8' }}>{i + 1}</td>
+                                                <td>
+                                                    <strong style={{ fontFamily: 'monospace', color: cod.vendido ? '#94a3b8' : '#4ade80' }}>
+                                                        {cod.clave}
+                                                    </strong>
+                                                </td>
+                                                <td>
+                                                    <span className={styles.badge} style={{
+                                                        background: cod.vendido ? 'rgba(239, 68, 68, 0.15)' : 'rgba(74, 222, 128, 0.15)',
+                                                        color: cod.vendido ? '#ef4444' : '#4ade80'
+                                                    }}>
+                                                        {cod.vendido ? 'Vendido' : 'Disponible'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ color: '#38bdf8' }}>
+                                                    {cod.idVenta ? `#${cod.idVenta}` : '-'}
+                                                </td>
+                                                <td style={{ color: '#cbd5e1' }}>
+                                                    {cod.fechaVenta ? new Date(cod.fechaVenta).toLocaleString() : '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                                Total en inventario: <strong style={{ color: '#10b981' }}>{codigosActuales.filter(c => !c.vendido && c.estado === 'Disponible').length} disponibles</strong>
+                            </span>
+                            <button 
+                                type="button" 
+                                className={`${styles.btn} ${styles.btnSecondary}`} 
+                                onClick={() => setProductoCodigosAbierto(null)}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODAL DE HISTORIAL DE VENTAS DEL PRODUCTO */}
             {productoHistorial && (
