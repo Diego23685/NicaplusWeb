@@ -18,7 +18,6 @@ interface InicioDashboardProps {
 }
 
 export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva }) => {
-    // Detectar pantalla móvil
     const [esMobile, setEsMobile] = useState<boolean>(window.innerWidth <= 768);
 
     const [resumen, setResumen] = useState<any>({
@@ -39,6 +38,9 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     const [cargando, setCargando] = useState(true);
     const [indicadores, setIndicadores] = useState<any>(null);
 
+    // Estado para almacenar la tasa de cambio traída del backend
+    const [tasaCambio, setTasaCambio] = useState<number>(0);
+
     // Estados para Búsqueda Universal
     const [query, setQuery] = useState('');
     const [resultados, setResultados] = useState<any>(null);
@@ -53,9 +55,11 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                const [resResumen, resIndicadores] = await Promise.all([
+                // Traer datos del dashboard y la tasa de cambio registrada en la BD
+                const [resResumen, resIndicadores, resTasa] = await Promise.all([
                     api.get('/reportes/resumen-dashboard'),
-                    api.get('/reportes/indicadores')
+                    api.get('/reportes/indicadores'),
+                    api.get('/tasa-cambio')
                 ]);
 
                 setResumen({
@@ -75,14 +79,27 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 });
 
                 setIndicadores(resIndicadores.data);
+
+                // Asignar el valor de la tasa que viene de la BD (soporta valor o Valor)
+                if (resTasa.data) {
+                    const valorObtenido = resTasa.data.valor ?? resTasa.data.Valor ?? 0;
+                    setTasaCambio(Number(valorObtenido));
+                }
             } catch (err) {
-                console.error("Error al sincronizar métricas del dashboard:", err);
+                console.error("Error al sincronizar métricas o tasa de cambio:", err);
             } finally {
                 setCargando(false);
             }
         };
+
         cargarDatosDashboard();
     }, []);
+
+    // Función de cálculo en frontend
+    const calcularDolares = (montoCordobas: number) => {
+        if (!tasaCambio || tasaCambio <= 0) return 0;
+        return montoCordobas / tasaCambio;
+    };
 
     const ejecutarBusqueda = async (valorQuery: string) => {
         setQuery(valorQuery);
@@ -164,18 +181,20 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     }
 
     /* =========================================================
-       1. VISTA MÓVIL TOTALMENTE DISTINTA (ESTILO ERP MÓVIL / TREINTA)
+       1. VISTA MÓVIL
        ========================================================= */
     if (esMobile) {
         return (
             <div className={styles.mobileContainer}>
-                {/* SALDO PRINCIPAL DE HOY Y ACCIONES URGENTES */}
                 <div className={styles.topSummaryCard}>
                     <div className={styles.summaryHeader}>
                         <span>VENTAS DE HOY</span>
                         <span className={styles.liveDot}>● SISTEMA ACTIVO</span>
                     </div>
-                    <h2 className={styles.totalAmount}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h2>
+                    <h2 className={styles.totalAmount}>C$ {resumen.ventasDia.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h2>
+                    <span style={{ fontSize: '0.85rem', color: '#94a3b8', display: 'block', marginTop: '-4px', marginBottom: '8px' }}>
+                        US$ {calcularDolares(resumen.ventasDia).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                     <div className={styles.quickMetricsRow}>
                         <div onClick={() => setVistaActiva('renovaciones')} className={styles.miniMetricUrgent}>
                             <FaCalendarTimes />
@@ -188,7 +207,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     </div>
                 </div>
 
-                {/* ACCIONES RÁPIDAS OPERATIVAS (TIPO TREINTA) */}
                 <div className={styles.quickActionsGrid}>
                     <button onClick={() => setVistaActiva('caja')} className={styles.actionBtnPrimary}>
                         <FaReceipt className={styles.actionIcon} />
@@ -208,7 +226,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     </button>
                 </div>
 
-                {/* BUSCADOR UNIVERSAL MÓVIL */}
                 <div className={styles.searchBoxWrapper}>
                     <FaSearch className={styles.searchBoxIcon} />
                     <input 
@@ -221,7 +238,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     {query && <FaTimes onClick={limpiarBuscador} className={styles.clearIcon} />}
                 </div>
 
-                {/* CONTENIDO DINÁMICO: BÚSQUEDA O ATENCIÓN URGENTE */}
                 {buscando ? (
                     <div className={styles.mobileSearchResults}>
                         {resultados?.clientes?.map((c: any, i: number) => (
@@ -259,7 +275,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     </div>
                 )}
 
-                {/* BARRA NAVEGACIÓN INFERIOR PINADA AL NAVEGAR */}
                 <nav className={styles.bottomNav}>
                     <button onClick={() => setVistaActiva('inicio')} className={styles.navItemActive}>Inicio</button>
                     <button onClick={() => setVistaActiva('caja')} className={styles.navItem}>Caja</button>
@@ -271,12 +286,11 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     }
 
     /* =========================================================
-       2. VISTA ESCRITORIO (PANEL ANALÍTICO COMPLETO)
+       2. VISTA ESCRITORIO
        ========================================================= */
     return (
         <div className={styles.dashboardContainer}>
             
-            {/* ENCABEZADO */}
             <header className={styles.dashboardHeader}>
                 <div>
                     <h3 className={styles.headerTitle}>Panel de Control</h3>
@@ -287,7 +301,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 </span>
             </header>
 
-            {/* BARRA DE BÚSQUEDA UNIVERSAL */}
             <div className={styles.searchSection}>
                 <FaSearch className={styles.searchIcon} />
                 <input 
@@ -304,7 +317,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 )}
             </div>
 
-            {/* SECCIÓN: SALUD DEL NEGOCIO E INDICADORES */}
             {indicadores && (
                 <section className={styles.indicatorGrid}>
                     <div className={styles.indicatorCard}>
@@ -332,10 +344,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 </section>
             )}
 
-            {/* CONTROL DINÁMICO DE BÚSQUEDA / DASHBOARD */}
             {buscando ? (
                 <div className={styles.searchResultsWrapper}>
-                    {/* RESULTADOS DE CLIENTES */}
                     {resultados?.clientes?.length > 0 && (
                         <div className={styles.resultsCard}>
                             <h4 className={styles.resultsTitle}><FaUser className={styles.titleIconCyan} /> Historial de Clientes Encontrados</h4>
@@ -356,7 +366,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                         </div>
                     )}
 
-                    {/* RESULTADOS DE CUENTAS / ESPACIOS LIBRES */}
                     {resultados?.cuentas?.length > 0 && (
                         <div className={styles.resultsCard}>
                             <h4 className={styles.resultsTitle}><FaTv className={styles.titleIconPurple} /> Estado de Cuentas y Espacios Libres</h4>
@@ -391,16 +400,16 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     )}
                 </div>
             ) : (
-                /* FLUJO OPERATIVO POR DEFECTO DEL DASHBOARD */
                 <>
-                    {/* SECCIÓN 1: KPI CARDS */}
+                    {/* SECCIÓN 1: KPI CARDS CON PRECIO EN C$ Y US$ */}
                     <section className={styles.kpiGrid}>
                         <div className={`${styles.kpiCard} ${styles.kpiGreen}`}>
                             <div className={styles.kpiHeader}>
                                 <small className={styles.kpiLabel}>VENTAS DEL DÍA</small>
                                 <FaMoneyBillWave className={styles.kpiIcon} />
                             </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h4>
+                            <h4 className={styles.kpiValue}>C$ {resumen.ventasDia.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                            <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasDia).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
                         </div>
 
                         <div className={`${styles.kpiCard} ${styles.kpiCyan}`}>
@@ -408,7 +417,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                                 <small className={styles.kpiLabel}>VENTAS SEMANALES</small>
                                 <FaChartLine className={styles.kpiIcon} />
                             </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</h4>
+                            <h4 className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                            <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasSemana).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
                         </div>
 
                         <div className={`${styles.kpiCard} ${styles.kpiPurple}`}>
@@ -416,8 +426,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                                 <small className={styles.kpiLabel}>INGRESOS (MES)</small>
                                 <FaPercentage className={styles.kpiIcon} />
                             </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</h4>
-                            <small className={styles.kpiSubtitle}>Margen: {porcentajeMargen}%</small>
+                            <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                            <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Margen: {porcentajeMargen}%</small>
                         </div>
 
                         <div className={`${styles.kpiCard} ${styles.kpiOrange}`}>
@@ -425,7 +435,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                                 <small className={styles.kpiLabel}>UTILIDAD (MES)</small>
                                 <FaChartLine className={styles.kpiIcon} />
                             </div>
-                            <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</h4>
+                            <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                            <small className={styles.kpiSubtitle} style={{ color: '#fed7aa' }}>US$ {calcularDolares(resumen.utilidadMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
                         </div>
 
                         <div 
@@ -535,7 +546,6 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 </div>
             </section>
 
-            {/* BARRA INFERIOR DE ACCESOS RÁPIDOS */}
             <footer className={styles.actionFooter}>
                 <button onClick={() => setVistaActiva('caja')} className={styles.btnActionBlue}>Ir a Caja POS</button>
                 <button onClick={() => setVistaActiva('taller')} className={styles.btnActionGreen}>Órdenes de Taller ({resumen.ticketsAbiertos})</button>

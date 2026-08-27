@@ -450,6 +450,9 @@ export const Caja: React.FC = () => {
     const [mensajeErrorModal, setMensajeErrorModal] = useState<string | null>(null);
     const [productoParaSeleccionarVariante, setProductoParaSeleccionarVariante] = useState<Producto | null>(null);
 
+    // Estado para la Tasa de Cambio
+    const [tasaCambio, setTasaCambio] = useState<number>(37);
+
     const ticketRenderRef = useRef<HTMLDivElement>(null);
 
     const mostrarError = (mensaje: string) => {
@@ -460,16 +463,25 @@ export const Caja: React.FC = () => {
         Promise.all([
             api.get('/products'),
             api.get('/categorias'),
-            api.get('/clientes')
-        ]).then(([resProd, resCat, resCli]) => {
+            api.get('/clientes'),
+            api.get('/tasa-cambio').catch(() => ({ data: { valor: 37 } }))
+        ]).then(([resProd, resCat, resCli, resTasa]) => {
             setProductos(resProd.data || []);
             setCategorias(resCat.data || []);
             setListaClientes(resCli.data || []);
+            if (resTasa.data) {
+                const val = resTasa.data.valor ?? resTasa.data.Valor ?? 37;
+                setTasaCambio(Number(val));
+            }
         }).catch(err => {
             console.error("Error cargando catálogos de Caja:", err);
             mostrarError("No se pudieron obtener los datos iniciales del punto de venta.");
         });
     }, []);
+
+    const calcularDolares = (montoCordobas: number) => {
+        return tasaCambio > 0 ? montoCordobas / tasaCambio : 0;
+    };
 
     const productosFiltrados = useMemo(() => {
         return productos
@@ -985,111 +997,117 @@ export const Caja: React.FC = () => {
                             <div className={styles.noProducts}>No se encontraron productos coincidentes.</div>
                         ) : vistaModo === 'cuadricula' ? (
                             <div className={styles.productGrid}>
-                                {productosFiltrados.map(p => (
-                                    <div 
-                                        key={p.id} 
-                                        onClick={() => alHacerClicProducto(p)} 
-                                        className={styles.productCard}
-                                    >
-                                        <div className={styles.productImgContainer}>
-                                            {p.imagenUrl ? (
-                                                <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} />
-                                            ) : (
-                                                <div className={styles.productNoImg}>SIN FOTO</div>
-                                            )}
-                                        </div>
-                                        
-                                        <div className={styles.productDetails}>
-                                            <div className={styles.productName} title={p.nombre}>
-                                                {p.nombre}
-                                            </div>
-                                            <div className={styles.productMetaRow}>
-                                                <span className={styles.productPrice}>
-                                                    {p.tieneVariaciones ? "Varía" : `C$ ${p.precioVenta}`}
-                                                </span>
-                                                {!p.tieneVariaciones && (
-                                                    <small className={styles.productProfit}>+C$ {p.precioVenta - p.precioCosto}</small>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.productBadges}>
-                                            <span className={`${styles.badge} ${
-                                                p.tieneVariaciones 
-                                                    ? styles.badgeVariantes 
-                                                    : p.esSuscripcion 
-                                                        ? styles.badgeRecurrente 
-                                                        : p.esCodigoDigital 
-                                                            ? styles.badgeDigital 
-                                                            : p.esDigital 
-                                                                ? styles.badgeDigital 
-                                                                : p.requiereServicio 
-                                                                    ? styles.badgeServicio 
-                                                                    : styles.badgeFisico
-                                            }`}>
-                                                {p.tieneVariaciones 
-                                                    ? "🎨 Variantes" 
-                                                    : p.esSuscripcion 
-                                                        ? "📺 Streaming" 
-                                                        : p.esCodigoDigital 
-                                                            ? "🔑 Código" 
-                                                            : p.esDigital 
-                                                                ? "🎮 Digital" 
-                                                                : p.requiereServicio 
-                                                                    ? "🛠️ Servicio" 
-                                                                    : "📦 Físico"}
-                                            </span>
-                                            {(!p.esDigital || p.esCodigoDigital) && !p.requiereServicio && (
-                                                <small className={`${styles.stockText} ${!p.tieneVariaciones && p.stockActual <= 3 ? styles.stockCritical : ''}`}>
-                                                    {p.tieneVariaciones 
-                                                        ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.`
-                                                        : `Cant: ${p.stockActual}`}
-                                                </small>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className={styles.productList}>
-                                {productosFiltrados.map(p => (
-                                    <div 
-                                        key={p.id} 
-                                        onClick={() => alHacerClicProducto(p)} 
-                                        className={styles.productRow}
-                                    >
-                                        <div className={styles.productRowLeft}>
-                                            <div className={styles.productRowImg}>
+                                {productosFiltrados.map(p => {
+                                    const precioDolar = calcularDolares(p.precioVenta);
+                                    return (
+                                        <div 
+                                            key={p.id} 
+                                            onClick={() => alHacerClicProducto(p)} 
+                                            className={styles.productCard}
+                                        >
+                                            <div className={styles.productImgContainer}>
                                                 {p.imagenUrl ? (
                                                     <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} />
                                                 ) : (
-                                                    <div className={styles.productNoImg}>N/A</div>
+                                                    <div className={styles.productNoImg}>SIN FOTO</div>
                                                 )}
                                             </div>
-                                            <div className={styles.productRowInfo}>
-                                                <strong className={styles.productRowName} title={p.nombre}>
+                                            
+                                            <div className={styles.productDetails}>
+                                                <div className={styles.productName} title={p.nombre}>
                                                     {p.nombre}
-                                                </strong>
-                                                <small className={styles.productRowSub}>
+                                                </div>
+                                                <div className={styles.productMetaRow}>
+                                                    <span className={styles.productPrice}>
+                                                        {p.tieneVariaciones ? "Varía" : `C$ ${p.precioVenta} / $${precioDolar.toFixed(2)}`}
+                                                    </span>
+                                                    {!p.tieneVariaciones && (
+                                                        <small className={styles.productProfit}>+C$ {p.precioVenta - p.precioCosto}</small>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.productBadges}>
+                                                <span className={`${styles.badge} ${
+                                                    p.tieneVariaciones 
+                                                        ? styles.badgeVariantes 
+                                                        : p.esSuscripcion 
+                                                            ? styles.badgeRecurrente 
+                                                            : p.esCodigoDigital 
+                                                                ? styles.badgeDigital 
+                                                                : p.esDigital 
+                                                                    ? styles.badgeDigital 
+                                                                    : p.requiereServicio 
+                                                                        ? styles.badgeServicio 
+                                                                        : styles.badgeFisico
+                                                }`}>
                                                     {p.tieneVariaciones 
-                                                        ? `🎨 Variantes (${p.variaciones?.length || 0} opciones)`
+                                                        ? "🎨 Variantes" 
                                                         : p.esSuscripcion 
                                                             ? "📺 Streaming" 
                                                             : p.esCodigoDigital 
-                                                                ? `🔑 Códigos Disp: ${p.stockActual}` 
+                                                                ? "🔑 Código" 
                                                                 : p.esDigital 
-                                                                    ? "🎮 Recarga Digital" 
+                                                                    ? "🎮 Digital" 
                                                                     : p.requiereServicio 
-                                                                        ? "Servicio Técnico" 
-                                                                        : `Disponibles: ${p.stockActual}`}
-                                                </small>
+                                                                        ? "🛠️ Servicio" 
+                                                                        : "📦 Físico"}
+                                                </span>
+                                                {(!p.esDigital || p.esCodigoDigital) && !p.requiereServicio && (
+                                                    <small className={`${styles.stockText} ${!p.tieneVariaciones && p.stockActual <= 3 ? styles.stockCritical : ''}`}>
+                                                        {p.tieneVariaciones 
+                                                            ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.`
+                                                            : `Cant: ${p.stockActual}`}
+                                                    </small>
+                                                )}
                                             </div>
                                         </div>
-                                        <span className={styles.productPrice}>
-                                            {p.tieneVariaciones ? "Varía" : `C$ ${p.precioVenta}`}
-                                        </span>
-                                    </div>
-                                ))}
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className={styles.productList}>
+                                {productosFiltrados.map(p => {
+                                    const precioDolar = calcularDolares(p.precioVenta);
+                                    return (
+                                        <div 
+                                            key={p.id} 
+                                            onClick={() => alHacerClicProducto(p)} 
+                                            className={styles.productRow}
+                                        >
+                                            <div className={styles.productRowLeft}>
+                                                <div className={styles.productRowImg}>
+                                                    {p.imagenUrl ? (
+                                                        <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} />
+                                                    ) : (
+                                                        <div className={styles.productNoImg}>N/A</div>
+                                                    )}
+                                                </div>
+                                                <div className={styles.productRowInfo}>
+                                                    <strong className={styles.productRowName} title={p.nombre}>
+                                                        {p.nombre}
+                                                    </strong>
+                                                    <small className={styles.productRowSub}>
+                                                        {p.tieneVariaciones 
+                                                            ? `🎨 Variantes (${p.variaciones?.length || 0} opciones)`
+                                                            : p.esSuscripcion 
+                                                                ? "📺 Streaming" 
+                                                                : p.esCodigoDigital 
+                                                                    ? `🔑 Códigos Disp: ${p.stockActual}` 
+                                                                    : p.esDigital 
+                                                                        ? "🎮 Recarga Digital" 
+                                                                        : p.requiereServicio 
+                                                                            ? "Servicio Técnico" 
+                                                                            : `Disponibles: ${p.stockActual}`}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <span className={styles.productPrice}>
+                                                {p.tieneVariaciones ? "Varía" : `C$ ${p.precioVenta} / $${precioDolar.toFixed(2)}`}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -1118,6 +1136,7 @@ export const Caja: React.FC = () => {
                             )}
                             {carrito.map(item => {
                                 const pBase = productos.find(p => p.id === item.idProducto);
+                                const subtotalDolar = calcularDolares(item.subTotal);
                                 return (
                                     <div key={`${item.idProducto}-${item.idVariacion || 'base'}`} className={styles.cartItem}>
                                         <div className={styles.cartItemMain}>
@@ -1131,7 +1150,10 @@ export const Caja: React.FC = () => {
                                                     {pBase?.esCodigoDigital && <span style={{ color: '#10b981' }}> (🔑)</span>}
                                                 </span>
                                             </div>
-                                            <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap' }}>C$ {item.subTotal}</strong>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <strong style={{ fontSize: '0.9rem', color: '#FFFFFF', whiteSpace: 'nowrap', display: 'block' }}>C$ {item.subTotal}</strong>
+                                                <small style={{ fontSize: '0.75rem', color: '#94a3b8' }}>${subtotalDolar.toFixed(2)}</small>
+                                            </div>
                                         </div>
 
                                         <div className={styles.cartItemSubRow}>
@@ -1353,9 +1375,12 @@ export const Caja: React.FC = () => {
                             </div>
                         )}
 
-                        <div className={styles.totalRow}>
+                        <div className={styles.totalRow} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                             <span className={styles.totalLabel}>Monto Total:</span>
-                            <strong className={styles.totalAmount}>C$ {totalVenta}</strong>
+                            <div style={{ textAlign: 'right' }}>
+                                <strong className={styles.totalAmount}>C$ {totalVenta}</strong>
+                                <small style={{ display: 'block', fontSize: '0.85rem', color: '#38bdf8' }}>US$ {calcularDolares(totalVenta).toFixed(2)}</small>
+                            </div>
                         </div>
 
                         <button 
@@ -1386,35 +1411,41 @@ export const Caja: React.FC = () => {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-                            {productoParaSeleccionarVariante.variaciones?.map((v) => (
-                                <button
-                                    key={v.id}
-                                    disabled={v.stockActual <= 0}
-                                    onClick={() => agregarVarianteAlCarrito(productoParaSeleccionarVariante, v)}
-                                    className={styles.modalBtn}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        background: v.stockActual <= 0 ? '#1e293b' : '#0f172a',
-                                        border: '1px solid #334155',
-                                        opacity: v.stockActual <= 0 ? 0.5 : 1,
-                                        cursor: v.stockActual <= 0 ? 'not-allowed' : 'pointer',
-                                        padding: '12px',
-                                        textAlign: 'left'
-                                    }}
-                                >
-                                    <div>
-                                        <strong style={{ color: '#ffffff', display: 'block', fontSize: '0.9rem' }}>{v.nombreVariacion}</strong>
-                                        <small style={{ color: v.stockActual <= 0 ? '#ef4444' : '#4ade80' }}>
-                                            {v.stockActual > 0 ? `Stock: ${v.stockActual} u.` : 'Agotado'}
-                                        </small>
-                                    </div>
-                                    <span style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                                        C$ {v.precioVenta.toLocaleString()}
-                                    </span>
-                                </button>
-                            ))}
+                            {productoParaSeleccionarVariante.variaciones?.map((v) => {
+                                const varDolar = calcularDolares(v.precioVenta);
+                                return (
+                                    <button
+                                        key={v.id}
+                                        disabled={v.stockActual <= 0}
+                                        onClick={() => agregarVarianteAlCarrito(productoParaSeleccionarVariante, v)}
+                                        className={styles.modalBtn}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            background: v.stockActual <= 0 ? '#1e293b' : '#0f172a',
+                                            border: '1px solid #334155',
+                                            opacity: v.stockActual <= 0 ? 0.5 : 1,
+                                            cursor: v.stockActual <= 0 ? 'not-allowed' : 'pointer',
+                                            padding: '12px',
+                                            textAlign: 'left'
+                                        }}
+                                    >
+                                        <div>
+                                            <strong style={{ color: '#ffffff', display: 'block', fontSize: '0.9rem' }}>{v.nombreVariacion}</strong>
+                                            <small style={{ color: v.stockActual <= 0 ? '#ef4444' : '#4ade80' }}>
+                                                {v.stockActual > 0 ? `Stock: ${v.stockActual} u.` : 'Agotado'}
+                                            </small>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <span style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '0.95rem', display: 'block' }}>
+                                                C$ {v.precioVenta.toLocaleString()}
+                                            </span>
+                                            <small style={{ color: '#94a3b8' }}>${varDolar.toFixed(2)}</small>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -1561,7 +1592,7 @@ export const Caja: React.FC = () => {
                                             {!esCodigo && (
                                                 <tr>
                                                     <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
-                                                        Garantía: {item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}
+                                                        Garantía: {item.garantiaDias > 0 ? `${item.garantiaDias} days` : 'Sin garantía'}
                                                     </td>
                                                 </tr>
                                             )}
@@ -1603,6 +1634,12 @@ export const Caja: React.FC = () => {
                                     <td align="left">TOTAL:</td>
                                     <td align="right" style={{ fontSize: '15px', fontWeight: 900 }}>
                                         C$ {datosUltimaVenta.totalCongelado || datosUltimaVenta.detalles.reduce((acc: number, d: any) => acc + (d.subTotal || 0), 0)}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left">USD Equivalente:</td>
+                                    <td align="right" style={{ fontSize: '12px', fontWeight: 700 }}>
+                                        ${calcularDolares(datosUltimaVenta.totalCongelado || datosUltimaVenta.detalles.reduce((acc: number, d: any) => acc + (d.subTotal || 0), 0)).toFixed(2)}
                                     </td>
                                 </tr>
                             </tbody>

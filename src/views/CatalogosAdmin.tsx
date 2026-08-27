@@ -123,6 +123,9 @@ export const CatalogosAdmin: React.FC = () => {
     const [cargando, setCargando] = useState(true);
     const [subiendoImagen, setSubiendoImagen] = useState(false);
 
+    // ESTADO PARA LA TASA DE CAMBIO
+    const [tasaCambio, setTasaCambio] = useState<number>(37);
+
     // FORMULARIO UNIFICADO DE PRODUCTOS
     const [editandoProductoId, setEditandoProductoId] = useState<number | null>(null);
     const [formProducto, setFormProducto] = useState(productoFormInicial);
@@ -195,16 +198,21 @@ export const CatalogosAdmin: React.FC = () => {
 
     const cargarSincronizacionMaster = useCallback(async () => {
         try {
-            const [resProd, resCat, resJue, resProv] = await Promise.all([
+            const [resProd, resCat, resJue, resProv, resTasa] = await Promise.all([
                 api.get('/products'),
                 api.get('/categorias'),
                 api.get('/juegos'),
-                api.get('/proveedores')
+                api.get('/proveedores'),
+                api.get('/tasa-cambio').catch(() => ({ data: { valor: 37 } }))
             ]);
             setProductos(resProd.data);
             setCategorias(resCat.data);
             setJuegos(resJue.data);
             setListaProveedores(resProv.data);
+            if (resTasa.data) {
+                const val = resTasa.data.valor ?? resTasa.data.Valor ?? 37;
+                setTasaCambio(Number(val));
+            }
         } catch (err: any) { 
             console.error("Error al sincronizar catálogos:", err); 
             dispararErrorVisual("Error de Red", err.response?.data?.message || "No se pudo sincronizar la información del servidor central.");
@@ -214,6 +222,10 @@ export const CatalogosAdmin: React.FC = () => {
     }, [dispararErrorVisual]);
 
     useEffect(() => { cargarSincronizacionMaster(); }, [cargarSincronizacionMaster]);
+
+    const calcularDolares = (montoCordobas: number) => {
+        return tasaCambio > 0 ? montoCordobas / tasaCambio : 0;
+    };
 
     const prodsFiltrados = useMemo(() => {
         return productos.filter(p => {
@@ -906,6 +918,9 @@ export const CatalogosAdmin: React.FC = () => {
                                             className={styles.input} 
                                             required={!formProducto.tieneVariaciones} 
                                         />
+                                        <small style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                                            ${calcularDolares(Number(formProducto.precioCosto) || 0).toFixed(2)} USD
+                                        </small>
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <label className={styles.label}>Precio Venta (C$)</label>
@@ -918,6 +933,9 @@ export const CatalogosAdmin: React.FC = () => {
                                             className={styles.input} 
                                             required={!formProducto.tieneVariaciones} 
                                         />
+                                        <small style={{ fontSize: '0.75rem', color: '#38bdf8', display: 'block', marginTop: '2px' }}>
+                                            ${calcularDolares(Number(formProducto.precioVenta) || 0).toFixed(2)} USD
+                                        </small>
                                     </div>
                                 </div>
                             )}
@@ -1249,7 +1267,10 @@ export const CatalogosAdmin: React.FC = () => {
                                 </td>
                             </tr>
                         ) : (
-                            prodsFiltrados.map((p) => (
+                            prodsFiltrados.map((p) => {
+                                const costoDolar = calcularDolares(p.precioCosto);
+                                const ventaDolar = calcularDolares(p.precioVenta);
+                                return (
                                 <React.Fragment key={p.id}>
                                     <tr style={{ borderBottom: productoIdPerfilAbierto === p.id ? 'none' : '' }}>
                                         <td>{p.imagenUrl ? <img src={p.imagenUrl} alt="P" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px' }} /> : <FaImage style={{ color: '#475569', fontSize: '1.2rem' }} />}</td>
@@ -1275,8 +1296,22 @@ export const CatalogosAdmin: React.FC = () => {
                                                 </span>
                                             </small>
                                         </td>
-                                        <td style={{ color: '#94a3b8' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioCosto}`}</td>
-                                        <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta}`}</td>
+                                        <td style={{ color: '#94a3b8' }}>
+                                            {p.tieneVariaciones ? 'Varía' : (
+                                                <>
+                                                    C$ {p.precioCosto}
+                                                    <small style={{ display: 'block', fontSize: '0.75rem' }}>${costoDolar.toFixed(2)} USD</small>
+                                                </>
+                                            )}
+                                        </td>
+                                        <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>
+                                            {p.tieneVariaciones ? 'Varía' : (
+                                                <>
+                                                    C$ {p.precioVenta}
+                                                    <small style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'normal' }}>${ventaDolar.toFixed(2)} USD</small>
+                                                </>
+                                            )}
+                                        </td>
                                         <td>{p.esDigital && p.esSuscripcion ? `${p.diasDuracion} días` : 'N/A'}</td>
                                         <td style={{ color: '#fb923c', fontWeight: '600' }}>
                                             <FaShieldAlt style={{ marginRight: '4px' }} />
@@ -1547,7 +1582,8 @@ export const CatalogosAdmin: React.FC = () => {
                                         </tr>
                                     )}
                                 </React.Fragment>
-                            ))
+                            );
+                            })
                         )}
                     </tbody>
                 </table>
@@ -1770,23 +1806,33 @@ export const CatalogosAdmin: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {ventasFiltradas.map((h, i) => (
-                                            <tr key={i}>
-                                                <td>{h.fecha}</td>
-                                                <td><strong>#{h.ventaId}</strong></td>
-                                                <td>
-                                                    <strong>{h.clienteNombre}</strong>
-                                                    {h.clienteTelefono && h.clienteTelefono !== 'N/A' && (
-                                                        <small style={{ display: 'block', color: '#94a3b8' }}>Tel: {h.clienteTelefono}</small>
-                                                    )}
-                                                </td>
-                                                <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#4ade80' }}>{h.cantidad} u.</td>
-                                                <td>C$ {h.precioUnitario}</td>
-                                                <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>C$ {h.subTotal}</td>
-                                                <td>{h.metodoPago}</td>
-                                                <td style={{ color: '#cbd5e1' }}>{h.operador}</td>
-                                            </tr>
-                                        ))}
+                                        {ventasFiltradas.map((h, i) => {
+                                            const unitDolar = calcularDolares(h.precioUnitario);
+                                            const subDolar = calcularDolares(h.subTotal);
+                                            return (
+                                                <tr key={i}>
+                                                    <td>{h.fecha}</td>
+                                                    <td><strong>#{h.ventaId}</strong></td>
+                                                    <td>
+                                                        <strong>{h.clienteNombre}</strong>
+                                                        {h.clienteTelefono && h.clienteTelefono !== 'N/A' && (
+                                                            <small style={{ display: 'block', color: '#94a3b8' }}>Tel: {h.clienteTelefono}</small>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#4ade80' }}>{h.cantidad} u.</td>
+                                                    <td>
+                                                        C$ {h.precioUnitario}
+                                                        <small style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8' }}>${unitDolar.toFixed(2)}</small>
+                                                    </td>
+                                                    <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>
+                                                        C$ {h.subTotal}
+                                                        <small style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8' }}>${subDolar.toFixed(2)}</small>
+                                                    </td>
+                                                    <td>{h.metodoPago}</td>
+                                                    <td style={{ color: '#cbd5e1' }}>{h.operador}</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             )}
@@ -1910,8 +1956,8 @@ export const CatalogosAdmin: React.FC = () => {
                                 <thead>
                                     <tr>
                                         <th>Variación</th>
-                                        <th style={{ width: '100px' }}>P. Costo</th>
-                                        <th style={{ width: '100px' }}>P. Venta</th>
+                                        <th style={{ width: '110px' }}>P. Costo</th>
+                                        <th style={{ width: '110px' }}>P. Venta</th>
                                         <th style={{ width: '110px', textAlign: 'center' }}>Stock</th>
                                         <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
                                     </tr>
@@ -1929,6 +1975,8 @@ export const CatalogosAdmin: React.FC = () => {
                                             .map((varItem) => {
                                                 const idxReal = variacionesModal.findIndex(x => x === varItem);
                                                 const esEditando = variacionEditandoIdx === idxReal;
+                                                const costoVarDolar = calcularDolares(varItem.precioCosto);
+                                                const ventaVarDolar = calcularDolares(varItem.precioVenta);
 
                                                 return (
                                                     <tr key={idxReal} style={{ background: varItem.stockActual === 0 ? 'rgba(239, 68, 68, 0.08)' : '' }}>
@@ -1956,7 +2004,10 @@ export const CatalogosAdmin: React.FC = () => {
                                                                     style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
                                                                 />
                                                             ) : (
-                                                                <span>C$ {varItem.precioCosto}</span>
+                                                                <span>
+                                                                    C$ {varItem.precioCosto}
+                                                                    <small style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8' }}>${costoVarDolar.toFixed(2)}</small>
+                                                                </span>
                                                             )}
                                                         </td>
 
@@ -1970,7 +2021,10 @@ export const CatalogosAdmin: React.FC = () => {
                                                                     style={{ margin: 0, padding: '4px', fontSize: '0.8rem' }} 
                                                                 />
                                                             ) : (
-                                                                <strong style={{ color: '#38bdf8' }}>C$ {varItem.precioVenta}</strong>
+                                                                <strong style={{ color: '#38bdf8' }}>
+                                                                    C$ {varItem.precioVenta}
+                                                                    <small style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'normal' }}>${ventaVarDolar.toFixed(2)}</small>
+                                                                </strong>
                                                             )}
                                                         </td>
 

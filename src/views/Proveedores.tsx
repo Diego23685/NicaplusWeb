@@ -27,6 +27,9 @@ export const Proveedores: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<number | null>(null);
 
+  // ESTADO PARA LA TASA DE CAMBIO
+  const [tasaCambio, setTasaCambio] = useState<number>(37);
+
   // BUSCADORES DE TABLAS Y FORMULARIOS
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [mostrarDropdownProd, setMostrarDropdownProd] = useState(false);
@@ -71,17 +74,22 @@ export const Proveedores: React.FC = () => {
 
   const cargarDatos = async () => {
     try {
-      const [resProv, resProd, resMet, resComp] = await Promise.all([
+      const [resProv, resProd, resMet, resComp, resTasa] = await Promise.all([
         api.get('/proveedores'),
         api.get('/products'),
         api.get('/proveedores/analisis-rendimiento'),
-        api.get('/proveedores/compras')
+        api.get('/proveedores/compras'),
+        api.get('/tasa-cambio').catch(() => ({ data: { valor: 37 } }))
       ]);
 
       setProveedores(resProv.data);
       setProductos(resProd.data);
       setMetricas(resMet.data);
       setHistorialCompras(resComp.data);
+      if (resTasa.data) {
+        const val = resTasa.data.valor ?? resTasa.data.Valor ?? 37;
+        setTasaCambio(Number(val));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -92,6 +100,10 @@ export const Proveedores: React.FC = () => {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  const calcularDolares = (montoCordobas: number) => {
+    return tasaCambio > 0 ? montoCordobas / tasaCambio : 0;
+  };
 
   // SELECCIÓN DE PRODUCTO DESDE EL BUSCADOR
   const seleccionarProductoDesdeBuscador = (prod: any) => {
@@ -542,6 +554,9 @@ export const Proveedores: React.FC = () => {
                     onChange={e => setCostoUnitarioCompra(e.target.value === '' ? 0 : Number(e.target.value))} 
                     className={styles.input} 
                   />
+                  <small style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                    ${calcularDolares(costoUnitarioCompra).toFixed(2)} USD
+                  </small>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Precio Venta (Catálogo)</label>
@@ -554,6 +569,11 @@ export const Proveedores: React.FC = () => {
                     onChange={e => setNuevoPrecioVenta(e.target.value === '' ? '' : Number(e.target.value))} 
                     className={styles.input} 
                   />
+                  {typeof nuevoPrecioVenta === 'number' && nuevoPrecioVenta > 0 && (
+                    <small style={{ fontSize: '0.75rem', color: '#38bdf8', display: 'block', marginTop: '2px' }}>
+                      ${calcularDolares(nuevoPrecioVenta).toFixed(2)} USD
+                    </small>
+                  )}
                 </div>
                 <div className={styles.formGroup}>
                   <label>Días de entrega</label>
@@ -682,42 +702,51 @@ export const Proveedores: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {historialFiltradoTabla.map(c => (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>#{c.id}</td>
-                    <td>{new Date(c.fechaCompra).toLocaleDateString()}</td>
-                    <td>{c.proveedorNombre}</td>
-                    <td>
-                      <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                        {c.detalles?.map((d: any, idx: number) => (
-                          <div key={idx}>
-                            • {d.cantidad}x {d.productoNombre} 
-                            {d.variacionNombre && <strong style={{ color: '#38bdf8' }}> ({d.variacionNombre})</strong>} 
-                            (a C$ {d.costoUnitario})
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontStyle: c.observaciones ? 'normal' : 'italic' }}>
-                        {c.observaciones || 'Sin notas'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#ef4444" }}>
-                      C$ {c.totalCompra.toLocaleString()}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        <button onClick={() => abrirModalEditarCompra(c)} className={styles.btnEdit} title="Editar Compra">
-                          <FaEdit />
-                        </button>
-                        <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular Compra">
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {historialFiltradoTabla.map(c => {
+                  const totalDolar = calcularDolares(c.totalCompra);
+                  return (
+                    <tr key={c.id}>
+                      <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>#{c.id}</td>
+                      <td>{new Date(c.fechaCompra).toLocaleDateString()}</td>
+                      <td>{c.proveedorNombre}</td>
+                      <td>
+                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                          {c.detalles?.map((d: any, idx: number) => {
+                            const subDolar = calcularDolares(d.costoUnitario);
+                            return (
+                              <div key={idx}>
+                                • {d.cantidad}x {d.productoNombre} 
+                                {d.variacionNombre && <strong style={{ color: '#38bdf8' }}> ({d.variacionNombre})</strong>} 
+                                (a C$ {d.costoUnitario} / ${subDolar.toFixed(2)})
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontStyle: c.observaciones ? 'normal' : 'italic' }}>
+                          {c.observaciones || 'Sin notas'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#ef4444" }}>
+                        C$ {c.totalCompra.toLocaleString()}
+                        <small style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'normal' }}>
+                          ${totalDolar.toFixed(2)} USD
+                        </small>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button onClick={() => abrirModalEditarCompra(c)} className={styles.btnEdit} title="Editar Compra">
+                            <FaEdit />
+                          </button>
+                          <button onClick={() => anularCompra(c.id)} className={styles.btnDelete} title="Anular Compra">
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {historialFiltradoTabla.length === 0 && (
                   <tr>
                     <td colSpan={7} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
@@ -747,34 +776,48 @@ export const Proveedores: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {metricas.map(m => (
-                  <tr key={m.id}>
-                    <td style={{ fontWeight: "bold" }}>{m.razonSocial}</td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className={styles.badgeMetrica}>
-                        <FaBoxes size={11} /> {m.totalOrdenes}
-                      </span>
-                    </td>
-                    <td>C$ {m.totalInvertido.toLocaleString()}</td>
-                    <td style={{ fontWeight: "bold", color: "#4ade80" }}>C$ {m.margenGananciaHistorico.toLocaleString()}</td>
-                    <td>{m.tiempoRespuestaPromedio} días</td>
-                    <td style={{ textAlign: "center" }}>
-                      <span
-                        className={styles.badgeScore}
-                        style={{
-                          background: m.scoreConfiabilidad >= 80
-                            ? "rgba(16,185,129,.15)"
-                            : m.scoreConfiabilidad >= 50
-                              ? "rgba(245,158,11,.15)"
-                              : "rgba(239,68,68,.15)",
-                          color: m.scoreConfiabilidad >= 80 ? "#10b981" : m.scoreConfiabilidad >= 50 ? "#f59e0b" : "#ef4444"
-                        }}
-                      >
-                        <FaUserCheck size={10} /> {m.scoreConfiabilidad}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {metricas.map(m => {
+                  const invDolar = calcularDolares(m.totalInvertido);
+                  const ganDolar = calcularDolares(m.margenGananciaHistorico);
+                  return (
+                    <tr key={m.id}>
+                      <td style={{ fontWeight: "bold" }}>{m.razonSocial}</td>
+                      <td style={{ textAlign: "center" }}>
+                        <span className={styles.badgeMetrica}>
+                          <FaBoxes size={11} /> {m.totalOrdenes}
+                        </span>
+                      </td>
+                      <td>
+                        C$ {m.totalInvertido.toLocaleString()}
+                        <small style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'normal' }}>
+                          ${invDolar.toFixed(2)} USD
+                        </small>
+                      </td>
+                      <td style={{ fontWeight: "bold", color: "#4ade80" }}>
+                        C$ {m.margenGananciaHistorico.toLocaleString()}
+                        <small style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'normal' }}>
+                          ${ganDolar.toFixed(2)} USD
+                        </small>
+                      </td>
+                      <td>{m.tiempoRespuestaPromedio} días</td>
+                      <td style={{ textAlign: "center" }}>
+                        <span
+                          className={styles.badgeScore}
+                          style={{
+                            background: m.scoreConfiabilidad >= 80
+                              ? "rgba(16,185,129,.15)"
+                              : m.scoreConfiabilidad >= 50
+                                ? "rgba(245,158,11,.15)"
+                                : "rgba(239,68,68,.15)",
+                            color: m.scoreConfiabilidad >= 80 ? "#10b981" : m.scoreConfiabilidad >= 50 ? "#f59e0b" : "#ef4444"
+                          }}
+                        >
+                          <FaUserCheck size={10} /> {m.scoreConfiabilidad}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {metricas.length === 0 && (
                   <tr>
                     <td colSpan={6} style={{ padding: 30, textAlign: "center", color: "#94a3b8" }}>
@@ -937,9 +980,14 @@ export const Proveedores: React.FC = () => {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                 <span style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>Nuevo Total Recalculado:</span>
-                <strong style={{ fontSize: '1.1rem', color: '#ef4444' }}>
-                  C$ {compraAEditar.detalles?.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0).toLocaleString()}
-                </strong>
+                <div style={{ textAlign: 'right' }}>
+                  <strong style={{ fontSize: '1.1rem', color: '#ef4444', display: 'block' }}>
+                    C$ {compraAEditar.detalles?.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0).toLocaleString()}
+                  </strong>
+                  <small style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    ${calcularDolares(compraAEditar.detalles?.reduce((acc: number, item: any) => acc + (item.cantidad * item.costoUnitario), 0)).toFixed(2)} USD
+                  </small>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
