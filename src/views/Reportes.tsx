@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { 
     FaEdit, 
@@ -52,11 +51,7 @@ export const Reportes: React.FC = () => {
     const [ventaAEditar, setVentaAEditar] = useState<any | null>(null);
     const [nuevoMetodoPago, setMetodoPago] = useState('');
     const [detallesEditados, setDetallesEditados] = useState<any[]>([]);
-
-    // Estados y Referencia para la generación de imagen
-    const [ventaParaImagen, setVentaParaImagen] = useState<any | null>(null);
     const [generandoImagen, setGenerandoImagen] = useState(false);
-    const ticketRenderRef = useRef<HTMLDivElement>(null);
 
     const cargarHistorialVentas = async () => {
         try {
@@ -146,7 +141,7 @@ export const Reportes: React.FC = () => {
 
             const res = await api.get(url);
             setDatosReporte(res.data);
-        } catch (err) {
+        } catch {
             alert("Error al generar el reporte.");
         } finally {
             setCargandoReporte(false);
@@ -358,48 +353,208 @@ export const Reportes: React.FC = () => {
         enviarWhatsAppVenta(datosVenta);
     };
 
+    // GENERACIÓN NATIVA Y COMPARTICIÓN ULTRARRÁPIDA
     const compartirFacturaWhatsApp = async (venta: any) => {
-        const datosVenta = obtenerEstructuraVentaNormalizada(venta);
-        setVentaParaImagen(datosVenta);
+        const datosNormalizados = obtenerEstructuraVentaNormalizada(venta);
         setGenerandoImagen(true);
 
-        setTimeout(async () => {
-            if (!ticketRenderRef.current) {
+        try {
+            const escala = 2;
+            const anchoBase = 380;
+            
+            let lineasTotales = 18;
+            datosNormalizados.detalles.forEach((d: any) => {
+                lineasTotales += 2;
+                if (d.descripcion?.trim()) lineasTotales += 1;
+                const meta = d.metadataDigital || '';
+                if (meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO')) {
+                    lineasTotales += extraerListaCodigos(meta).length;
+                } else {
+                    lineasTotales += 1;
+                }
+                if (d.descuento > 0) lineasTotales += 1;
+            });
+
+            const altoBase = Math.max(480, lineasTotales * 18);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = anchoBase * escala;
+            canvas.height = altoBase * escala;
+            const ctx = canvas.getContext('2d');
+
+            if (!ctx) {
                 setGenerandoImagen(false);
                 return;
             }
-            try {
-                const canvas = await html2canvas(ticketRenderRef.current, {
-                    scale: 3,
-                    backgroundColor: '#ffffff',
-                    useCORS: true
-                });
 
-                canvas.toBlob(async (blob) => {
-                    if (!blob) return;
-                    const file = new File([blob], `Factura_000${datosVenta?.ventaId || '1'}.png`, { type: 'image/png' });
+            ctx.scale(escala, escala);
 
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: `Factura #${datosVenta?.ventaId}`,
-                            text: `Factura de compra - Nicaplus Gaming`
-                        });
-                    } else {
-                        await navigator.clipboard.write([
-                            new ClipboardItem({ 'image/png': blob })
-                        ]);
-                        alert("📋 Imagen copiada al portapapeles. Pégala directamente con Ctrl+V en WhatsApp Web.");
-                        const tel = datosVenta?.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
+            // Fondo blanco
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, anchoBase, altoBase);
+
+            // Encabezado
+            ctx.fillStyle = '#000000';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 16px "Courier New", monospace';
+            ctx.fillText('NICAPLUS GAMING', anchoBase / 2, 35);
+            
+            ctx.font = 'bold 11px "Courier New", monospace';
+            ctx.fillText('Tienda Digital y Taller Técnico', anchoBase / 2, 52);
+            ctx.fillText('León, Nicaragua | Tel: +505 8888-8888', anchoBase / 2, 67);
+
+            let y = 80;
+            const dibujarLinea = (posicionY: number) => {
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.moveTo(15, posicionY);
+                ctx.lineTo(anchoBase - 15, posicionY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            };
+
+            dibujarLinea(y);
+            y += 18;
+
+            // Datos Factura
+            ctx.textAlign = 'left';
+            ctx.font = 'bold 11px "Courier New", monospace';
+            ctx.fillText(`Factura: #000${datosNormalizados.ventaId}`, 15, y); y += 15;
+            ctx.fillText(`Fecha: ${new Date(datosNormalizados.fechaVenta || Date.now()).toLocaleDateString('es-NI')}`, 15, y); y += 15;
+            ctx.fillText(`Condición: ${(datosNormalizados.metodoPagoCongelado || 'Efectivo').toUpperCase()}`, 15, y); y += 15;
+            ctx.fillText(`Cliente: ${(datosNormalizados.cliente?.nombre || 'Mostrador General').substring(0, 26)}`, 15, y); y += 15;
+
+            dibujarLinea(y);
+            y += 16;
+
+            // Cabecera Tabla
+            ctx.fillText('Cant/Desc', 15, y);
+            ctx.textAlign = 'right';
+            ctx.fillText('Total', anchoBase - 15, y);
+            y += 15;
+
+            let descuentoTotal = 0;
+
+            // Detalles
+            datosNormalizados.detalles.forEach((item: any) => {
+                const subtotal = item.subTotal || 0;
+                const desc = (item.descuento || 0) * (item.cantidad || 1);
+                descuentoTotal += desc;
+
+                ctx.textAlign = 'left';
+                ctx.font = 'bold 11px "Courier New", monospace';
+                const nombreCorto = (item.nombre || 'Producto').substring(0, 24);
+                ctx.fillText(`${item.cantidad}x ${nombreCorto}`, 15, y);
+
+                ctx.textAlign = 'right';
+                ctx.fillText(`C$ ${subtotal}`, anchoBase - 15, y);
+                y += 14;
+
+                ctx.textAlign = 'left';
+                if (item.descripcion?.trim() && item.descripcion !== 'Sin descripción') {
+                    ctx.font = '10px "Courier New", monospace';
+                    ctx.fillText(`   ${item.descripcion.trim().substring(0, 32)}`, 15, y);
+                    y += 13;
+                }
+
+                const meta = item.metadataDigital || '';
+                const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
+
+                if (!esCodigo) {
+                    ctx.font = 'bold 10px "Courier New", monospace';
+                    ctx.fillText(`   Garantía: ${item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}`, 15, y);
+                    y += 13;
+                }
+
+                if (item.descuento > 0) {
+                    ctx.font = '10px "Courier New", monospace';
+                    ctx.fillText(`   (Descto: -C$ ${desc})`, 15, y);
+                    y += 13;
+                }
+
+                if (esCodigo) {
+                    const codigos = extraerListaCodigos(meta);
+                    ctx.font = 'bold 11px "Courier New", monospace';
+                    codigos.forEach(cod => {
+                        ctx.fillText(`   🔑 ${cod}`, 15, y);
+                        y += 14;
+                    });
+                } else if (meta) {
+                    ctx.font = '10px "Courier New", monospace';
+                    ctx.fillText(`   ID: ${meta.replace(/^DIAS:\d+\|/, '').substring(0, 32)}`, 15, y);
+                    y += 13;
+                }
+
+                y += 3;
+            });
+
+            dibujarLinea(y);
+            y += 18;
+
+            // Totales
+            ctx.font = 'bold 11px "Courier New", monospace';
+            if (descuentoTotal > 0) {
+                ctx.textAlign = 'left';
+                ctx.fillText('Subtotal:', 15, y);
+                ctx.textAlign = 'right';
+                ctx.fillText(`C$ ${datosNormalizados.totalCongelado + descuentoTotal}`, anchoBase - 15, y);
+                y += 15;
+
+                ctx.textAlign = 'left';
+                ctx.fillText('Descuento:', 15, y);
+                ctx.textAlign = 'right';
+                ctx.fillText(`-C$ ${descuentoTotal}`, anchoBase - 15, y);
+                y += 15;
+            }
+
+            ctx.textAlign = 'left';
+            ctx.font = 'bold 13px "Courier New", monospace';
+            ctx.fillText('TOTAL:', 15, y);
+            ctx.textAlign = 'right';
+            ctx.fillText(`C$ ${datosNormalizados.totalCongelado}`, anchoBase - 15, y);
+            y += 18;
+
+            dibujarLinea(y);
+            y += 20;
+
+            // Pie
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 11px "Courier New", monospace';
+            ctx.fillText('¡Gracias por su compra!', anchoBase / 2, y); y += 14;
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillText('Canjee sus códigos o conserve su ticket.', anchoBase / 2, y);
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    setGenerandoImagen(false);
+                    return;
+                }
+
+                const file = new File([blob], `Factura_000${datosNormalizados.ventaId}.png`, { type: 'image/png' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Factura #${datosNormalizados.ventaId}`,
+                        text: `Factura de compra - Nicaplus Gaming`
+                    });
+                } else {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    alert("📋 Factura copiada como imagen al portapapeles. Pégala directamente con Ctrl+V en WhatsApp Web.");
+                    const tel = datosNormalizados.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
+                    if (tel) {
                         window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
                     }
-                }, 'image/png');
-            } catch (error) {
-                console.error("Error al compartir imagen:", error);
-            } finally {
+                }
                 setGenerandoImagen(false);
-            }
-        }, 50);
+            }, 'image/png');
+
+        } catch (error) {
+            console.error("Error generando ticket nativo:", error);
+            setGenerandoImagen(false);
+        }
     };
 
     const exportarAPDF = () => {
@@ -1278,131 +1433,6 @@ export const Reportes: React.FC = () => {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-
-            {/* RENDER INVISIBLE PARA CONVERSIÓN DE FACTURA A IMAGEN (HTML2CANVAS) */}
-            {ventaParaImagen && (
-                <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
-                    <div 
-                        ref={ticketRenderRef} 
-                        style={{
-                            width: '380px',
-                            background: '#ffffff',
-                            color: '#000000',
-                            padding: '24px 18px',
-                            fontFamily: "'Courier New', Courier, monospace",
-                            fontSize: '13px',
-                            fontWeight: 'bold',
-                            lineHeight: 1.3
-                        }}
-                    >
-                        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                            <img 
-                                src={`${window.location.origin}/LogoNica.png`} 
-                                alt="Logo" 
-                                style={{ maxWidth: '140px', maxHeight: '55px', height: 'auto', filter: 'grayscale(100%) contrast(150%)', marginBottom: '6px' }}
-                                crossOrigin="anonymous" 
-                            />
-                            <div style={{ fontSize: '14px', fontWeight: 900 }}>NICAPLUS GAMING</div>
-                            <div>Tienda Digital y Taller Técnico</div>
-                            <div>León, Nicaragua | Tel: +505 8888-8888</div>
-                        </div>
-
-                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
-
-                        <div>
-                            <div>Factura: #000{ventaParaImagen.ventaId || 1}</div>
-                            <div>Fecha: {new Date(ventaParaImagen.fechaVenta || Date.now()).toLocaleDateString('es-NI')}</div>
-                            <div>Condición: {(ventaParaImagen.metodoPagoCongelado || 'Efectivo').toUpperCase()}</div>
-                            <div>Cliente: {ventaParaImagen.cliente?.nombre || 'Mostrador'}</div>
-                        </div>
-
-                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
-
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                            <thead>
-                                <tr>
-                                    <th align="left" style={{ paddingBottom: '4px' }}>Cant/Desc</th>
-                                    <th align="right" style={{ paddingBottom: '4px' }}>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {ventaParaImagen.detalles.map((item: any, idx: number) => {
-                                    const meta = item.metadataDigital || '';
-                                    const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
-                                    const listaCodigos = esCodigo ? extraerListaCodigos(meta) : [];
-
-                                    return (
-                                        <React.Fragment key={idx}>
-                                            <tr>
-                                                <td align="left">{item.cantidad}x {item.nombre}</td>
-                                                <td align="right">C$ {item.subTotal}</td>
-                                            </tr>
-                                            {item.descripcion && item.descripcion.trim() && item.descripcion !== 'Sin descripción' && (
-                                                <tr>
-                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', color: '#444' }}>
-                                                        {item.descripcion.trim()}
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {!esCodigo && (
-                                                <tr>
-                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
-                                                        Garantía: {item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {item.descuento > 0 && (
-                                                <tr>
-                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
-                                                        (Descto: -C$ {item.descuento * item.cantidad})
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {esCodigo ? (
-                                                <tr>
-                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', paddingTop: '2px' }}>
-                                                        {listaCodigos.map((c: string, cIdx: number) => (
-                                                            <div key={cIdx} style={{ fontFamily: "'Courier New', monospace", fontSize: '12px', letterSpacing: '0.5px' }}>
-                                                                🔑 {c}
-                                                            </div>
-                                                        ))}
-                                                    </td>
-                                                </tr>
-                                            ) : (meta && (
-                                                <tr>
-                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', wordBreak: 'break-all' }}>
-                                                        ID: {meta.replace(/^DIAS:\d+\|/, '')}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-
-                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
-
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <tbody>
-                                <tr>
-                                    <td align="left">TOTAL:</td>
-                                    <td align="right" style={{ fontSize: '15px', fontWeight: 900 }}>
-                                        C$ {ventaParaImagen.totalCongelado || ventaParaImagen.detalles.reduce((acc: number, d: any) => acc + (d.subTotal || 0), 0)}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
-
-                        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-                            <div>¡Gracias por su compra!</div>
-                            <div style={{ fontSize: '11px' }}>Canjee sus códigos o conserve su ticket.</div>
-                        </div>
                     </div>
                 </div>
             )}
