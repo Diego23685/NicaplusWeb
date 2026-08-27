@@ -386,13 +386,13 @@ export const Reportes: React.FC = () => {
         enviarWhatsAppVenta(datosVenta);
     };
 
-    // COMPARTIR FACTURA COMO IMAGEN
     const compartirFacturaImagenReportes = async (venta: any) => {
         const datosNormalizados = obtenerEstructuraVentaNormalizada(venta);
         setVentaParaImagen(datosNormalizados);
         setGenerandoImagen(true);
 
-        setTimeout(async () => {
+        // Esperar al siguiente micro-tick de renderizado en vez de 150ms
+        requestAnimationFrame(async () => {
             if (!ticketRenderRef.current) {
                 setGenerandoImagen(false);
                 return;
@@ -400,13 +400,19 @@ export const Reportes: React.FC = () => {
 
             try {
                 const canvas = await html2canvas(ticketRenderRef.current, {
-                    scale: 3,
+                    scale: 2, // 2x es óptimo y 3 veces más rápido que 3x
                     backgroundColor: '#ffffff',
-                    useCORS: true
+                    useCORS: false, // Evita peticiones de red CORS si el logo está local
+                    logging: false, // Desactiva logs de consola que frenan la CPU móvil
+                    imageTimeout: 0
                 });
 
                 canvas.toBlob(async (blob) => {
-                    if (!blob) return;
+                    if (!blob) {
+                        setGenerandoImagen(false);
+                        return;
+                    }
+                    
                     const file = new File([blob], `Factura_000${datosNormalizados.ventaId}.png`, { type: 'image/png' });
 
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -419,20 +425,19 @@ export const Reportes: React.FC = () => {
                         await navigator.clipboard.write([
                             new ClipboardItem({ 'image/png': blob })
                         ]);
-                        alert("📋 Factura copiada como imagen al portapapeles. Pégala directamente con Ctrl+V en WhatsApp Web.");
+                        alert("📋 Factura copiada como imagen. Pégala con Ctrl+V en WhatsApp Web.");
                         const tel = datosNormalizados.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
                         if (tel) {
                             window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
                         }
                     }
+                    setGenerandoImagen(false);
                 }, 'image/png');
             } catch (error) {
                 console.error("Error al generar imagen de la factura:", error);
-                alert("Ocurrió un error al generar la imagen de la factura.");
-            } finally {
                 setGenerandoImagen(false);
             }
-        }, 150);
+        });
     };
 
     const exportarAPDF = () => {
