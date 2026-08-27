@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import api from '../services/api';
 import { 
     FaEdit, 
@@ -12,10 +13,21 @@ import {
     FaChevronRight,
     FaShoppingCart,
     FaExchangeAlt,
-    FaLock
+    FaLock,
+    FaShareAlt
 } from 'react-icons/fa';
 import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
 import '../assets/styles/Reportes.css';
+
+const extraerListaCodigos = (metaStr: string): string[] => {
+    if (!metaStr) return [];
+    return metaStr
+        .split(/[\n|\|]+/)
+        .map(linea => linea.trim())
+        .filter(linea => Boolean(linea))
+        .map(linea => linea.replace(/^C[ÓO]DIGO(\s*DISPONIBLE)?:\s*/i, '').trim())
+        .filter(linea => Boolean(linea));
+};
 
 export const Reportes: React.FC = () => {
     const [desde, setDesde] = useState('');
@@ -40,6 +52,11 @@ export const Reportes: React.FC = () => {
     const [ventaAEditar, setVentaAEditar] = useState<any | null>(null);
     const [nuevoMetodoPago, setMetodoPago] = useState('');
     const [detallesEditados, setDetallesEditados] = useState<any[]>([]);
+
+    // Estados y Referencia para la generación de imagen
+    const [ventaParaImagen, setVentaParaImagen] = useState<any | null>(null);
+    const [generandoImagen, setGenerandoImagen] = useState(false);
+    const ticketRenderRef = useRef<HTMLDivElement>(null);
 
     const cargarHistorialVentas = async () => {
         try {
@@ -316,6 +333,7 @@ export const Reportes: React.FC = () => {
             return {
                 ...d,
                 nombre: prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`),
+                descripcion: prod?.descripcion || '',
                 subTotal: d.subTotal ?? (d.cantidad * d.precioUnitario - (d.descuento || 0))
             };
         });
@@ -338,6 +356,50 @@ export const Reportes: React.FC = () => {
     const reordenarEnviarWhatsApp = (venta: any) => {
         const datosVenta = obtenerEstructuraVentaNormalizada(venta);
         enviarWhatsAppVenta(datosVenta);
+    };
+
+    const compartirFacturaWhatsApp = async (venta: any) => {
+        const datosVenta = obtenerEstructuraVentaNormalizada(venta);
+        setVentaParaImagen(datosVenta);
+        setGenerandoImagen(true);
+
+        setTimeout(async () => {
+            if (!ticketRenderRef.current) {
+                setGenerandoImagen(false);
+                return;
+            }
+            try {
+                const canvas = await html2canvas(ticketRenderRef.current, {
+                    scale: 3,
+                    backgroundColor: '#ffffff',
+                    useCORS: true
+                });
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    const file = new File([blob], `Factura_000${datosVenta?.ventaId || '1'}.png`, { type: 'image/png' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: `Factura #${datosVenta?.ventaId}`,
+                            text: `Factura de compra - Nicaplus Gaming`
+                        });
+                    } else {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        alert("📋 Imagen copiada al portapapeles. Pégala directamente con Ctrl+V en WhatsApp Web.");
+                        const tel = datosVenta?.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
+                        window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
+                    }
+                }, 'image/png');
+            } catch (error) {
+                console.error("Error al compartir imagen:", error);
+            } finally {
+                setGenerandoImagen(false);
+            }
+        }, 50);
     };
 
     const exportarAPDF = () => {
@@ -958,6 +1020,9 @@ export const Reportes: React.FC = () => {
                                                             <button onClick={() => abrirEditorVenta(v)} className="btnCorregir" title="Editar Venta">
                                                                 <FaEdit />
                                                             </button>
+                                                            <button onClick={() => compartirFacturaWhatsApp(v)} disabled={generandoImagen} className="btnCorregir" style={{ background: '#0284c7' }} title="Compartir Imagen PNG">
+                                                                <FaShareAlt />
+                                                            </button>
                                                             <button onClick={() => reimprimirTicket(v)} className="btnCorregir" style={{ background: '#3b82f6' }} title="Reimprimir Ticket">
                                                                 <FaPrint />
                                                             </button>
@@ -1213,6 +1278,131 @@ export const Reportes: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* RENDER INVISIBLE PARA CONVERSIÓN DE FACTURA A IMAGEN (HTML2CANVAS) */}
+            {ventaParaImagen && (
+                <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+                    <div 
+                        ref={ticketRenderRef} 
+                        style={{
+                            width: '380px',
+                            background: '#ffffff',
+                            color: '#000000',
+                            padding: '24px 18px',
+                            fontFamily: "'Courier New', Courier, monospace",
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            lineHeight: 1.3
+                        }}
+                    >
+                        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                            <img 
+                                src={`${window.location.origin}/LogoNica.png`} 
+                                alt="Logo" 
+                                style={{ maxWidth: '140px', maxHeight: '55px', height: 'auto', filter: 'grayscale(100%) contrast(150%)', marginBottom: '6px' }}
+                                crossOrigin="anonymous" 
+                            />
+                            <div style={{ fontSize: '14px', fontWeight: 900 }}>NICAPLUS GAMING</div>
+                            <div>Tienda Digital y Taller Técnico</div>
+                            <div>León, Nicaragua | Tel: +505 8888-8888</div>
+                        </div>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <div>
+                            <div>Factura: #000{ventaParaImagen.ventaId || 1}</div>
+                            <div>Fecha: {new Date(ventaParaImagen.fechaVenta || Date.now()).toLocaleDateString('es-NI')}</div>
+                            <div>Condición: {(ventaParaImagen.metodoPagoCongelado || 'Efectivo').toUpperCase()}</div>
+                            <div>Cliente: {ventaParaImagen.cliente?.nombre || 'Mostrador'}</div>
+                        </div>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                            <thead>
+                                <tr>
+                                    <th align="left" style={{ paddingBottom: '4px' }}>Cant/Desc</th>
+                                    <th align="right" style={{ paddingBottom: '4px' }}>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ventaParaImagen.detalles.map((item: any, idx: number) => {
+                                    const meta = item.metadataDigital || '';
+                                    const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
+                                    const listaCodigos = esCodigo ? extraerListaCodigos(meta) : [];
+
+                                    return (
+                                        <React.Fragment key={idx}>
+                                            <tr>
+                                                <td align="left">{item.cantidad}x {item.nombre}</td>
+                                                <td align="right">C$ {item.subTotal}</td>
+                                            </tr>
+                                            {item.descripcion && item.descripcion.trim() && item.descripcion !== 'Sin descripción' && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', color: '#444' }}>
+                                                        {item.descripcion.trim()}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {!esCodigo && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
+                                                        Garantía: {item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {item.descuento > 0 && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
+                                                        (Descto: -C$ {item.descuento * item.cantidad})
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {esCodigo ? (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', paddingTop: '2px' }}>
+                                                        {listaCodigos.map((c: string, cIdx: number) => (
+                                                            <div key={cIdx} style={{ fontFamily: "'Courier New', monospace", fontSize: '12px', letterSpacing: '0.5px' }}>
+                                                                🔑 {c}
+                                                            </div>
+                                                        ))}
+                                                    </td>
+                                                </tr>
+                                            ) : (meta && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', wordBreak: 'break-all' }}>
+                                                        ID: {meta.replace(/^DIAS:\d+\|/, '')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                                <tr>
+                                    <td align="left">TOTAL:</td>
+                                    <td align="right" style={{ fontSize: '15px', fontWeight: 900 }}>
+                                        C$ {ventaParaImagen.totalCongelado || ventaParaImagen.detalles.reduce((acc: number, d: any) => acc + (d.subTotal || 0), 0)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                            <div>¡Gracias por su compra!</div>
+                            <div style={{ fontSize: '11px' }}>Canjee sus códigos o conserve su ticket.</div>
+                        </div>
                     </div>
                 </div>
             )}
