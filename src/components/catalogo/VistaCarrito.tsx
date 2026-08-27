@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
     FaArrowLeft, FaShoppingCart, FaMinus, FaPlus, FaTrashAlt, 
-    FaUser, FaPhone, FaTruck, FaMapMarkerAlt, FaMoneyBillWave, FaWhatsapp 
+    FaUser, FaPhone, FaTruck, FaMapMarkerAlt, FaMoneyBillWave, FaWhatsapp,
+    FaPalette
 } from 'react-icons/fa';
 import styles from './Catalogo.module.css';
 
@@ -21,8 +22,8 @@ interface VistaCarritoProps {
     aceptoTerminos: boolean;
     setAceptoTerminos: (v: boolean) => void;
     setVerModalTerminos: (v: boolean) => void;
-    cambiarCantidad: (id: number, delta: number) => void;
-    removerDelCarrito: (id: number) => void;
+    cambiarCantidad: (id: number, delta: number, idVariacion?: number) => void;
+    removerDelCarrito: (id: number, idVariacion?: number) => void;
     cambiarSeccion: (seccion: any) => void;
     enviarAWhatsApp: (e: React.FormEvent) => void;
 }
@@ -51,32 +52,90 @@ export const VistaCarrito: React.FC<VistaCarritoProps> = ({
             ) : (
                 <div className={styles.cartMainGrid}>
                     <div className={styles.cartItemsContainer}>
-                        {carrito.map(item => (
-                            <div key={item.producto.id} className={styles.cartItemCard}>
-                                <div className={styles.cartItemImgThum}>
-                                    {item.producto.imagenUrl ? <img src={item.producto.imagenUrl} alt="" /> : <div className={styles.cartNoImg}>🎮</div>}
-                                </div>
-                                <div className={styles.cartItemDetails}>
-                                    <div className={styles.cartItemMeta}>
-                                        <h4>{item.producto.nombre}</h4>
-                                        <span className={item.producto.esDigital ? styles.tagDig : styles.tagFis}>{item.producto.esDigital ? "Digital" : "Físico"}</span>
+                        {carrito.map(item => {
+                            const variacion = item.variacionSeleccionada;
+                            const itemKey = variacion ? `${item.producto.id}-var-${variacion.id}` : `${item.producto.id}`;
+                            const imagenMostrar = variacion?.imagenUrl || item.producto.imagenUrl;
+                            const precioUnitario = variacion ? variacion.precioVenta : item.producto.precioVenta;
+                            const subtotal = item.cantidad * precioUnitario;
+
+                            return (
+                                <div key={itemKey} className={styles.cartItemCard}>
+                                    <div className={styles.cartItemImgThum}>
+                                        {imagenMostrar ? (
+                                            <img src={imagenMostrar} alt={item.producto.nombre} />
+                                        ) : (
+                                            <div className={styles.cartNoImg}>🎮</div>
+                                        )}
                                     </div>
-                                    <p className={styles.cartItemPriceUnit}>U: C$ {item.producto.precioVenta}</p>
+                                    <div className={styles.cartItemDetails}>
+                                        <div className={styles.cartItemMeta}>
+                                            <h4>{item.producto.nombre}</h4>
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                <span className={item.producto.esDigital ? styles.tagDig : styles.tagFis}>
+                                                    {item.producto.esDigital ? "Digital" : "Físico"}
+                                                </span>
+                                                {variacion && (
+                                                    <span style={{
+                                                        background: '#f59e0b',
+                                                        color: '#000',
+                                                        fontSize: '0.68rem',
+                                                        fontWeight: 800,
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '3px'
+                                                    }}>
+                                                        <FaPalette size={9} /> {variacion.nombreVariacion}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className={styles.cartItemPriceUnit}>
+                                            U: C$ {precioUnitario.toLocaleString('es-NI')}
+                                        </p>
+                                    </div>
+                                    <div className={styles.cartQtyControls}>
+                                        <button 
+                                            onClick={() => cambiarCantidad(item.producto.id, -1, variacion?.id)} 
+                                            className={styles.qtyBtn}
+                                            aria-label="Disminuir cantidad"
+                                        >
+                                            <FaMinus size={10} />
+                                        </button>
+                                        <span className={styles.qtyValue}>{item.cantidad}</span>
+                                        <button 
+                                            onClick={() => cambiarCantidad(item.producto.id, 1, variacion?.id)} 
+                                            className={styles.qtyBtn}
+                                            aria-label="Aumentar cantidad"
+                                        >
+                                            <FaPlus size={10} />
+                                        </button>
+                                    </div>
+                                    <div className={styles.cartItemSubtotalBlock}>
+                                        <span className={styles.itemSubtotalText}>
+                                            C$ {subtotal.toLocaleString('es-NI')}
+                                        </span>
+                                    </div>
+                                    <button 
+                                        onClick={() => removerDelCarrito(item.producto.id, variacion?.id)} 
+                                        className={styles.deleteItemBtn} 
+                                        aria-label="Eliminar ítem"
+                                    >
+                                        <FaTrashAlt size={14} />
+                                    </button>
                                 </div>
-                                <div className={styles.cartQtyControls}>
-                                    <button onClick={() => cambiarCantidad(item.producto.id, -1)} className={styles.qtyBtn}><FaMinus size={10} /></button>
-                                    <span className={styles.qtyValue}>{item.cantidad}</span>
-                                    <button onClick={() => cambiarCantidad(item.producto.id, 1)} className={styles.qtyBtn}><FaPlus size={10} /></button>
-                                </div>
-                                <div className={styles.cartItemSubtotalBlock}><span className={styles.itemSubtotalText}>C$ {item.cantidad * item.producto.precioVenta}</span></div>
-                                <button onClick={() => removerDelCarrito(item.producto.id)} className={styles.deleteItemBtn} aria-label="Eliminar ítem"><FaTrashAlt size={14} /></button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className={styles.cartSummaryCard}>
                         <h3>Resumen de Pedido</h3>
-                        <div className={styles.summaryRow}><span>Subtotal</span><span>C$ {totalPagar}</span></div>
+                        <div className={styles.summaryRow}>
+                            <span>Subtotal</span>
+                            <span>C$ {totalPagar.toLocaleString('es-NI')}</span>
+                        </div>
                         <div className={styles.dividerSummary} />
                         
                         <form onSubmit={enviarAWhatsApp} className={styles.billingForm}>
@@ -120,7 +179,7 @@ export const VistaCarrito: React.FC<VistaCarritoProps> = ({
                             <div className={styles.dividerSummary} />
                             <div className={`${styles.summaryRow} ${styles.totalRowView}`}>
                                 <span>Total:</span>
-                                <span className={styles.totalColor}>C$ {totalPagar}</span>
+                                <span className={styles.totalColor}>C$ {totalPagar.toLocaleString('es-NI')}</span>
                             </div>
 
                             <div className={styles.termsCheckboxGroup}>
@@ -134,7 +193,7 @@ export const VistaCarrito: React.FC<VistaCarritoProps> = ({
                                     Acepto los {' '}
                                     <button type="button" onClick={() => setVerModalTerminos(true)}>
                                         términos y condiciones
-                                                    </button>
+                                    </button>
                                 </label>
                             </div>
 
