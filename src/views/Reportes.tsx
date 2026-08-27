@@ -329,6 +329,8 @@ export const Reportes: React.FC = () => {
                 ...d,
                 nombre: prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`),
                 descripcion: prod?.descripcion || '',
+                // ASEGURAR QUE SE MAPEE LA GARANTÍA (Prioriza el detalle guardado, luego el producto o 0)
+                garantiaDias: d.garantiaDias ?? d.GarantiaDias ?? prod?.garantiaDias ?? prod?.GarantiaDias ?? 0,
                 subTotal: d.subTotal ?? (d.cantidad * d.precioUnitario - (d.descuento || 0))
             };
         });
