@@ -388,209 +388,56 @@ export const Reportes: React.FC = () => {
 
     const compartirFacturaImagenReportes = async (venta: any) => {
         const datosNormalizados = obtenerEstructuraVentaNormalizada(venta);
+        setVentaParaImagen(datosNormalizados);
         setGenerandoImagen(true);
 
-        try {
-            // 1. Configuración de dimensiones y resolución
-            const escala = 2;
-            const anchoBase = 380;
-            
-            // Calcular alto dinámico del canvas
-            let lineasTotales = 18; // Encabezado, cliente, totales y pie
-            datosNormalizados.detalles.forEach((d: any) => {
-                lineasTotales += 2; // Cantidad, nombre, subtotal
-                if (d.descripcion?.trim()) lineasTotales += 1;
-                const meta = d.metadataDigital || '';
-                if (meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO')) {
-                    lineasTotales += extraerListaCodigos(meta).length;
-                } else {
-                    lineasTotales += 1; // Garantía o ID
-                }
-                if (d.descuento > 0) lineasTotales += 1;
-            });
-
-            const altoBase = Math.max(480, lineasTotales * 18);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = anchoBase * escala;
-            canvas.height = altoBase * escala;
-            const ctx = canvas.getContext('2d');
-
-            if (!ctx) {
+        // Esperar al siguiente micro-tick de renderizado en vez de 150ms
+        requestAnimationFrame(async () => {
+            if (!ticketRenderRef.current) {
                 setGenerandoImagen(false);
                 return;
             }
 
-            ctx.scale(escala, escala);
+            try {
+                const canvas = await html2canvas(ticketRenderRef.current, {
+                    scale: 2, // 2x es óptimo y 3 veces más rápido que 3x
+                    backgroundColor: '#ffffff',
+                    useCORS: false, // Evita peticiones de red CORS si el logo está local
+                    logging: false, // Desactiva logs de consola que frenan la CPU móvil
+                    imageTimeout: 0
+                });
 
-            // 2. Fondo blanco
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, anchoBase, altoBase);
-
-            // 3. Encabezado
-            ctx.fillStyle = '#000000';
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 16px "Courier New", monospace';
-            ctx.fillText('NICAPLUS GAMING', anchoBase / 2, 35);
-            
-            ctx.font = 'bold 11px "Courier New", monospace';
-            ctx.fillText('Tienda Digital y Taller Técnico', anchoBase / 2, 52);
-            ctx.fillText('León, Nicaragua | Tel: +505 8888-8888', anchoBase / 2, 67);
-
-            // Línea divisoria
-            let y = 80;
-            const dibujarLinea = (posicionY: number) => {
-                ctx.setLineDash([4, 3]);
-                ctx.beginPath();
-                ctx.moveTo(15, posicionY);
-                ctx.lineTo(anchoBase - 15, posicionY);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            };
-
-            dibujarLinea(y);
-            y += 18;
-
-            // Datos de Factura
-            ctx.textAlign = 'left';
-            ctx.font = 'bold 11px "Courier New", monospace';
-            ctx.fillText(`Factura: #000${datosNormalizados.ventaId}`, 15, y); y += 15;
-            ctx.fillText(`Fecha: ${new Date(datosNormalizados.fechaVenta || Date.now()).toLocaleDateString('es-NI')}`, 15, y); y += 15;
-            ctx.fillText(`Condición: ${(datosNormalizados.metodoPagoCongelado || 'Efectivo').toUpperCase()}`, 15, y); y += 15;
-            ctx.fillText(`Cliente: ${(datosNormalizados.cliente?.nombre || 'Mostrador General').substring(0, 26)}`, 15, y); y += 15;
-
-            dibujarLinea(y);
-            y += 16;
-
-            // Cabecera Tabla
-            ctx.fillText('Cant/Desc', 15, y);
-            ctx.textAlign = 'right';
-            ctx.fillText('Total', anchoBase - 15, y);
-            y += 15;
-
-            let descuentoTotal = 0;
-
-            // Detalles de Productos
-            datosNormalizados.detalles.forEach((item: any) => {
-                const subtotal = item.subTotal || 0;
-                const desc = (item.descuento || 0) * (item.cantidad || 1);
-                descuentoTotal += desc;
-
-                ctx.textAlign = 'left';
-                ctx.font = 'bold 11px "Courier New", monospace';
-                const nombreCorto = (item.nombre || 'Producto').substring(0, 24);
-                ctx.fillText(`${item.cantidad}x ${nombreCorto}`, 15, y);
-
-                ctx.textAlign = 'right';
-                ctx.fillText(`C$ ${subtotal}`, anchoBase - 15, y);
-                y += 14;
-
-                ctx.textAlign = 'left';
-                if (item.descripcion?.trim() && item.descripcion !== 'Sin descripción') {
-                    ctx.font = '10px "Courier New", monospace';
-                    ctx.fillText(`   ${item.descripcion.trim().substring(0, 32)}`, 15, y);
-                    y += 13;
-                }
-
-                const meta = item.metadataDigital || '';
-                const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
-
-                if (!esCodigo) {
-                    ctx.font = 'bold 10px "Courier New", monospace';
-                    ctx.fillText(`   Garantía: ${item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}`, 15, y);
-                    y += 13;
-                }
-
-                if (item.descuento > 0) {
-                    ctx.font = '10px "Courier New", monospace';
-                    ctx.fillText(`   (Descto: -C$ ${desc})`, 15, y);
-                    y += 13;
-                }
-
-                if (esCodigo) {
-                    const codigos = extraerListaCodigos(meta);
-                    ctx.font = 'bold 11px "Courier New", monospace';
-                    codigos.forEach(cod => {
-                        ctx.fillText(`   🔑 ${cod}`, 15, y);
-                        y += 14;
-                    });
-                } else if (meta) {
-                    ctx.font = '10px "Courier New", monospace';
-                    ctx.fillText(`   ID: ${meta.replace(/^DIAS:\d+\|/, '').substring(0, 32)}`, 15, y);
-                    y += 13;
-                }
-
-                y += 3;
-            });
-
-            dibujarLinea(y);
-            y += 18;
-
-            // Totales
-            ctx.font = 'bold 11px "Courier New", monospace';
-            if (descuentoTotal > 0) {
-                ctx.textAlign = 'left';
-                ctx.fillText('Subtotal:', 15, y);
-                ctx.textAlign = 'right';
-                ctx.fillText(`C$ ${datosNormalizados.totalCongelado + descuentoTotal}`, anchoBase - 15, y);
-                y += 15;
-
-                ctx.textAlign = 'left';
-                ctx.fillText('Descuento:', 15, y);
-                ctx.textAlign = 'right';
-                ctx.fillText(`-C$ ${descuentoTotal}`, anchoBase - 15, y);
-                y += 15;
-            }
-
-            ctx.textAlign = 'left';
-            ctx.font = 'bold 13px "Courier New", monospace';
-            ctx.fillText('TOTAL:', 15, y);
-            ctx.textAlign = 'right';
-            ctx.fillText(`C$ ${datosNormalizados.totalCongelado}`, anchoBase - 15, y);
-            y += 18;
-
-            dibujarLinea(y);
-            y += 20;
-
-            // Pie de Ticket
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 11px "Courier New", monospace';
-            ctx.fillText('¡Gracias por su compra!', anchoBase / 2, y); y += 14;
-            ctx.font = '10px "Courier New", monospace';
-            ctx.fillText('Canjee sus códigos o conserve su ticket.', anchoBase / 2, y);
-
-            // 4. Compartición / Copia instantánea
-            canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    setGenerandoImagen(false);
-                    return;
-                }
-
-                const file = new File([blob], `Factura_000${datosNormalizados.ventaId}.png`, { type: 'image/png' });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: `Factura #${datosNormalizados.ventaId}`,
-                        text: `Factura de compra - Nicaplus Gaming`
-                    });
-                } else {
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]);
-                    alert("📋 Factura copiada como imagen. Pégala con Ctrl+V en WhatsApp Web.");
-                    const tel = datosNormalizados.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
-                    if (tel) {
-                        window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        setGenerandoImagen(false);
+                        return;
                     }
-                }
-                setGenerandoImagen(false);
-            }, 'image/png');
+                    
+                    const file = new File([blob], `Factura_000${datosNormalizados.ventaId}.png`, { type: 'image/png' });
 
-        } catch (error) {
-            console.error("Error generando ticket nativo:", error);
-            setGenerandoImagen(false);
-        }
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: `Factura #${datosNormalizados.ventaId}`,
+                            text: `Factura de compra - Nicaplus Gaming`
+                        });
+                    } else {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        alert("📋 Factura copiada como imagen. Pégala con Ctrl+V en WhatsApp Web.");
+                        const tel = datosNormalizados.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
+                        if (tel) {
+                            window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
+                        }
+                    }
+                    setGenerandoImagen(false);
+                }, 'image/png');
+            } catch (error) {
+                console.error("Error al generar imagen de la factura:", error);
+                setGenerandoImagen(false);
+            }
+        });
     };
 
     const exportarAPDF = () => {
