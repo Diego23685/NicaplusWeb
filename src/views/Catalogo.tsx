@@ -7,7 +7,7 @@ import {
     FaShoppingCart, FaStore, FaMapMarkerAlt, FaHome, FaInfoCircle, FaSearch, FaGamepad, FaTags, 
     FaArrowLeft, FaSignOutAlt, FaBars, FaTimes, FaSignInAlt, FaChevronLeft, FaChevronRight, 
     FaHeadphones, FaLaptop, FaKeyboard, FaMouse, FaTv, FaPlug, FaFolderOpen, FaFacebook, FaInstagram,
-    FaCheckCircle, FaExclamationTriangle, FaShieldAlt, FaInfo
+    FaCheckCircle, FaExclamationTriangle, FaShieldAlt, FaInfo, FaPalette
 } from 'react-icons/fa';
 
 // Importación de subcomponentes externos y hooks extraídos
@@ -35,7 +35,24 @@ const obtenerIconoCategoria = (nombre = '') => {
   return <FaFolderOpen size={24} />;
 };
 
-interface Producto {
+export interface VariacionProducto {
+    id: number;
+    productoPadreId: number;
+    sku?: string;
+    color?: string;
+    almacenamiento?: string;
+    ram?: string;
+    talla?: string;
+    nombreVariacion: string;
+    precioVenta: number;
+    precioCosto?: number;
+    stockActual: number;
+    stockMinimo?: number;
+    imagenUrl?: string;
+    estado?: string;
+}
+
+export interface Producto {
     id: number;
     nombre: string;
     descripcion: string;
@@ -45,6 +62,8 @@ interface Producto {
     esDigital: boolean;
     categoriaId?: number;
     juegoId?: number;
+    tieneVariaciones?: boolean;
+    variaciones?: VariacionProducto[];
 }
 
 interface Categoria {
@@ -59,8 +78,9 @@ interface Juego {
     imagenUrl: string;
 }
 
-interface ItemCarrito {
+export interface ItemCarrito {
     producto: Producto;
+    variacionSeleccionada?: VariacionProducto | null;
     cantidad: number;
 }
 
@@ -78,23 +98,53 @@ interface Notificacion {
     tipo: 'error' | 'advertencia' | 'exito' | 'info';
 }
 
+// Función auxiliar para calcular rango o precio base
+const calcularRangoPrecios = (p: Producto): string => {
+    if (!p.tieneVariaciones || !p.variaciones || p.variaciones.length === 0) {
+        return `C$ ${p.precioVenta.toLocaleString('es-NI')}`;
+    }
+    const precios = p.variaciones.map(v => v.precioVenta).filter(pr => pr > 0);
+    if (precios.length === 0) return `C$ ${p.precioVenta.toLocaleString('es-NI')}`;
+
+    const min = Math.min(...precios);
+    const max = Math.max(...precios);
+
+    if (min === max) return `C$ ${min.toLocaleString('es-NI')}`;
+    return `Desde C$ ${min.toLocaleString('es-NI')}`;
+};
+
 /* ==========================================================================
       SUBCOMPONENTE INTERNO: DETALLE DE PRODUCTO
    ========================================================================== */
 interface ProductoDetalleProps {
     producto: Producto;
     alVolver: () => void;
-    alAgregarAlCarrito: (p: Producto, e?: React.MouseEvent) => void;
-    cantidadEnCarrito: number;
+    alAgregarAlCarrito: (p: Producto, variacion?: VariacionProducto | null, e?: React.MouseEvent) => void;
+    carrito: ItemCarrito[];
 }
 
 const ProductoDetalle: React.FC<ProductoDetalleProps> = ({ 
     producto, 
     alVolver, 
     alAgregarAlCarrito,
-    cantidadEnCarrito 
+    carrito 
 }) => {
-    const hayStock = producto.esDigital || producto.stockActual > 0;
+    const tieneVars = Boolean(producto.tieneVariaciones && producto.variaciones && producto.variaciones.length > 0);
+    const [varSeleccionada, setVarSeleccionada] = useState<VariacionProducto | null>(
+        tieneVars ? producto.variaciones![0] : null
+    );
+
+    const precioActual = varSeleccionada ? varSeleccionada.precioVenta : producto.precioVenta;
+    const stockActual = varSeleccionada ? varSeleccionada.stockActual : producto.stockActual;
+    const hayStock = producto.esDigital || stockActual > 0;
+
+    const cantidadEnCarrito = useMemo(() => {
+        const item = carrito.find(i => 
+            i.producto.id === producto.id && 
+            (varSeleccionada ? i.variacionSeleccionada?.id === varSeleccionada.id : !i.variacionSeleccionada)
+        );
+        return item?.cantidad || 0;
+    }, [carrito, producto.id, varSeleccionada]);
 
     return (
         <div className={`${detailStyles.detailViewContainer} ${styles.fadeEntrance}`}>
@@ -107,8 +157,8 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                     <span className={detailStyles.detailBadge} style={{ background: producto.esDigital ? '#581c7e' : '#047688' }}>
                         {producto.esDigital ? "ENTREGA DIGITAL" : "PRODUCTO FÍSICO"}
                     </span>
-                    {producto.imagenUrl ? (
-                        <img src={producto.imagenUrl} alt={producto.nombre} className={detailStyles.detailMainImage} />
+                    {(varSeleccionada?.imagenUrl || producto.imagenUrl) ? (
+                        <img src={varSeleccionada?.imagenUrl || producto.imagenUrl} alt={producto.nombre} className={detailStyles.detailMainImage} />
                     ) : (
                         <div className={detailStyles.detailNoImage}>SIN IMAGEN DE DISPOSITIVO</div>
                     )}
@@ -119,18 +169,61 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                     
                     <div className={detailStyles.detailPriceRow}>
                         <span className={detailStyles.detailPriceLabel}>Precio:</span>
-                        <span className={detailStyles.detailPriceValue}>C$ {producto.precioVenta.toLocaleString('es-NI')}</span>
+                        <span className={detailStyles.detailPriceValue}>C$ {precioActual.toLocaleString('es-NI')}</span>
                     </div>
+
+                    {/* SELECTOR DE VARIACIONES / PRESENTACIONES */}
+                    {tieneVars && (
+                        <div style={{ margin: '14px 0', background: 'rgba(15, 23, 42, 0.6)', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#38bdf8', fontWeight: 800, marginBottom: '8px' }}>
+                                <FaPalette /> Selecciona una presentación / opción:
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {producto.variaciones!.map(v => {
+                                    const activa = varSeleccionada?.id === v.id;
+                                    const sinStock = !producto.esDigital && v.stockActual <= 0;
+                                    return (
+                                        <button
+                                            key={v.id}
+                                            type="button"
+                                            disabled={sinStock}
+                                            onClick={() => setVarSeleccionada(v)}
+                                            style={{
+                                                padding: '8px 14px',
+                                                borderRadius: '8px',
+                                                border: activa ? '2px solid #38bdf8' : '1px solid #334155',
+                                                background: activa ? '#0284c7' : sinStock ? '#1e293b' : '#0f172a',
+                                                color: sinStock ? '#64748b' : '#fff',
+                                                cursor: sinStock ? 'not-allowed' : 'pointer',
+                                                fontSize: '0.85rem',
+                                                fontWeight: activa ? 800 : 600,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '2px',
+                                                opacity: sinStock ? 0.45 : 1
+                                            }}
+                                        >
+                                            <span>{v.nombreVariacion}</span>
+                                            <small style={{ fontSize: '0.75rem', color: activa ? '#fff' : '#38bdf8' }}>
+                                                {sinStock ? 'Agotado' : `C$ ${v.precioVenta.toLocaleString('es-NI')}`}
+                                            </small>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     <div className={detailStyles.detailDivider} />
 
                     <div className={detailStyles.detailStockStatus}>
                         {hayStock ? (
                             <span className={detailStyles.stockAvailable}>
-                                <FaCheckCircle /> Disponible {!producto.esDigital && `(${producto.stockActual} unidades en tienda)`}
+                                <FaCheckCircle /> Disponible {!producto.esDigital && `(${stockActual} unidades en tienda)`}
                             </span>
                         ) : (
-                            <span className={detailStyles.stockOut}>
+                            <span className={detailStyles.stockOut} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
                                 <FaExclamationTriangle /> Agotado temporalmente
                             </span>
                         )}
@@ -155,7 +248,7 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                         <button 
                             className={detailStyles.detailAddCartBtn}
                             disabled={!hayStock}
-                            onClick={(e) => alAgregarAlCarrito(producto, e)}
+                            onClick={(e) => alAgregarAlCarrito(producto, varSeleccionada, e)}
                         >
                             <FaShoppingCart /> Añadir al carrito 
                             {cantidadEnCarrito > 0 && ` (${cantidadEnCarrito})`}
@@ -248,21 +341,33 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         }
     };
 
-    const agregarAlCarrito = (producto: Producto, e?: React.MouseEvent) => {
+    const agregarAlCarrito = (producto: Producto, variacion?: VariacionProducto | null, e?: React.MouseEvent) => {
         let errorStock = false;
+        const stockDisponible = variacion ? variacion.stockActual : producto.stockActual;
 
         setCarrito(prevCarrito => {
-            const existe = prevCarrito.find(item => item.producto.id === producto.id);
-            if (existe) {
-                if (!producto.esDigital && producto.stockActual <= existe.cantidad) {
+            const existeIndex = prevCarrito.findIndex(item => 
+                item.producto.id === producto.id && 
+                (variacion ? item.variacionSeleccionada?.id === variacion.id : !item.variacionSeleccionada)
+            );
+
+            if (existeIndex > -1) {
+                const itemExistente = prevCarrito[existeIndex];
+                if (!producto.esDigital && stockDisponible <= itemExistente.cantidad) {
                     errorStock = true;
                     return prevCarrito;
                 }
-                return prevCarrito.map(item =>
-                    item.producto.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
-                );
+                const copia = [...prevCarrito];
+                copia[existeIndex] = { ...itemExistente, cantidad: itemExistente.cantidad + 1 };
+                return copia;
             }
-            return [...prevCarrito, { producto, cantidad: 1 }];
+
+            if (!producto.esDigital && stockDisponible <= 0) {
+                errorStock = true;
+                return prevCarrito;
+            }
+
+            return [...prevCarrito, { producto, variacionSeleccionada: variacion || null, cantidad: 1 }];
         });
 
         if (errorStock) {
@@ -280,8 +385,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 const flyElem = document.createElement('div');
                 flyElem.className = styles.flyingParticle;
                 
-                if (producto.imagenUrl) {
-                    flyElem.style.backgroundImage = `url(${producto.imagenUrl})`;
+                if (variacion?.imagenUrl || producto.imagenUrl) {
+                    flyElem.style.backgroundImage = `url(${variacion?.imagenUrl || producto.imagenUrl})`;
                 }
 
                 flyElem.style.left = `${rectBoton.left + rectBoton.width / 2 - 25}px`;
@@ -316,7 +421,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 if (item.producto.id === id) {
                     const nuevaCantidad = item.cantidad + delta;
                     if (nuevaCantidad < 1) return item;
-                    if (!item.producto.esDigital && item.producto.stockActual < nuevaCantidad) {
+                    const stockDisponible = item.variacionSeleccionada ? item.variacionSeleccionada.stockActual : item.producto.stockActual;
+                    if (!item.producto.esDigital && stockDisponible < nuevaCantidad) {
                         alcanzadoLimite = true;
                         return item;
                     }
@@ -334,6 +440,13 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const removerDelCarrito = (id: number) => {
         setCarrito(prev => prev.filter(item => item.producto.id !== id));
     };
+
+    const totalPagar = useMemo(() => {
+        return carrito.reduce((sum, item) => {
+            const precio = item.variacionSeleccionada ? item.variacionSeleccionada.precioVenta : item.producto.precioVenta;
+            return sum + (item.cantidad * precio);
+        }, 0);
+    }, [carrito]);
 
     const enviarAWhatsApp = (e: React.FormEvent) => {
         e.preventDefault();
@@ -357,7 +470,9 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         mensaje += `💳 *Pago:* ${metodoPago}\n\n🛒 *DETALLE*\n`;
 
         carrito.forEach(item => {
-            mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre} (C$ ${item.producto.precioVenta.toLocaleString('es-NI')})\n`;
+            const precio = item.variacionSeleccionada ? item.variacionSeleccionada.precioVenta : item.producto.precioVenta;
+            const descVariante = item.variacionSeleccionada ? ` [${item.variacionSeleccionada.nombreVariacion}]` : '';
+            mensaje += `🔹 *${item.cantidad}x* ${item.producto.nombre}${descVariante} (C$ ${precio.toLocaleString('es-NI')})\n`;
         });
         mensaje += `\n💰 *TOTAL A PAGAR: C$ ${totalPagar.toLocaleString('es-NI')}*`;
         
@@ -411,7 +526,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     }, [productos, busqueda, estaBuscando, idCatSeleccionada, idJuegoSeleccionado, categorias, juegos]);
 
     const totalCarritoItems = useMemo(() => carrito.reduce((sum, i) => sum + i.cantidad, 0), [carrito]);
-    const totalPagar = useMemo(() => carrito.reduce((sum, item) => sum + (item.cantidad * item.producto.precioVenta), 0), [carrito]);
 
     const itemsNavegacion = [
         { id: 'inicio', label: 'Inicio', icon: <FaHome /> },
@@ -710,9 +824,15 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                                     <p className={styles.promoSubtitle}>{productoPrincipal.descripcion}</p>
                                                     <button 
                                                         className={styles.promoBtn} 
-                                                        onClick={(e) => agregarAlCarrito(productoPrincipal, e)}
+                                                        onClick={(e) => {
+                                                            if (productoPrincipal.tieneVariaciones) {
+                                                                manejarVerDetalle(productoPrincipal);
+                                                            } else {
+                                                                agregarAlCarrito(productoPrincipal, null, e);
+                                                            }
+                                                        }}
                                                     >
-                                                        COMPRAR POR C$ {productoPrincipal.precioVenta.toLocaleString('es-NI')}
+                                                        COMPRAR POR {calcularRangoPrecios(productoPrincipal)}
                                                     </button>
                                                     <div className={styles.promoGraphicOverlay} />
                                                     {productoPrincipal.imagenUrl && (
@@ -732,37 +852,47 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                             )}
 
                                             <div className={styles.sidePromoContainer}>
-                                                {productosSecundarios.map((prod: Producto, index: number) => (
-                                                    <div 
-                                                        key={prod.id} 
-                                                        className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
-                                                    >
-                                                        <div className={styles.sideBannerContent}>
-                                                            <span className={styles.sideTag}>
-                                                                {prod.esDigital ? "ENTREGA INMEDIATA" : "STOCK DISPONIBLE"}
-                                                            </span>
-                                                            <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
-                                                                {prod.nombre}
-                                                            </h3>
-                                                            <p>¡Por solo C$ {prod.precioVenta.toLocaleString('es-NI')}!</p>
-                                                            <button 
-                                                                className={styles.sideLink} 
-                                                                onClick={(e) => agregarAlCarrito(prod, e)}
-                                                            >
-                                                                Añadir al carrito
-                                                            </button>
+                                                {productosSecundarios.map((prod: Producto, index: number) => {
+                                                    const hayStockProd = prod.esDigital || prod.stockActual > 0;
+                                                    return (
+                                                        <div 
+                                                            key={prod.id} 
+                                                            className={`${styles.sideBanner} ${index === 0 ? styles.sideBannerTop : styles.sideBannerBottom}`}
+                                                        >
+                                                            <div className={styles.sideBannerContent}>
+                                                                <span className={styles.sideTag}>
+                                                                    {prod.esDigital ? "ENTREGA INMEDIATA" : (hayStockProd ? "STOCK DISPONIBLE" : "AGOTADO")}
+                                                                </span>
+                                                                <h3 onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                                    {prod.nombre}
+                                                                </h3>
+                                                                <p>¡Por solo {calcularRangoPrecios(prod)}!</p>
+                                                                <button 
+                                                                    className={styles.sideLink} 
+                                                                    disabled={!hayStockProd}
+                                                                    onClick={(e) => {
+                                                                        if (prod.tieneVariaciones) {
+                                                                            manejarVerDetalle(prod);
+                                                                        } else {
+                                                                            agregarAlCarrito(prod, null, e);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    {prod.tieneVariaciones ? "Ver Opciones" : (hayStockProd ? "Añadir al carrito" : "Agotado")}
+                                                                </button>
+                                                            </div>
+                                                            {prod.imagenUrl && (
+                                                                <img 
+                                                                    src={prod.imagenUrl} 
+                                                                    alt={prod.nombre} 
+                                                                    className={styles.sideBannerImage} 
+                                                                    onClick={() => manejarVerDetalle(prod)}
+                                                                    style={{cursor: 'pointer'}}
+                                                                />
+                                                            )}
                                                         </div>
-                                                        {prod.imagenUrl && (
-                                                            <img 
-                                                                src={prod.imagenUrl} 
-                                                                alt={prod.nombre} 
-                                                                className={styles.sideBannerImage} 
-                                                                onClick={() => manejarVerDetalle(prod)}
-                                                                style={{cursor: 'pointer'}}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </section>
                                     )}
@@ -893,37 +1023,124 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                         </div>
                                     ) : (
                                         <div className={styles.productsGrid}>
-                                            {productosFiltrados.map((prod: Producto) => (
-                                                <div key={prod.id} className={styles.productCard}>
-                                                    <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
-                                                        <span className={styles.productBadge} style={{ background: prod.esDigital ? '#581c7e' : '#047688' }}>
-                                                            {prod.esDigital ? "Digital" : "Físico"}
-                                                        </span>
-                                                        {prod.imagenUrl ? (
-                                                            <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} loading="lazy" />
-                                                        ) : (
-                                                            <div className={styles.noImagePlaceholder}>Nicaplus Tech</div>
-                                                        )}
-                                                    </div>
-                                                    <div className={styles.productInfo}>
-                                                        <h3 className={styles.productName} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
-                                                            {prod.nombre}
-                                                        </h3>
-                                                        <p className={styles.productDescription}>{prod.descripcion}</p>
-                                                        <div className={styles.priceActionRow}>
-                                                            <span className={styles.productPrice}>C$ {prod.precioVenta.toLocaleString('es-NI')}</span>
-                                                            <button 
-                                                                className={styles.addCartBtn}
-                                                                disabled={!prod.esDigital && prod.stockActual <= 0}
-                                                                onClick={(e) => agregarAlCarrito(prod, e)}
-                                                                aria-label={`Añadir ${prod.nombre} al carrito`}
-                                                            >
-                                                                <FaShoppingCart />
-                                                            </button>
+                                            {productosFiltrados.map((prod: Producto) => {
+                                                const tieneVariaciones = Boolean(prod.tieneVariaciones && prod.variaciones && prod.variaciones.length > 0);
+                                                const hayStock = prod.esDigital || prod.stockActual > 0;
+
+                                                return (
+                                                    <div key={prod.id} className={styles.productCard}>
+                                                        <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)} style={{ cursor: 'pointer', position: 'relative' }}>
+    
+                                                            {/* BADGES SUPERIORES ALINEADOS EN FILA SIN SOLAPAMIENTO */}
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                top: '8px',
+                                                                left: '8px',
+                                                                right: '8px',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                zIndex: 5,
+                                                                pointerEvents: 'none'
+                                                            }}>
+                                                                {/* Tipo de Producto (Físico / Digital) */}
+                                                                <span style={{
+                                                                    background: prod.esDigital ? '#581c7e' : '#047688',
+                                                                    color: '#fff',
+                                                                    fontSize: '0.68rem',
+                                                                    fontWeight: 800,
+                                                                    padding: '3px 8px',
+                                                                    borderRadius: '6px',
+                                                                    textTransform: 'uppercase',
+                                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                                                    letterSpacing: '0.3px'
+                                                                }}>
+                                                                    {prod.esDigital ? "Digital" : "Físico"}
+                                                                </span>
+
+                                                                {/* Badge de Variantes si aplica */}
+                                                                {tieneVariaciones && (
+                                                                    <span style={{
+                                                                        background: '#f59e0b',
+                                                                        color: '#000',
+                                                                        fontSize: '0.68rem',
+                                                                        fontWeight: 800,
+                                                                        padding: '3px 8px',
+                                                                        borderRadius: '6px',
+                                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '3px'
+                                                                    }}>
+                                                                        <FaPalette size={10} /> Variantes
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* INDICADOR DE STOCK EN TIENDA INFERIOR DERECHO */}
+                                                            <div style={{ position: 'absolute', bottom: '8px', right: '8px', zIndex: 5, pointerEvents: 'none' }}>
+                                                                {hayStock ? (
+                                                                    <span style={{
+                                                                        background: 'rgba(16, 185, 129, 0.95)',
+                                                                        color: '#fff',
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 800,
+                                                                        padding: '3px 8px',
+                                                                        borderRadius: '6px',
+                                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                                                                    }}>
+                                                                        {!prod.esDigital ? `${prod.stockActual} u.` : 'Disponible'}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span style={{
+                                                                        background: 'rgba(239, 68, 68, 0.95)',
+                                                                        color: '#fff',
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 800,
+                                                                        padding: '3px 8px',
+                                                                        borderRadius: '6px',
+                                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                                                                    }}>
+                                                                        Agotado
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {prod.imagenUrl ? (
+                                                                <img src={prod.imagenUrl} alt={prod.nombre} className={styles.productImage} loading="lazy" />
+                                                            ) : (
+                                                                <div className={styles.noImagePlaceholder}>Nicaplus Tech</div>
+                                                            )}
+                                                        </div>
+                                                        <div className={styles.productInfo}>
+                                                            <h3 className={styles.productName} onClick={() => manejarVerDetalle(prod)} style={{cursor: 'pointer'}}>
+                                                                {prod.nombre}
+                                                            </h3>
+                                                            <p className={styles.productDescription}>{prod.descripcion}</p>
+                                                            <div className={styles.priceActionRow}>
+                                                                <span className={styles.productPrice}>
+                                                                    {calcularRangoPrecios(prod)}
+                                                                </span>
+                                                                <button 
+                                                                    className={styles.addCartBtn}
+                                                                    disabled={!hayStock}
+                                                                    onClick={(e) => {
+                                                                        if (tieneVariaciones) {
+                                                                            manejarVerDetalle(prod);
+                                                                        } else {
+                                                                            agregarAlCarrito(prod, null, e);
+                                                                        }
+                                                                    }}
+                                                                    title={tieneVariaciones ? "Seleccionar variación" : "Añadir al carrito"}
+                                                                    aria-label={`Añadir ${prod.nombre} al carrito`}
+                                                                >
+                                                                    {tieneVariaciones ? <FaPalette size={13} /> : <FaShoppingCart size={13} />}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
 
@@ -937,7 +1154,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                 producto={productoSeleccionado}
                                 alVolver={() => setSeccionActiva('productos')}
                                 alAgregarAlCarrito={agregarAlCarrito}
-                                cantidadEnCarrito={carrito.find(item => item.producto.id === productoSeleccionado.id)?.cantidad || 0}
+                                carrito={carrito}
                             />
                         )}
 
