@@ -125,6 +125,9 @@ export const CatalogosAdmin: React.FC = () => {
     const [cargando, setCargando] = useState(true);
     const [subiendoImagen, setSubiendoImagen] = useState(false);
 
+    // ESTADO PARA LA TASA DE CAMBIO
+    const [tasaCambio, setTasaCambio] = useState<number>(37);
+
     // PAGINACIÓN
     const [paginaActual, setPaginaActual] = useState(1);
 
@@ -200,16 +203,21 @@ export const CatalogosAdmin: React.FC = () => {
 
     const cargarSincronizacionMaster = useCallback(async () => {
         try {
-            const [resProd, resCat, resJue, resProv] = await Promise.all([
+            const [resProd, resCat, resJue, resProv, resTasa] = await Promise.all([
                 api.get('/products'),
                 api.get('/categorias'),
                 api.get('/juegos'),
-                api.get('/proveedores')
+                api.get('/proveedores'),
+                api.get('/tasa-cambio').catch(() => ({ data: { valor: 37 } }))
             ]);
             setProductos(resProd.data || []);
             setCategorias(resCat.data || []);
             setJuegos(resJue.data || []);
             setListaProveedores(resProv.data || []);
+            if (resTasa.data) {
+                const val = resTasa.data.valor ?? resTasa.data.Valor ?? 37;
+                setTasaCambio(Number(val));
+            }
         } catch (err: any) { 
             console.error("Error al sincronizar catálogos:", err); 
             dispararErrorVisual("Error de Red", err.response?.data?.message || "No se pudo sincronizar la información del servidor central.");
@@ -219,6 +227,10 @@ export const CatalogosAdmin: React.FC = () => {
     }, [dispararErrorVisual]);
 
     useEffect(() => { cargarSincronizacionMaster(); }, [cargarSincronizacionMaster]);
+
+    const calcularDolares = (montoCordobas: number) => {
+        return tasaCambio > 0 ? montoCordobas / tasaCambio : 0;
+    };
 
     const prodsFiltrados = useMemo(() => {
         const query = filtroProd.toLowerCase().trim();
@@ -914,10 +926,16 @@ export const CatalogosAdmin: React.FC = () => {
                                     <div className={styles.formGroup}>
                                         <label className={styles.label}>P. Compra (C$)</label>
                                         <input type="number" step="any" name="precioCosto" value={formProducto.precioCosto} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                        <small style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                                            ${calcularDolares(Number(formProducto.precioCosto) || 0).toFixed(2)} USD
+                                        </small>
                                     </div>
                                     <div className={styles.formGroup}>
                                         <label className={styles.label}>P. Venta (C$)</label>
                                         <input type="number" step="any" name="precioVenta" value={formProducto.precioVenta} onChange={handleProductoInputChange} className={styles.input} required={!formProducto.tieneVariaciones} />
+                                        <small style={{ fontSize: '0.75rem', color: '#38bdf8', display: 'block', marginTop: '2px' }}>
+                                            ${calcularDolares(Number(formProducto.precioVenta) || 0).toFixed(2)} USD
+                                        </small>
                                     </div>
                                 </div>
                             )}
@@ -1189,98 +1207,103 @@ export const CatalogosAdmin: React.FC = () => {
                 {prodsPaginados.length === 0 ? (
                     <div className={styles.emptyText}>No hay productos coincidentes.</div>
                 ) : (
-                    prodsPaginados.map(p => (
-                        <div key={p.id} className={styles.productCardTouch}>
-                            <div className={styles.productCardTop} onClick={() => abrirDetalleCompleto(p)} title="Clic para ver ficha técnica completa e historial">
-                                <div className={styles.productImgWrap}>
-                                    {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
+                    prodsPaginados.map(p => {
+                        const precioDolarMob = calcularDolares(p.precioVenta);
+                        return (
+                            <div key={p.id} className={styles.productCardTouch}>
+                                <div className={styles.productCardTop} onClick={() => abrirDetalleCompleto(p)} title="Clic para ver ficha técnica completa e historial">
+                                    <div className={styles.productImgWrap}>
+                                        {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} className={styles.productImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
+                                    </div>
+                                    <div className={styles.productDetailsWrap}>
+                                        <strong className={styles.productTitle}>{p.nombre}</strong>
+                                        <div className={styles.productBadgesRow}>
+                                            <span className={styles.badgeType}>
+                                                {p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : (p.esCodigoDigital ? '🔑 Códigos' : '🎮 Digital')) : '📦 Físico'}
+                                            </span>
+                                            {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
+                                            <span className={styles.badgeHint}><FaInfoCircle size={10} /> Ficha</span>
+                                        </div>
+                                        <div className={styles.productPricesRow}>
+                                            <span className={styles.priceSale}>
+                                                {p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()} / $${precioDolarMob.toFixed(2)}`}
+                                            </span>
+                                            <small className={styles.productStockText}>
+                                                Stock: <strong style={{ color: p.stockActual > 0 ? '#4ade80' : '#ef4444' }}>
+                                                    {p.tieneVariaciones 
+                                                        ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                                        : (p.controlaStock || p.esCodigoDigital ? `${p.stockActual} u.` : 'Infinito')}
+                                                </strong>
+                                            </small>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className={styles.productDetailsWrap}>
-                                    <strong className={styles.productTitle}>{p.nombre}</strong>
-                                    <div className={styles.productBadgesRow}>
-                                        <span className={styles.badgeType}>
-                                            {p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : (p.esCodigoDigital ? '🔑 Códigos' : '🎮 Digital')) : '📦 Físico'}
-                                        </span>
-                                        {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
-                                        <span className={styles.badgeHint}><FaInfoCircle size={10} /> Ficha</span>
-                                    </div>
-                                    <div className={styles.productPricesRow}>
-                                        <span className={styles.priceSale}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}</span>
-                                        <small className={styles.productStockText}>
-                                            Stock: <strong style={{ color: p.stockActual > 0 ? '#4ade80' : '#ef4444' }}>
-                                                {p.tieneVariaciones 
-                                                    ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                                    : (p.controlaStock || p.esCodigoDigital ? `${p.stockActual} u.` : 'Infinito')}
-                                            </strong>
-                                        </small>
-                                    </div>
+
+                                {/* BOTONES DE ACCIÓN REDISEÑADOS PARA MÓVIL */}
+                                <div className={styles.productCardActions} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #334155' }}>
+                                    {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
+                                        <button 
+                                            onClick={() => abrirModalCodigos(p)} 
+                                            className={styles.btn} 
+                                            style={{ background: '#10b981', color: '#fff', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
+                                            title="Pool de Códigos"
+                                        >
+                                            <FaKey /> ({p.stockActual})
+                                        </button>
+                                    )}
+
+                                    {p.tieneVariaciones && (
+                                        <button 
+                                            onClick={() => abrirModalVariaciones(p)} 
+                                            className={styles.btn} 
+                                            style={{ background: '#f59e0b', color: '#000', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
+                                            title="Variaciones"
+                                        >
+                                            <FaPalette /> ({p.variaciones?.length || 0})
+                                        </button>
+                                    )}
+
+                                    {p.esSuscripcion && (
+                                        <button 
+                                            onClick={() => abrirGestionPerfiles(p)} 
+                                            className={styles.btn} 
+                                            style={{ background: '#047688', color: '#fff', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
+                                            title="Pantallas Streaming"
+                                        >
+                                            <FaTv /> Pantallas
+                                        </button>
+                                    )}
+
+                                    <button 
+                                        onClick={() => editarProducto(p)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#3b82f6', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
+                                        title="Editar"
+                                    >
+                                        <FaEdit />
+                                    </button>
+
+                                    <button 
+                                        onClick={() => clonarProducto(p)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#6366f1', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
+                                        title="Clonar"
+                                    >
+                                        <FaCopy />
+                                    </button>
+
+                                    <button 
+                                        onClick={() => eliminarProducto(p.id)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#ef4444', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
+                                        title="Eliminar"
+                                    >
+                                        <FaTrash />
+                                    </button>
                                 </div>
                             </div>
-
-                            {/* BOTONES DE ACCIÓN REDISEÑADOS PARA MÓVIL */}
-                            <div className={styles.productCardActions} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #334155' }}>
-                                {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
-                                    <button 
-                                        onClick={() => abrirModalCodigos(p)} 
-                                        className={styles.btn} 
-                                        style={{ background: '#10b981', color: '#fff', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
-                                        title="Pool de Códigos"
-                                    >
-                                        <FaKey /> ({p.stockActual})
-                                    </button>
-                                )}
-
-                                {p.tieneVariaciones && (
-                                    <button 
-                                        onClick={() => abrirModalVariaciones(p)} 
-                                        className={styles.btn} 
-                                        style={{ background: '#f59e0b', color: '#000', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
-                                        title="Variaciones"
-                                    >
-                                        <FaPalette /> ({p.variaciones?.length || 0})
-                                    </button>
-                                )}
-
-                                {p.esSuscripcion && (
-                                    <button 
-                                        onClick={() => abrirGestionPerfiles(p)} 
-                                        className={styles.btn} 
-                                        style={{ background: '#047688', color: '#fff', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
-                                        title="Pantallas Streaming"
-                                    >
-                                        <FaTv /> Pantallas
-                                    </button>
-                                )}
-
-                                <button 
-                                    onClick={() => editarProducto(p)} 
-                                    className={styles.btn} 
-                                    style={{ background: '#3b82f6', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
-                                    title="Editar"
-                                >
-                                    <FaEdit />
-                                </button>
-
-                                <button 
-                                    onClick={() => clonarProducto(p)} 
-                                    className={styles.btn} 
-                                    style={{ background: '#6366f1', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
-                                    title="Clonar"
-                                >
-                                    <FaCopy />
-                                </button>
-
-                                <button 
-                                    onClick={() => eliminarProducto(p.id)} 
-                                    className={styles.btn} 
-                                    style={{ background: '#ef4444', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
-                                    title="Eliminar"
-                                >
-                                    <FaTrash />
-                                </button>
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
@@ -1291,70 +1314,80 @@ export const CatalogosAdmin: React.FC = () => {
                         <tr>
                             <th style={{ width: '60px' }}>Foto</th>
                             <th>Producto (Clic para detalles)</th>
-                            <th style={{ width: '130px' }}>P. Venta</th>
+                            <th style={{ width: '150px' }}>P. Venta</th>
                             <th style={{ width: '110px' }}>Stock</th>
                             <th style={{ width: '220px', textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {prodsPaginados.map((p) => (
-                            <tr key={p.id}>
-                                <td onClick={() => abrirDetalleCompleto(p)} style={{ cursor: 'pointer' }}>
-                                    {p.imagenUrl ? <img src={p.imagenUrl} alt="P" className={styles.tableImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
-                                </td>
-                                <td onClick={() => abrirDetalleCompleto(p)} className={styles.tdLink}>
-                                    <strong className={styles.textHoverCyan}>{p.nombre}</strong>
-                                    <small className={styles.textMuted} style={{ display: 'flex', gap: '8px', marginTop: '2px', alignItems: 'center' }}>
-                                        <span>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : (p.esCodigoDigital ? '🔑 Pool Códigos' : '🎮 Digital')) : '📦 Físico'}</span>
-                                        {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
-                                        <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '3px' }}><FaInfoCircle size={11}/> Ver Ficha Completa</span>
-                                    </small>
-                                </td>
-                                <td className={styles.textCyan}>
-                                    <strong style={{ fontSize: '1.05rem' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}</strong>
-                                </td>
-                                <td>
-                                    <strong style={{ color: p.stockActual > 0 ? '#4ade80' : '#ef4444' }}>
-                                        {p.tieneVariaciones 
-                                            ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                            : (p.controlaStock || p.esCodigoDigital ? `${p.stockActual} u.` : 'Infinito')}
-                                    </strong>
-                                </td>
-                                <td style={{ textAlign: 'center' }}>
-                                    <div className={styles.tableActionsRow} style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
-                                        {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
-                                            <button 
-                                                onClick={() => abrirModalCodigos(p)} 
-                                                className={styles.btnIconAction} 
-                                                style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }} 
-                                                title="Gestionar Códigos"
-                                            >
-                                                <FaKey size={13} />
-                                            </button>
+                        {prodsPaginados.map((p) => {
+                            const ventaDolarDesk = calcularDolares(p.precioVenta);
+                            return (
+                                <tr key={p.id}>
+                                    <td onClick={() => abrirDetalleCompleto(p)} style={{ cursor: 'pointer' }}>
+                                        {p.imagenUrl ? <img src={p.imagenUrl} alt="P" className={styles.tableImg} loading="lazy" /> : <FaImage className={styles.noImgIcon} />}
+                                    </td>
+                                    <td onClick={() => abrirDetalleCompleto(p)} className={styles.tdLink}>
+                                        <strong className={styles.textHoverCyan}>{p.nombre}</strong>
+                                        <small className={styles.textMuted} style={{ display: 'flex', gap: '8px', marginTop: '2px', alignItems: 'center' }}>
+                                            <span>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : (p.esCodigoDigital ? '🔑 Pool Códigos' : '🎮 Digital')) : '📦 Físico'}</span>
+                                            {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
+                                            <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '3px' }}><FaInfoCircle size={11}/> Ver Ficha Completa</span>
+                                        </small>
+                                    </td>
+                                    <td className={styles.textCyan}>
+                                        <strong style={{ fontSize: '1.05rem' }}>
+                                            {p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}
+                                        </strong>
+                                        {!p.tieneVariaciones && (
+                                            <small style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'normal', color: '#94a3b8' }}>
+                                                ${ventaDolarDesk.toFixed(2)} USD
+                                            </small>
                                         )}
-                                        {p.tieneVariaciones && (
-                                            <button onClick={() => abrirModalVariaciones(p)} className={styles.btnIconAmber} title="Variaciones">
-                                                <FaPalette size={13} />
+                                    </td>
+                                    <td>
+                                        <strong style={{ color: p.stockActual > 0 ? '#4ade80' : '#ef4444' }}>
+                                            {p.tieneVariaciones 
+                                                ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                                : (p.controlaStock || p.esCodigoDigital ? `${p.stockActual} u.` : 'Infinito')}
+                                        </strong>
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <div className={styles.tableActionsRow} style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                                            {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
+                                                <button 
+                                                    onClick={() => abrirModalCodigos(p)} 
+                                                    className={styles.btnIconAction} 
+                                                    style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }} 
+                                                    title="Gestionar Códigos"
+                                                >
+                                                    <FaKey size={13} />
+                                                </button>
+                                            )}
+                                            {p.tieneVariaciones && (
+                                                <button onClick={() => abrirModalVariaciones(p)} className={styles.btnIconAmber} title="Variaciones">
+                                                    <FaPalette size={13} />
+                                                </button>
+                                            )}
+                                            {p.esSuscripcion && (
+                                                <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnIconTeal} title="Perfiles">
+                                                    <FaTv size={13} />
+                                                </button>
+                                            )}
+                                            <button onClick={() => editarProducto(p)} className={styles.btnIconAction} title="Editar">
+                                                <FaEdit size={13} />
                                             </button>
-                                        )}
-                                        {p.esSuscripcion && (
-                                            <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnIconTeal} title="Perfiles">
-                                                <FaTv size={13} />
+                                            <button onClick={() => clonarProducto(p)} className={styles.btnIconAction} title="Clonar">
+                                                <FaCopy size={13} />
                                             </button>
-                                        )}
-                                        <button onClick={() => editarProducto(p)} className={styles.btnIconAction} title="Editar">
-                                            <FaEdit size={13} />
-                                        </button>
-                                        <button onClick={() => clonarProducto(p)} className={styles.btnIconAction} title="Clonar">
-                                            <FaCopy size={13} />
-                                        </button>
-                                        <button onClick={() => eliminarProducto(p.id)} className={styles.btnIconDelete} title="Eliminar">
-                                            <FaTrash size={13} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                            <button onClick={() => eliminarProducto(p.id)} className={styles.btnIconDelete} title="Eliminar">
+                                                <FaTrash size={13} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -1607,6 +1640,9 @@ export const CatalogosAdmin: React.FC = () => {
                                             <h4 style={{ margin: '2px 0 0 0', color: '#cbd5e1', fontSize: '1.2rem', fontWeight: 800 }}>
                                                 {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioCosto.toLocaleString()}`}
                                             </h4>
+                                            {!productoDetalleModal.tieneVariaciones && (
+                                                <small style={{ fontSize: '0.75rem', color: '#94a3b8' }}>${calcularDolares(productoDetalleModal.precioCosto).toFixed(2)} USD</small>
+                                            )}
                                         </div>
 
                                         <div>
@@ -1614,6 +1650,9 @@ export const CatalogosAdmin: React.FC = () => {
                                             <h4 style={{ margin: '2px 0 0 0', color: '#38bdf8', fontSize: '1.2rem', fontWeight: 900 }}>
                                                 {productoDetalleModal.tieneVariaciones ? 'Varía' : `C$ ${productoDetalleModal.precioVenta.toLocaleString()}`}
                                             </h4>
+                                            {!productoDetalleModal.tieneVariaciones && (
+                                                <small style={{ fontSize: '0.75rem', color: '#94a3b8' }}>${calcularDolares(productoDetalleModal.precioVenta).toFixed(2)} USD</small>
+                                            )}
                                         </div>
 
                                         {!productoDetalleModal.tieneVariaciones && (
@@ -1622,6 +1661,7 @@ export const CatalogosAdmin: React.FC = () => {
                                                 <h4 style={{ margin: '2px 0 0 0', color: '#4ade80', fontSize: '1.2rem', fontWeight: 800 }}>
                                                     C$ {(productoDetalleModal.precioVenta - productoDetalleModal.precioCosto).toLocaleString()}
                                                 </h4>
+                                                <small style={{ fontSize: '0.75rem', color: '#94a3b8' }}>${calcularDolares(productoDetalleModal.precioVenta - productoDetalleModal.precioCosto).toFixed(2)} USD</small>
                                             </div>
                                         )}
 
@@ -1685,22 +1725,29 @@ export const CatalogosAdmin: React.FC = () => {
                                         ) : ventasFiltradas.length === 0 ? (
                                             <div className={styles.emptyText}>No hay registros de ventas para este artículo.</div>
                                         ) : (
-                                            ventasFiltradas.map((h, i) => (
-                                                <div key={i} className={styles.saleItemCard}>
-                                                    <div className={styles.saleItemHeader}>
-                                                        <strong>Factura #{h.ventaId}</strong>
-                                                        <span className={styles.saleDate}>{h.fecha}</span>
-                                                    </div>
-                                                    <div className={styles.saleItemDetails}>
-                                                        <span style={{ fontWeight: 700 }}>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin teléfono'})</span>
-                                                        <div className={styles.salePriceRow}>
-                                                            <span>{h.cantidad}x C$ {h.precioUnitario.toLocaleString()}</span>
-                                                            <strong className={styles.textCyan} style={{ fontSize: '1.05rem' }}>Total: C$ {h.subTotal.toLocaleString()}</strong>
+                                            ventasFiltradas.map((h, i) => {
+                                                const unitDolarHist = calcularDolares(h.precioUnitario);
+                                                const subDolarHist = calcularDolares(h.subTotal);
+                                                return (
+                                                    <div key={i} className={styles.saleItemCard}>
+                                                        <div className={styles.saleItemHeader}>
+                                                            <strong>Factura #{h.ventaId}</strong>
+                                                            <span className={styles.saleDate}>{h.fecha}</span>
                                                         </div>
-                                                        <small className={styles.textMuted}>Pago: {h.metodoPago} • Atendió: {h.operador}</small>
+                                                        <div className={styles.saleItemDetails}>
+                                                            <span style={{ fontWeight: 700 }}>👤 {h.clienteNombre} ({h.clienteTelefono || 'Sin teléfono'})</span>
+                                                            <div className={styles.salePriceRow}>
+                                                                <span>{h.cantidad}x C$ {h.precioUnitario.toLocaleString()} (${unitDolarHist.toFixed(2)})</span>
+                                                                <div style={{ textAlign: 'right' }}>
+                                                                    <strong className={styles.textCyan} style={{ fontSize: '1.05rem' }}>Total: C$ {h.subTotal.toLocaleString()}</strong>
+                                                                    <small style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8' }}>${subDolarHist.toFixed(2)} USD</small>
+                                                                </div>
+                                                            </div>
+                                                            <small className={styles.textMuted}>Pago: {h.metodoPago} • Atendió: {h.operador}</small>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </div>
@@ -1851,6 +1898,9 @@ export const CatalogosAdmin: React.FC = () => {
                         <div className={styles.variationsListScroll}>
                             {variacionesModal.map((varItem, idxReal) => {
                                 const esEditando = variacionEditandoIdx === idxReal;
+                                const costoVarModalDolar = calcularDolares(varItem.precioCosto);
+                                const ventaVarModalDolar = calcularDolares(varItem.precioVenta);
+
                                 return (
                                     <div key={idxReal} className={styles.varCardTouch}>
                                         <div className={styles.varCardTop}>
@@ -1869,11 +1919,15 @@ export const CatalogosAdmin: React.FC = () => {
                                         <div className={styles.varCardDetailsRow}>
                                             <div>
                                                 <small>Costo: </small>
-                                                {esEditando ? <input type="number" value={varItem.precioCosto} onChange={e => guardarVariacionModal(idxReal, 'precioCosto', Number(e.target.value) || 0)} className={styles.inputMini} /> : <span>C$ {varItem.precioCosto}</span>}
+                                                {esEditando ? <input type="number" value={varItem.precioCosto} onChange={e => guardarVariacionModal(idxReal, 'precioCosto', Number(e.target.value) || 0)} className={styles.inputMini} /> : (
+                                                    <span>C$ {varItem.precioCosto} <small style={{ color: '#94a3b8' }}>(${costoVarModalDolar.toFixed(2)})</small></span>
+                                                )}
                                             </div>
                                             <div>
                                                 <small>Venta: </small>
-                                                {esEditando ? <input type="number" value={varItem.precioVenta} onChange={e => guardarVariacionModal(idxReal, 'precioVenta', Number(e.target.value) || 0)} className={styles.inputMini} /> : <strong className={styles.textCyan}>C$ {varItem.precioVenta}</strong>}
+                                                {esEditando ? <input type="number" value={varItem.precioVenta} onChange={e => guardarVariacionModal(idxReal, 'precioVenta', Number(e.target.value) || 0)} className={styles.inputMini} /> : (
+                                                    <strong className={styles.textCyan}>C$ {varItem.precioVenta} <small style={{ color: '#94a3b8', fontWeight: 'normal' }}>(${ventaVarModalDolar.toFixed(2)})</small></strong>
+                                                )}
                                             </div>
                                         </div>
 

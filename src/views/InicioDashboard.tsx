@@ -47,6 +47,9 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     const [cargando, setCargando] = useState(true);
     const [indicadores, setIndicadores] = useState<any>(null);
 
+    // Estado para la Tasa de Cambio
+    const [tasaCambio, setTasaCambio] = useState<number>(37);
+
     // Búsqueda Universal
     const [query, setQuery] = useState('');
     const [resultados, setResultados] = useState<any>(null);
@@ -55,9 +58,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                const [resResumen, resIndicadores] = await Promise.all([
+                const [resResumen, resIndicadores, resTasa] = await Promise.all([
                     api.get('/reportes/resumen-dashboard'),
-                    api.get('/reportes/indicadores')
+                    api.get('/reportes/indicadores'),
+                    api.get('/tasa-cambio').catch(() => ({ data: { valor: 37 } }))
                 ]);
 
                 setResumen({
@@ -77,6 +81,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 });
 
                 setIndicadores(resIndicadores.data);
+                if (resTasa.data) {
+                    const val = resTasa.data.valor ?? resTasa.data.Valor ?? 37;
+                    setTasaCambio(Number(val));
+                }
             } catch (err) {
                 console.error("Error al sincronizar métricas del dashboard:", err);
             } finally {
@@ -85,6 +93,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
         };
         cargarDatosDashboard();
     }, []);
+
+    const calcularDolares = (montoCordobas: number) => {
+        return tasaCambio > 0 ? montoCordobas / tasaCambio : 0;
+    };
 
     const ejecutarBusqueda = async (valorQuery: string) => {
         setQuery(valorQuery);
@@ -272,6 +284,9 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                             <FaMoneyBillWave className={styles.textGreen} />
                         </div>
                         <h2 className={styles.heroKpiAmount}>C$ {resumen.ventasDia.toLocaleString('es-NI')}</h2>
+                        <small style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginTop: '-4px', marginBottom: '8px' }}>
+                            US$ {calcularDolares(resumen.ventasDia).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </small>
                         <div className={styles.heroActionsRow}>
                             <div onClick={() => setVistaActiva('renovaciones')} className={styles.chipUrgent}>
                                 <FaCalendarTimes />
@@ -292,6 +307,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                                 <FaChartLine className={styles.textCyan} />
                             </div>
                             <span className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</span>
+                            <small className={styles.kpiSub}>${calcularDolares(resumen.ventasSemana).toFixed(2)} USD</small>
                         </div>
 
                         <div className={styles.kpiCard}>
@@ -300,7 +316,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                                 <FaPercentage className={styles.textPurple} />
                             </div>
                             <span className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</span>
-                            <small className={styles.kpiSub}>Margen: {porcentajeMargen}%</small>
+                            <small className={styles.kpiSub}>${calcularDolares(resumen.ventasMes).toFixed(2)} USD | Margen: {porcentajeMargen}%</small>
                         </div>
 
                         <div className={styles.kpiCard}>
@@ -309,6 +325,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                                 <FaChartLine className={styles.textOrange} />
                             </div>
                             <span className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</span>
+                            <small className={styles.kpiSub} style={{ color: '#fed7aa' }}>${calcularDolares(resumen.utilidadMes).toFixed(2)} USD</small>
                         </div>
 
                         <div className={styles.kpiCard}>
