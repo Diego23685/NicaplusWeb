@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import api from '../services/api';
 import { 
     FaEdit, 
@@ -13,10 +14,21 @@ import {
     FaShoppingCart,
     FaExchangeAlt,
     FaLock,
-    FaTrash
+    FaTrash,
+    FaShareAlt
 } from 'react-icons/fa';
 import { imprimirTicketTermico, enviarWhatsAppVenta } from './Caja';
 import styles from '../assets/styles/Reportes.module.css';
+
+const extraerListaCodigos = (metaStr: string): string[] => {
+    if (!metaStr) return [];
+    return metaStr
+        .split(/[\n|\|]+/)
+        .map(linea => linea.trim())
+        .filter(linea => Boolean(linea))
+        .map(linea => linea.replace(/^C[ÓO]DIGO(\s*DISPONIBLE)?:\s*/i, '').trim())
+        .filter(linea => Boolean(linea));
+};
 
 export const Reportes: React.FC = () => {
     const [desde, setDesde] = useState('');
@@ -41,6 +53,11 @@ export const Reportes: React.FC = () => {
     const [ventaAEditar, setVentaAEditar] = useState<any | null>(null);
     const [nuevoMetodoPago, setMetodoPago] = useState('');
     const [detallesEditados, setDetallesEditados] = useState<any[]>([]);
+
+    // Estados y Referencia para la generación de imagen
+    const [ventaParaImagen, setVentaParaImagen] = useState<any | null>(null);
+    const [, setGenerandoImagen] = useState(false);
+    const ticketRenderRef = useRef<HTMLDivElement>(null);
 
     const formatearLocal = (d: Date) => {
         const y = d.getFullYear();
@@ -226,7 +243,7 @@ export const Reportes: React.FC = () => {
             alert(res.data?.mensaje || "Venta eliminada e inventarios restaurados.");
             setVentaAEditar(null);
             cargarDatosIniciales();
-            if (desde && hasta) ConsultarReporte();
+            if (desde && hasta) ConsultarReporte(); 
         } catch (err: any) {
             alert(err.response?.data?.mensaje || err.response?.data || "Error al eliminar la venta.");
         }
@@ -344,6 +361,7 @@ export const Reportes: React.FC = () => {
             return {
                 ...d,
                 nombre: prod ? (prod.nombre ?? prod.Nombre) : (d.nombre || `Producto #${d.idProducto}`),
+                descripcion: prod?.descripcion || '',
                 subTotal: d.subTotal ?? (d.cantidad * d.precioUnitario - (d.descuento || 0))
             };
         });
@@ -366,6 +384,55 @@ export const Reportes: React.FC = () => {
     const reordenarEnviarWhatsApp = (venta: any) => {
         const datosVenta = obtenerEstructuraVentaNormalizada(venta);
         enviarWhatsAppVenta(datosVenta);
+    };
+
+    // COMPARTIR FACTURA COMO IMAGEN
+    const compartirFacturaImagenReportes = async (venta: any) => {
+        const datosNormalizados = obtenerEstructuraVentaNormalizada(venta);
+        setVentaParaImagen(datosNormalizados);
+        setGenerandoImagen(true);
+
+        setTimeout(async () => {
+            if (!ticketRenderRef.current) {
+                setGenerandoImagen(false);
+                return;
+            }
+
+            try {
+                const canvas = await html2canvas(ticketRenderRef.current, {
+                    scale: 3,
+                    backgroundColor: '#ffffff',
+                    useCORS: true
+                });
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    const file = new File([blob], `Factura_000${datosNormalizados.ventaId}.png`, { type: 'image/png' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: `Factura #${datosNormalizados.ventaId}`,
+                            text: `Factura de compra - Nicaplus Gaming`
+                        });
+                    } else {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        alert("📋 Factura copiada como imagen al portapapeles. Pégala directamente con Ctrl+V en WhatsApp Web.");
+                        const tel = datosNormalizados.cliente?.telefono?.replace(/[^0-9]/g, '') || '';
+                        if (tel) {
+                            window.open(`https://web.whatsapp.com/send?phone=505${tel}`, '_blank');
+                        }
+                    }
+                }, 'image/png');
+            } catch (error) {
+                console.error("Error al generar imagen de la factura:", error);
+                alert("Ocurrió un error al generar la imagen de la factura.");
+            } finally {
+                setGenerandoImagen(false);
+            }
+        }, 150);
     };
 
     const exportarAPDF = () => {
@@ -722,7 +789,6 @@ export const Reportes: React.FC = () => {
 
                 {/* 5. VISTA MÓVIL (FEEDS TÁCTILES) */}
                 <div className={styles.mobileFeed}>
-                    {/* FEED VENTAS */}
                     {tabAuditoria === 'ventas' && (
                         cargandoTabla ? (
                             <div className={styles.emptyText}>Sincronizando transacciones...</div>
@@ -762,6 +828,9 @@ export const Reportes: React.FC = () => {
                                                 <button onClick={() => abrirEditorVenta(v)} className={styles.btnActionEdit} title="Editar">
                                                     <FaEdit size={13} />
                                                 </button>
+                                                <button onClick={() => compartirFacturaImagenReportes(v)} className={styles.btnActionPrint} style={{ background: '#0284c7', color: '#fff' }} title="Compartir Imagen PNG">
+                                                    <FaShareAlt size={13} />
+                                                </button>
                                                 <button onClick={() => reimprimirTicket(v)} className={styles.btnActionPrint} title="Imprimir Ticket">
                                                     <FaPrint size={13} />
                                                 </button>
@@ -776,7 +845,6 @@ export const Reportes: React.FC = () => {
                         )
                     )}
 
-                    {/* FEED COMPRAS */}
                     {tabAuditoria === 'compras' && (
                         !datosReporte?.comprasProveedores || datosReporte.comprasProveedores.length === 0 ? (
                             <div className={styles.emptyText}>No hay compras a proveedores registradas en este período.</div>
@@ -805,7 +873,6 @@ export const Reportes: React.FC = () => {
                         )
                     )}
 
-                    {/* FEED LIBRO DIARIO */}
                     {tabAuditoria === 'caja' && (
                         !datosReporte?.movimientosCaja || datosReporte.movimientosCaja.length === 0 ? (
                             <div className={styles.emptyText}>No hay movimientos de caja en este rango.</div>
@@ -838,7 +905,7 @@ export const Reportes: React.FC = () => {
                     )}
                 </div>
 
-                {/* 6. VISTA ESCRITORIO (TABLAS COMPLETAS >= 1024px) */}
+                {/* 6. VISTA ESCRITORIO */}
                 <div className={styles.desktopTableWrap}>
                     {tabAuditoria === 'ventas' && (
                         <table className={styles.table}>
@@ -870,6 +937,7 @@ export const Reportes: React.FC = () => {
                                         <td style={{ textAlign: 'center' }}>
                                             <div className={styles.actionsGroupCenter}>
                                                 <button onClick={() => abrirEditorVenta(v)} className={styles.btnActionEdit} title="Editar"><FaEdit /></button>
+                                                <button onClick={() => compartirFacturaImagenReportes(v)} className={styles.btnActionPrint} style={{ background: '#0284c7', color: '#fff' }} title="Compartir Imagen PNG"><FaShareAlt /></button>
                                                 <button onClick={() => reimprimirTicket(v)} className={styles.btnActionPrint} title="Imprimir"><FaPrint /></button>
                                                 <button onClick={() => reordenarEnviarWhatsApp(v)} className={styles.btnActionWhatsapp} title="WhatsApp"><FaWhatsapp /></button>
                                             </div>
@@ -1082,6 +1150,131 @@ export const Reportes: React.FC = () => {
                                 <FaTrash /> Eliminar Factura por Completo (Revertir Stock)
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* RENDER INVISIBLE PARA CONVERSIÓN DE FACTURA A IMAGEN */}
+            {ventaParaImagen && (
+                <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+                    <div 
+                        ref={ticketRenderRef} 
+                        style={{
+                            width: '380px',
+                            background: '#ffffff',
+                            color: '#000000',
+                            padding: '24px 18px',
+                            fontFamily: "'Courier New', Courier, monospace",
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            lineHeight: 1.3
+                        }}
+                    >
+                        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                            <img 
+                                src={`${window.location.origin}/LogoNica.png`} 
+                                alt="Logo" 
+                                style={{ maxWidth: '140px', maxHeight: '55px', height: 'auto', filter: 'grayscale(100%) contrast(150%)', marginBottom: '6px' }}
+                                crossOrigin="anonymous" 
+                            />
+                            <div style={{ fontSize: '14px', fontWeight: 900 }}>NICAPLUS GAMING</div>
+                            <div>Tienda Digital y Taller Técnico</div>
+                            <div>León, Nicaragua | Tel: +505 8888-8888</div>
+                        </div>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <div>
+                            <div>Factura: #000{ventaParaImagen.ventaId || 1}</div>
+                            <div>Fecha: {new Date(ventaParaImagen.fechaVenta || Date.now()).toLocaleDateString('es-NI')}</div>
+                            <div>Condición: {(ventaParaImagen.metodoPagoCongelado || 'Efectivo').toUpperCase()}</div>
+                            <div>Cliente: {ventaParaImagen.cliente?.nombre || 'Mostrador'}</div>
+                        </div>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                            <thead>
+                                <tr>
+                                    <th align="left" style={{ paddingBottom: '4px' }}>Cant/Desc</th>
+                                    <th align="right" style={{ paddingBottom: '4px' }}>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ventaParaImagen.detalles.map((item: any, idx: number) => {
+                                    const meta = item.metadataDigital || '';
+                                    const esCodigo = meta.toUpperCase().includes('CÓDIGO') || meta.toUpperCase().includes('CODIGO');
+                                    const listaCodigos = esCodigo ? extraerListaCodigos(meta) : [];
+
+                                    return (
+                                        <React.Fragment key={idx}>
+                                            <tr>
+                                                <td align="left">{item.cantidad}x {item.nombre}</td>
+                                                <td align="right">C$ {item.subTotal}</td>
+                                            </tr>
+                                            {item.descripcion && item.descripcion.trim() && item.descripcion !== 'Sin descripción' && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', color: '#444' }}>
+                                                        {item.descripcion.trim()}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {!esCodigo && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
+                                                        Garantía: {item.garantiaDias > 0 ? `${item.garantiaDias} días` : 'Sin garantía'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {item.descuento > 0 && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px' }}>
+                                                        (Descto: -C$ {item.descuento * item.cantidad})
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {esCodigo ? (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', paddingTop: '2px' }}>
+                                                        {listaCodigos.map((c, cIdx) => (
+                                                            <div key={cIdx} style={{ fontFamily: "'Courier New', monospace", fontSize: '12px', letterSpacing: '0.5px' }}>
+                                                                🔑 {c}
+                                                            </div>
+                                                        ))}
+                                                    </td>
+                                                </tr>
+                                            ) : (meta && (
+                                                <tr>
+                                                    <td colSpan={2} align="left" style={{ paddingLeft: '6px', fontSize: '11px', wordBreak: 'break-all' }}>
+                                                        ID: {meta.replace(/^DIAS:\d+\|/, '')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                                <tr>
+                                    <td align="left">TOTAL:</td>
+                                    <td align="right" style={{ fontSize: '15px', fontWeight: 900 }}>
+                                        C$ {ventaParaImagen.totalCongelado || ventaParaImagen.detalles.reduce((acc: number, d: any) => acc + (d.subTotal || 0), 0)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div style={{ borderBottom: '2px dashed #000', margin: '8px 0' }} />
+
+                        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                            <div>¡Gracias por su compra!</div>
+                            <div style={{ fontSize: '11px' }}>Canjee sus códigos o conserve su ticket.</div>
+                        </div>
                     </div>
                 </div>
             )}

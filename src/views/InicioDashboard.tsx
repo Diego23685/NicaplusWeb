@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
     FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
     FaChartLine, FaPercentage, FaExclamationTriangle, 
-    FaCalendarDay, FaCalendarTimes, FaClipboardList,
+    FaCalendarDay, FaCalendarTimes, 
     FaSearch, FaUser, FaTv, FaLock, FaTimes,
     FaReceipt, FaUsers, FaTools, FaCheckCircle
 } from 'react-icons/fa';

@@ -13,12 +13,9 @@ import {
   FaTimes,
   FaHistory,
   FaSearch,
-  FaChevronDown,
   FaChevronUp,
   FaPhoneAlt,
-  FaCalendarAlt,
-  FaFileInvoiceDollar
-} from 'react-icons/fa';
+  FaCalendarAlt} from 'react-icons/fa';
 import styles from '../assets/styles/Proveedores.module.css';
 
 export const Proveedores: React.FC = () => {

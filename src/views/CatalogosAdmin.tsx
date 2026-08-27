@@ -4,7 +4,7 @@ import {
     FaBoxOpen, FaGamepad, FaTags, FaImage, FaThList, FaEdit, FaTrash, 
     FaTimes, FaPlus, FaChevronDown, FaChevronUp, FaTruck, FaShieldAlt, 
     FaBoxes, FaSearch, FaTv, FaLayerGroup, FaCopy, FaPalette, FaSave, FaHistory,
-    FaChevronLeft, FaChevronRight, FaInfoCircle
+    FaChevronLeft, FaChevronRight, FaInfoCircle, FaKey
 } from 'react-icons/fa';
 import styles from '../assets/styles/CatalogosAdmin.module.css';
 
@@ -34,6 +34,7 @@ interface Producto {
     stockActual: number;
     imagenUrl: string;
     esDigital: boolean;
+    esCodigoDigital?: boolean;
     esSuscripcion: boolean;
     controlaStock: boolean;
     requiereServicio?: boolean;
@@ -61,6 +62,17 @@ interface PerfilCuenta {
     accountGroupKey?: string;
 }
 
+interface CodigoDigital {
+    id: number;
+    idProducto: number;
+    idVariacion: number | null;
+    clave: string;
+    vendido: boolean;
+    estado: string;
+    fechaVenta: string | null;
+    idVenta: number | null;
+}
+
 interface HistorialVentaItem {
     ventaId: number;
     fecha: string;
@@ -86,6 +98,7 @@ const productoFormInicial = {
     stockActual: 0,
     imagenUrl: '',
     esDigital: false,
+    esCodigoDigital: false,
     esSuscripcion: false,
     controlaStock: true,
     categoriaId: '',
@@ -137,7 +150,15 @@ export const CatalogosAdmin: React.FC = () => {
     const [nuevaVarPrecioVenta, setNuevaVarPrecioVenta] = useState<number | ''>('');
     const [nuevaVarStock, setNuevaVarStock] = useState<number | ''>('');
 
-    // GESTIÓN DE PERFILES
+    // GESTIÓN DE CÓDIGOS DIGITALES
+    const [productoCodigosAbierto, setProductoCodigosAbierto] = useState<Producto | null>(null);
+    const [codigosActuales, setCodigosActuales] = useState<CodigoDigital[]>([]);
+    const [textoBatchCodigos, setTextoBatchCodigos] = useState('');
+    const [filtroEstadoCodigos, setFiltroEstadoCodigos] = useState<'disponibles' | 'todos' | 'vendidos'>('disponibles');
+    const [busquedaCodigo, setBusquedaCodigo] = useState('');
+    const [cargandoCodigos, setCargandoCodigos] = useState(false);
+
+    // GESTIÓN DE PERFILES STREAMING
     const [productoPerfilAbierto, setProductoPerfilAbierto] = useState<Producto | null>(null);
     const [perfilesActuales, setPerfilesActuales] = useState<PerfilCuenta[]>([]);
     const [perfilEditandoId, setPerfilEditandoId] = useState<number | null>(null);
@@ -225,6 +246,16 @@ export const CatalogosAdmin: React.FC = () => {
         return prodsFiltrados.slice(inicio, inicio + PAGE_SIZE);
     }, [prodsFiltrados, paginaActual]);
 
+    const codigosFiltrados = useMemo(() => {
+        return codigosActuales.filter(c => {
+            const coincideTexto = c.clave.toLowerCase().includes(busquedaCodigo.toLowerCase().trim());
+            let coincideEstado = true;
+            if (filtroEstadoCodigos === 'disponibles') coincideEstado = !c.vendido && c.estado === 'Disponible';
+            if (filtroEstadoCodigos === 'vendidos') coincideEstado = c.vendido || c.estado === 'Vendido';
+            return coincideTexto && coincideEstado;
+        });
+    }, [codigosActuales, busquedaCodigo, filtroEstadoCodigos]);
+
     const perfilesFiltradosYOrdenados = useMemo(() => {
         return perfilesActuales
             .filter((perfil) => {
@@ -285,6 +316,7 @@ export const CatalogosAdmin: React.FC = () => {
             if (name === 'esDigital' && valorFinal) {
                 nuevoEstado.controlaStock = false;
             } else if (name === 'esDigital' && !valorFinal) {
+                nuevoEstado.esCodigoDigital = false;
                 nuevoEstado.esSuscripcion = false;
                 nuevoEstado.juegoId = '';
                 nuevoEstado.controlaStock = true;
@@ -306,6 +338,54 @@ export const CatalogosAdmin: React.FC = () => {
             setHistorialVentas([]);
         } finally {
             setCargandoHistorial(false);
+        }
+    };
+
+    const abrirModalCodigos = async (producto: Producto) => {
+        setProductoCodigosAbierto(producto);
+        setTextoBatchCodigos('');
+        setBusquedaCodigo('');
+        setFiltroEstadoCodigos('disponibles');
+        setCargandoCodigos(true);
+
+        try {
+            const res = await api.get(`/CodigosDigitales/producto/${producto.id}?soloDisponibles=false`);
+            setCodigosActuales(res.data || []);
+        } catch (err: any) {
+            dispararErrorVisual("Error al Cargar Códigos", err.response?.data?.mensaje || "No se pudo recuperar la lista de códigos.");
+            setCodigosActuales([]);
+        } finally {
+            setCargandoCodigos(false);
+        }
+    };
+
+    const guardarCodigosMasivos = async () => {
+        if (!productoCodigosAbierto) return;
+
+        const lineas = textoBatchCodigos
+            .split(/[\n,]+/)
+            .map(l => l.trim())
+            .filter(Boolean);
+
+        if (lineas.length === 0) {
+            alert("Pegue al menos un código válido.");
+            return;
+        }
+
+        try {
+            const res = await api.post('/CodigosDigitales/masivo', {
+                idProducto: productoCodigosAbierto.id,
+                codigos: lineas
+            });
+
+            alert(res.data?.mensaje || `Se agregaron ${lineas.length} códigos con éxito.`);
+            setTextoBatchCodigos('');
+
+            const resCodigos = await api.get(`/CodigosDigitales/producto/${productoCodigosAbierto.id}?soloDisponibles=false`);
+            setCodigosActuales(resCodigos.data || []);
+            cargarSincronizacionMaster();
+        } catch (err: any) {
+            dispararErrorVisual("Error al Guardar Códigos", err.response?.data?.mensaje || "No se pudieron guardar los códigos.");
         }
     };
 
@@ -513,6 +593,7 @@ export const CatalogosAdmin: React.FC = () => {
             stockActual: producto.stockActual,
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
+            esCodigoDigital: producto.esCodigoDigital || false,
             esSuscripcion: producto.esSuscripcion || false,
             controlaStock: producto.controlaStock ?? true,
             categoriaId: producto.categoriaId?.toString() || '',
@@ -538,6 +619,7 @@ export const CatalogosAdmin: React.FC = () => {
             stockActual: producto.controlaStock ? producto.stockActual : 0,
             imagenUrl: producto.imagenUrl || '',
             esDigital: producto.esDigital,
+            esCodigoDigital: producto.esCodigoDigital || false,
             esSuscripcion: producto.esSuscripcion || false,
             controlaStock: producto.controlaStock ?? true,
             categoriaId: producto.categoriaId?.toString() || '',
@@ -697,6 +779,7 @@ export const CatalogosAdmin: React.FC = () => {
             stockMinimo: 0,
             imagenUrl: productoVariacionAbierto.imagenUrl,
             esDigital: productoVariacionAbierto.esDigital,
+            esCodigoDigital: productoVariacionAbierto.esCodigoDigital || false,
             controlaStock: productoVariacionAbierto.controlaStock,
             requiereServicio: productoVariacionAbierto.requiereServicio ?? false,
             visibleEnCatalogo: true,
@@ -735,7 +818,7 @@ export const CatalogosAdmin: React.FC = () => {
             <header className={styles.header}>
                 <div>
                     <h3 className={styles.title}>Catálogos Maestros</h3>
-                    <p className={styles.subtitle}>Gestión simplificada de inventario general.</p>
+                    <p className={styles.subtitle}>Gestión de inventario físico, suscripciones y códigos digitales.</p>
                 </div>
             </header>
 
@@ -876,26 +959,60 @@ export const CatalogosAdmin: React.FC = () => {
                         <div className={styles.formColumn}>
                             <div className={styles.togglesBlock}>
                                 <label className={styles.checkboxLabel}>
-                                    <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> ¿Es Recarga / Digital?
+                                    <input type="checkbox" name="esDigital" checked={formProducto.esDigital} onChange={handleProductoInputChange} /> 🌐 ¿Es Producto Digital / Servicio?
                                 </label>
                                 
-                                <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
-                                    <input type="checkbox" name="controlaStock" checked={formProducto.controlaStock} onChange={handleProductoInputChange} /> <FaBoxes size={11} /> ¿Controla Stock Físico?
-                                </label>
-
                                 {formProducto.esDigital && (
-                                    <div className={styles.streamingSubOptions}>
-                                        <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
-                                            <input type="checkbox" name="esSuscripcion" checked={formProducto.esSuscripcion} onChange={handleProductoInputChange} /> 🔄 Suscripción (Streaming)
+                                    <div style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px', margin: '4px 0' }}>
+                                        <label className={styles.checkboxLabel} style={{ color: '#10b981' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                name="esCodigoDigital" 
+                                                checked={formProducto.esCodigoDigital} 
+                                                disabled={formProducto.esSuscripcion}
+                                                onChange={e => setFormProducto(prev => ({ 
+                                                    ...prev, 
+                                                    esCodigoDigital: e.target.checked,
+                                                    ...(e.target.checked ? { esSuscripcion: false } : {})
+                                                }))} 
+                                            /> 
+                                            🔑 Maneja Pool de Códigos (Xbox, Steam, etc.)
                                         </label>
+
+                                        <label className={styles.checkboxLabel} style={{ color: '#f43f5e' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                name="esSuscripcion" 
+                                                checked={formProducto.esSuscripcion} 
+                                                disabled={formProducto.esCodigoDigital}
+                                                onChange={e => setFormProducto(prev => ({ 
+                                                    ...prev, 
+                                                    esSuscripcion: e.target.checked,
+                                                    ...(e.target.checked ? { esCodigoDigital: false } : {})
+                                                }))} 
+                                            /> 
+                                            🔄 Suscripción Streaming (Pantallas)
+                                        </label>
+
                                         {formProducto.esSuscripcion && (
-                                            <div className={styles.formGroup}>
+                                            <div className={styles.formGroup} style={{ marginTop: '4px' }}>
                                                 <label className={styles.labelRed}>Días de Vigencia</label>
                                                 <input type="number" name="diasDuracion" min={1} value={formProducto.diasDuracion} onChange={handleProductoInputChange} className={styles.input} />
                                             </div>
                                         )}
                                     </div>
                                 )}
+
+                                <label className={styles.checkboxLabel} style={{ color: formProducto.controlaStock ? '#4ade80' : '#94a3b8' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        name="controlaStock" 
+                                        checked={formProducto.controlaStock} 
+                                        disabled={formProducto.esCodigoDigital || formProducto.esSuscripcion}
+                                        onChange={handleProductoInputChange} 
+                                    /> 
+                                    <FaBoxes size={11} /> ¿Controla Stock Numérico Físico?
+                                </label>
                             </div>
 
                             {formProducto.esDigital && (
@@ -1046,7 +1163,7 @@ export const CatalogosAdmin: React.FC = () => {
                 <div className={styles.rubrosScroll}>
                     <button onClick={() => setRubroAdmin('todos')} className={`${styles.pillRubro} ${rubroAdmin === 'todos' ? styles.rubroActiveBlue : ''}`}><FaLayerGroup /> Todos</button>
                     <button onClick={() => setRubroAdmin('fisicos')} className={`${styles.pillRubro} ${rubroAdmin === 'fisicos' ? styles.rubroActiveTeal : ''}`}><FaBoxes /> Físicos</button>
-                    <button onClick={() => setRubroAdmin('digitales')} className={`${styles.pillRubro} ${rubroAdmin === 'digitales' ? styles.rubroActiveCyan : ''}`}><FaGamepad /> Digitales</button>
+                    <button onClick={() => setRubroAdmin('digitales')} className={`${styles.pillRubro} ${rubroAdmin === 'digitales' ? styles.rubroActiveCyan : ''}`}><FaGamepad /> Digitales / Códigos</button>
                     <button onClick={() => setRubroAdmin('streaming')} className={`${styles.pillRubro} ${rubroAdmin === 'streaming' ? styles.rubroActiveRose : ''}`}><FaTv /> Streaming</button>
                 </div>
 
@@ -1067,7 +1184,7 @@ export const CatalogosAdmin: React.FC = () => {
                 </div>
             </div>
 
-            {/* 5. VISTA MÓVIL / TABLET: FEED DE CARDS CON CLIC PARA EXPEDIENTE */}
+            {/* 5. VISTA MÓVIL / TABLET: FEED DE CARDS CON ACCIONES ERGONÓMICAS */}
             <div className={styles.mobileCardsFeed}>
                 {prodsPaginados.length === 0 ? (
                     <div className={styles.emptyText}>No hay productos coincidentes.</div>
@@ -1081,34 +1198,93 @@ export const CatalogosAdmin: React.FC = () => {
                                 <div className={styles.productDetailsWrap}>
                                     <strong className={styles.productTitle}>{p.nombre}</strong>
                                     <div className={styles.productBadgesRow}>
-                                        <span className={styles.badgeType}>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : '🎮 Digital') : '📦 Físico'}</span>
+                                        <span className={styles.badgeType}>
+                                            {p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : (p.esCodigoDigital ? '🔑 Códigos' : '🎮 Digital')) : '📦 Físico'}
+                                        </span>
                                         {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
-                                        <span className={styles.badgeHint}><FaInfoCircle size={10} /> Ver Ficha</span>
+                                        <span className={styles.badgeHint}><FaInfoCircle size={10} /> Ficha</span>
                                     </div>
                                     <div className={styles.productPricesRow}>
                                         <span className={styles.priceSale}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}</span>
                                         <small className={styles.productStockText}>
-                                            Stock: {p.tieneVariaciones 
-                                                ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                                : (p.controlaStock ? `${p.stockActual} u.` : 'Infinito')}
+                                            Stock: <strong style={{ color: p.stockActual > 0 ? '#4ade80' : '#ef4444' }}>
+                                                {p.tieneVariaciones 
+                                                    ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
+                                                    : (p.controlaStock || p.esCodigoDigital ? `${p.stockActual} u.` : 'Infinito')}
+                                            </strong>
                                         </small>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className={styles.productCardActions}>
-                                {p.tieneVariaciones && <button onClick={() => abrirModalVariaciones(p)} className={styles.btnActionAmber}><FaPalette /> Variantes ({p.variaciones?.length || 0})</button>}
-                                {p.esSuscripcion && <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnActionTeal}><FaTv /> Pantallas</button>}
-                                <button onClick={() => editarProducto(p)} className={styles.btnActionSecondary} title="Editar"><FaEdit /></button>
-                                <button onClick={() => clonarProducto(p)} className={styles.btnActionSecondary} title="Clonar"><FaCopy /></button>
-                                <button onClick={() => eliminarProducto(p.id)} className={styles.btnActionDanger} title="Eliminar"><FaTrash /></button>
+                            {/* BOTONES DE ACCIÓN REDISEÑADOS PARA MÓVIL */}
+                            <div className={styles.productCardActions} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #334155' }}>
+                                {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
+                                    <button 
+                                        onClick={() => abrirModalCodigos(p)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#10b981', color: '#fff', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
+                                        title="Pool de Códigos"
+                                    >
+                                        <FaKey /> ({p.stockActual})
+                                    </button>
+                                )}
+
+                                {p.tieneVariaciones && (
+                                    <button 
+                                        onClick={() => abrirModalVariaciones(p)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#f59e0b', color: '#000', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
+                                        title="Variaciones"
+                                    >
+                                        <FaPalette /> ({p.variaciones?.length || 0})
+                                    </button>
+                                )}
+
+                                {p.esSuscripcion && (
+                                    <button 
+                                        onClick={() => abrirGestionPerfiles(p)} 
+                                        className={styles.btn} 
+                                        style={{ background: '#047688', color: '#fff', fontSize: '0.8rem', padding: '8px 6px', justifyContent: 'center', borderRadius: '8px', fontWeight: 'bold' }}
+                                        title="Pantallas Streaming"
+                                    >
+                                        <FaTv /> Pantallas
+                                    </button>
+                                )}
+
+                                <button 
+                                    onClick={() => editarProducto(p)} 
+                                    className={styles.btn} 
+                                    style={{ background: '#3b82f6', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
+                                    title="Editar"
+                                >
+                                    <FaEdit />
+                                </button>
+
+                                <button 
+                                    onClick={() => clonarProducto(p)} 
+                                    className={styles.btn} 
+                                    style={{ background: '#6366f1', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
+                                    title="Clonar"
+                                >
+                                    <FaCopy />
+                                </button>
+
+                                <button 
+                                    onClick={() => eliminarProducto(p.id)} 
+                                    className={styles.btn} 
+                                    style={{ background: '#ef4444', color: '#fff', fontSize: '0.85rem', padding: '8px', justifyContent: 'center', borderRadius: '8px' }} 
+                                    title="Eliminar"
+                                >
+                                    <FaTrash />
+                                </button>
                             </div>
                         </div>
                     ))
                 )}
             </div>
 
-            {/* 6. VISTA ESCRITORIO SIMPLIFICADA (SIN SCROLL LATERAL) */}
+            {/* 6. VISTA ESCRITORIO CON ACCIONES EN FILA */}
             <div className={styles.desktopTableWrap}>
                 <table className={styles.table}>
                     <thead>
@@ -1117,7 +1293,7 @@ export const CatalogosAdmin: React.FC = () => {
                             <th>Producto (Clic para detalles)</th>
                             <th style={{ width: '130px' }}>P. Venta</th>
                             <th style={{ width: '110px' }}>Stock</th>
-                            <th style={{ width: '170px', textAlign: 'center' }}>Acciones</th>
+                            <th style={{ width: '220px', textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1129,7 +1305,7 @@ export const CatalogosAdmin: React.FC = () => {
                                 <td onClick={() => abrirDetalleCompleto(p)} className={styles.tdLink}>
                                     <strong className={styles.textHoverCyan}>{p.nombre}</strong>
                                     <small className={styles.textMuted} style={{ display: 'flex', gap: '8px', marginTop: '2px', alignItems: 'center' }}>
-                                        <span>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : '🎮 Digital') : '📦 Físico'}</span>
+                                        <span>{p.esDigital ? (p.esSuscripcion ? '📺 Streaming' : (p.esCodigoDigital ? '🔑 Pool Códigos' : '🎮 Digital')) : '📦 Físico'}</span>
                                         {p.tieneVariaciones && <span className={styles.badgeVar}>🎨 Variantes</span>}
                                         <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '3px' }}><FaInfoCircle size={11}/> Ver Ficha Completa</span>
                                     </small>
@@ -1138,19 +1314,43 @@ export const CatalogosAdmin: React.FC = () => {
                                     <strong style={{ fontSize: '1.05rem' }}>{p.tieneVariaciones ? 'Varía' : `C$ ${p.precioVenta.toLocaleString()}`}</strong>
                                 </td>
                                 <td>
-                                    <strong style={{ color: '#4ade80' }}>
+                                    <strong style={{ color: p.stockActual > 0 ? '#4ade80' : '#ef4444' }}>
                                         {p.tieneVariaciones 
                                             ? `${(p.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                            : (p.controlaStock ? `${p.stockActual} u.` : 'Infinito')}
+                                            : (p.controlaStock || p.esCodigoDigital ? `${p.stockActual} u.` : 'Infinito')}
                                     </strong>
                                 </td>
                                 <td style={{ textAlign: 'center' }}>
-                                    <div className={styles.tableActionsRow}>
-                                        {p.tieneVariaciones && <button onClick={() => abrirModalVariaciones(p)} className={styles.btnIconAmber} title="Variaciones"><FaPalette /></button>}
-                                        {p.esSuscripcion && <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnIconTeal} title="Perfiles"><FaTv /></button>}
-                                        <button onClick={() => editarProducto(p)} className={styles.btnIconAction} title="Editar"><FaEdit /></button>
-                                        <button onClick={() => clonarProducto(p)} className={styles.btnIconAction} title="Clonar"><FaCopy /></button>
-                                        <button onClick={() => eliminarProducto(p.id)} className={styles.btnIconDelete} title="Eliminar"><FaTrash /></button>
+                                    <div className={styles.tableActionsRow} style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                                        {p.esDigital && p.esCodigoDigital && !p.esSuscripcion && (
+                                            <button 
+                                                onClick={() => abrirModalCodigos(p)} 
+                                                className={styles.btnIconAction} 
+                                                style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }} 
+                                                title="Gestionar Códigos"
+                                            >
+                                                <FaKey size={13} />
+                                            </button>
+                                        )}
+                                        {p.tieneVariaciones && (
+                                            <button onClick={() => abrirModalVariaciones(p)} className={styles.btnIconAmber} title="Variaciones">
+                                                <FaPalette size={13} />
+                                            </button>
+                                        )}
+                                        {p.esSuscripcion && (
+                                            <button onClick={() => abrirGestionPerfiles(p)} className={styles.btnIconTeal} title="Perfiles">
+                                                <FaTv size={13} />
+                                            </button>
+                                        )}
+                                        <button onClick={() => editarProducto(p)} className={styles.btnIconAction} title="Editar">
+                                            <FaEdit size={13} />
+                                        </button>
+                                        <button onClick={() => clonarProducto(p)} className={styles.btnIconAction} title="Clonar">
+                                            <FaCopy size={13} />
+                                        </button>
+                                        <button onClick={() => eliminarProducto(p.id)} className={styles.btnIconDelete} title="Eliminar">
+                                            <FaTrash size={13} />
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -1187,13 +1387,159 @@ export const CatalogosAdmin: React.FC = () => {
             )}
 
             {/* =========================================================
+            MODAL CÓDIGOS DIGITALES (COMPACTO Y PROPORCIONADO)
+            ========================================================= */}
+            {productoCodigosAbierto && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContentWide} style={{ maxWidth: '650px', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+                        <div className={styles.modalHeader} style={{ paddingBottom: '8px' }}>
+                            <h3 className={styles.modalTitle} style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' }}>
+                                <FaKey /> Códigos: {productoCodigosAbierto.nombre}
+                            </h3>
+                            <button onClick={() => setProductoCodigosAbierto(null)} className={styles.modalCloseBtn}><FaTimes /></button>
+                        </div>
+
+                        {/* SECCIÓN DE CARGA COMPACTA */}
+                        <div className={styles.panelMiniLoad} style={{ margin: '6px 0', padding: '10px 12px' }}>
+                            <label style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                                📥 Pegar Códigos / Licencias (Uno por línea o separados por coma):
+                            </label>
+                            <textarea 
+                                rows={2}
+                                placeholder="XXXXX-XXXXX-XXXXX-XXXXX&#10;YYYYY-YYYYY-YYYYY-YYYYY"
+                                value={textoBatchCodigos}
+                                onChange={e => setTextoBatchCodigos(e.target.value)}
+                                className={styles.textarea}
+                                style={{ fontFamily: 'monospace', fontSize: '0.8rem', padding: '6px 8px', marginBottom: '8px', minHeight: '60px' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                    Detectados: <strong style={{ color: '#10b981' }}>{textoBatchCodigos.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).length}</strong>
+                                </span>
+                                <button 
+                                    type="button" 
+                                    onClick={guardarCodigosMasivos} 
+                                    style={{
+                                        background: '#10b981',
+                                        color: '#fff',
+                                        border: 'none',
+                                        padding: '6px 14px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 'bold',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        cursor: 'pointer',
+                                        flex: 'none'
+                                    }}
+                                >
+                                    <FaPlus size={10} /> Agregar al Stock
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* FILTROS Y BÚSQUEDA */}
+                        <div className={styles.perfilesSearchRow} style={{ margin: '4px 0', gap: '6px' }}>
+                            <div className={styles.searchBox} style={{ minHeight: '38px', flex: 1 }}>
+                                <FaSearch className={styles.searchIcon} size={12} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar serial..." 
+                                    value={busquedaCodigo} 
+                                    onChange={e => setBusquedaCodigo(e.target.value)} 
+                                    className={styles.searchInput} 
+                                    style={{ fontSize: '0.8rem' }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flex: 'none' }}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setFiltroEstadoCodigos('disponibles')} 
+                                    className={`${styles.pillMini} ${filtroEstadoCodigos === 'disponibles' ? styles.pillActivePurple : ''}`}
+                                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                >
+                                    Disponibles ({codigosActuales.filter(c => !c.vendido && c.estado === 'Disponible').length})
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setFiltroEstadoCodigos('vendidos')} 
+                                    className={`${styles.pillMini} ${filtroEstadoCodigos === 'vendidos' ? styles.pillActiveAmber : ''}`}
+                                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                >
+                                    Vendidos ({codigosActuales.filter(c => c.vendido || c.estado === 'Vendido').length})
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* TABLA DE SERIALES */}
+                        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #334155', borderRadius: '8px', marginTop: '6px' }}>
+                            {cargandoCodigos ? (
+                                <div className={styles.loading}>Cargando códigos...</div>
+                            ) : codigosFiltrados.length === 0 ? (
+                                <div className={styles.emptyText} style={{ padding: '16px' }}>No hay códigos registrados con este criterio.</div>
+                            ) : (
+                                <table className={styles.table} style={{ fontSize: '0.8rem' }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: '40px' }}>#</th>
+                                            <th>Clave / Serial</th>
+                                            <th style={{ width: '100px' }}>Estado</th>
+                                            <th style={{ width: '90px' }}>Factura</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {codigosFiltrados.map((cod, i) => (
+                                            <tr key={cod.id} style={{ background: cod.vendido ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)' }}>
+                                                <td style={{ color: '#94a3b8' }}>{i + 1}</td>
+                                                <td><strong style={{ fontFamily: 'monospace', color: cod.vendido ? '#94a3b8' : '#4ade80', fontSize: '0.85rem' }}>{cod.clave}</strong></td>
+                                                <td>
+                                                    <span className={styles.badge} style={{ background: cod.vendido ? 'rgba(239, 68, 68, 0.15)' : 'rgba(74, 222, 128, 0.15)', color: cod.vendido ? '#ef4444' : '#4ade80', padding: '2px 6px', fontSize: '0.7rem' }}>
+                                                        {cod.vendido ? 'Vendido' : 'Disponible'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ color: '#38bdf8' }}>{cod.idVenta ? `#${cod.idVenta}` : '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        {/* FOOTER COMPACTO */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: '8px' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                Stock disponible: <strong style={{ color: '#10b981' }}>{codigosActuales.filter(c => !c.vendido && c.estado === 'Disponible').length} códigos</strong>
+                            </span>
+                            <button 
+                                type="button" 
+                                onClick={() => setProductoCodigosAbierto(null)}
+                                style={{
+                                    background: '#334155',
+                                    color: '#f8fafc',
+                                    border: 'none',
+                                    padding: '6px 18px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    flex: 'none'
+                                }}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* =========================================================
                MODAL ADAPTABLE: FICHA TÉCNICA / HISTORIAL DE VENTAS
                ========================================================= */}
             {productoDetalleModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContentWide} style={{ maxWidth: '750px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                         
-                        {/* HEADER MODAL */}
                         <div className={styles.modalHeader}>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', minWidth: 0 }}>
                                 <div style={{ width: '48px', height: '48px', borderRadius: '10px', overflow: 'hidden', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1208,14 +1554,13 @@ export const CatalogosAdmin: React.FC = () => {
                                         {productoDetalleModal.nombre}
                                     </h3>
                                     <small style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                                        {productoDetalleModal.esDigital ? (productoDetalleModal.esSuscripcion ? 'Streaming Recurrente' : 'Digital') : 'Artículo Físico'} • Estado: <strong style={{ color: productoDetalleModal.estado === 'Activo' ? '#4ade80' : '#f59e0b' }}>{productoDetalleModal.estado}</strong>
+                                        {productoDetalleModal.esDigital ? (productoDetalleModal.esSuscripcion ? 'Streaming' : (productoDetalleModal.esCodigoDigital ? 'Pool Códigos' : 'Digital')) : 'Artículo Físico'} • Estado: <strong style={{ color: productoDetalleModal.estado === 'Activo' ? '#4ade80' : '#f59e0b' }}>{productoDetalleModal.estado}</strong>
                                     </small>
                                 </div>
                             </div>
                             <button onClick={() => setProductoDetalleModal(null)} className={styles.modalCloseBtn}><FaTimes /></button>
                         </div>
 
-                        {/* SUB-PESTAÑAS TÁCTILES DEL MODAL */}
                         <div style={{ display: 'flex', gap: '6px', background: '#0f172a', padding: '6px', borderRadius: '10px', border: '1px solid #334155', margin: '4px 0 10px 0' }}>
                             <button
                                 type="button"
@@ -1253,13 +1598,9 @@ export const CatalogosAdmin: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* CUERPO DEL MODAL CON SCROLL FLUIDO */}
                         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
-                            
-                            {/* PESTAÑA 1: FICHA TÉCNICA */}
                             {tabModal === 'ficha' && (
                                 <>
-                                    {/* RESUMEN FINANCIERO */}
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', background: '#0f172a', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
                                         <div>
                                             <small style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>PRECIO COSTO</small>
@@ -1289,12 +1630,11 @@ export const CatalogosAdmin: React.FC = () => {
                                             <h4 style={{ margin: '2px 0 0 0', color: '#f8fafc', fontSize: '1.2rem', fontWeight: 800 }}>
                                                 {productoDetalleModal.tieneVariaciones 
                                                     ? `${(productoDetalleModal.variaciones || []).reduce((acc, v) => acc + (v.stockActual || 0), 0)} u.` 
-                                                    : (productoDetalleModal.controlaStock ? `${productoDetalleModal.stockActual} u.` : 'Infinito')}
+                                                    : (productoDetalleModal.controlaStock || productoDetalleModal.esCodigoDigital ? `${productoDetalleModal.stockActual} u.` : 'Infinito')}
                                             </h4>
                                         </div>
                                     </div>
 
-                                    {/* PROVEEDOR, GARANTÍA Y NOTAS */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#1e293b', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
                                             <div>
@@ -1303,14 +1643,14 @@ export const CatalogosAdmin: React.FC = () => {
                                             </div>
 
                                             <div>
-                                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaShieldAlt /> GARANTÍA OFICIAL</small>
+                                                <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaShieldAlt /> GARANTÍA</small>
                                                 <strong style={{ color: '#fb923c', fontSize: '0.95rem' }}>{productoDetalleModal.garantiaDias > 0 ? `${productoDetalleModal.garantiaDias} días` : 'Sin garantía'}</strong>
                                             </div>
 
                                             {productoDetalleModal.esDigital && productoDetalleModal.esSuscripcion && (
                                                 <div>
                                                     <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}><FaTv /> VIGENCIA STREAMING</small>
-                                                    <strong style={{ color: '#f43f5e', fontSize: '0.95rem' }}>{productoDetalleModal.diasDuracion} días por ciclo</strong>
+                                                    <strong style={{ color: '#f43f5e', fontSize: '0.95rem' }}>{productoDetalleModal.diasDuracion} días</strong>
                                                 </div>
                                             )}
                                         </div>
@@ -1325,7 +1665,6 @@ export const CatalogosAdmin: React.FC = () => {
                                 </>
                             )}
 
-                            {/* PESTAÑA 2: HISTORIAL DE VENTAS */}
                             {tabModal === 'historial' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     <div className={styles.searchBox} style={{ minHeight: '48px' }}>
@@ -1366,10 +1705,8 @@ export const CatalogosAdmin: React.FC = () => {
                                     </div>
                                 </div>
                             )}
-
                         </div>
 
-                        {/* FOOTER MODAL */}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: '6px' }}>
                             <button 
                                 type="button" 

@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { 
     FaWhatsapp, FaTimes, FaUser, FaKey, FaCalendarAlt, 
-    FaHistory, FaSearch, FaMoneyBillWave, FaBan, FaCheck,
-    FaExclamationCircle, FaShieldAlt
-} from 'react-icons/fa';
+    FaHistory, FaSearch, FaMoneyBillWave, FaBan
+    } from 'react-icons/fa';
 import styles from '../assets/styles/Renovaciones.module.css';
 
 interface Cliente {

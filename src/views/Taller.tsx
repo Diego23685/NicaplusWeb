@@ -4,7 +4,7 @@ import {
     FaUser, FaLaptop, FaTools, FaChevronRight, FaTimes, 
     FaMoneyBillWave, FaWrench, FaWhatsapp, FaPrint, 
     FaCheckCircle, FaSearch, FaFileContract, FaExclamationTriangle,
-    FaConciergeBell, FaEdit, FaHistory, FaColumns, FaPlus, FaChevronDown, FaChevronUp
+    FaConciergeBell, FaEdit, FaHistory, FaColumns, FaPlus, FaChevronUp
 } from 'react-icons/fa';
 import styles from '../assets/styles/Taller.module.css';
 

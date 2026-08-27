@@ -3,7 +3,6 @@ import api from '../services/api';
 import { 
     FaFileInvoiceDollar, 
     FaSave, 
-    FaHistory, 
     FaEdit, 
     FaTrash, 
     FaTimes, 
@@ -14,10 +13,7 @@ import {
     FaCalendarAlt,
     FaPlus,
     FaChevronUp,
-    FaMoneyBillWave,
-    FaArrowDown,
-    FaArrowUp
-} from 'react-icons/fa';
+    FaMoneyBillWave} from 'react-icons/fa';
 import styles from '../assets/styles/ContabilidadCaja.module.css';
 
 export const ContabilidadCaja: React.FC = () => {
