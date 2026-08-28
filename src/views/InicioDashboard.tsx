@@ -427,36 +427,38 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                             <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasDia).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
                         </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiCyan}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>VENTAS SEMANALES</small>
-                                <FaChartLine className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
-                            <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasSemana).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
-                        </div>
-
-                        {/* Ocultamos ingresos totales del mes y utilidad a Ventas */}
+                        {/* Ocultar ventas semanales, mensuales y utilidad a Ventas */}
                         {!esVentas && (
-                            <>
-                                <div className={`${styles.kpiCard} ${styles.kpiPurple}`}>
-                                    <div className={styles.kpiHeader}>
-                                        <small className={styles.kpiLabel}>INGRESOS (MES)</small>
-                                        <FaPercentage className={styles.kpiIcon} />
-                                    </div>
-                                    <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
-                                    <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Margen: {porcentajeMargen}%</small>
+                            <div className={`${styles.kpiCard} ${styles.kpiCyan}`}>
+                                <div className={styles.kpiHeader}>
+                                    <small className={styles.kpiLabel}>VENTAS SEMANALES</small>
+                                    <FaChartLine className={styles.kpiIcon} />
                                 </div>
+                                <h4 className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                                <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasSemana).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
+                            </div>
+                        )}
 
-                                <div className={`${styles.kpiCard} ${styles.kpiOrange}`}>
-                                    <div className={styles.kpiHeader}>
-                                        <small className={styles.kpiLabel}>UTILIDAD (MES)</small>
-                                        <FaChartLine className={styles.kpiIcon} />
-                                    </div>
-                                    <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
-                                    <small className={styles.kpiSubtitle} style={{ color: '#fed7aa' }}>US$ {calcularDolares(resumen.utilidadMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
+                        {!esVentas && (
+                            <div className={`${styles.kpiCard} ${styles.kpiPurple}`}>
+                                <div className={styles.kpiHeader}>
+                                    <small className={styles.kpiLabel}>INGRESOS (MES)</small>
+                                    <FaPercentage className={styles.kpiIcon} />
                                 </div>
-                            </>
+                                <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                                <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Margen: {porcentajeMargen}%</small>
+                            </div>
+                        )}
+
+                        {!esVentas && (
+                            <div className={`${styles.kpiCard} ${styles.kpiOrange}`}>
+                                <div className={styles.kpiHeader}>
+                                    <small className={styles.kpiLabel}>UTILIDAD (MES)</small>
+                                    <FaChartLine className={styles.kpiIcon} />
+                                </div>
+                                <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                                <small className={styles.kpiSubtitle} style={{ color: '#fed7aa' }}>US$ {calcularDolares(resumen.utilidadMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
+                            </div>
                         )}
 
                         <div 
@@ -495,13 +497,15 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                             <h4 className={styles.kpiValue}>{resumen.ticketsAbiertos}</h4>
                         </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiBlue}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>CLIENTES TOTALES</small>
-                                <FaUserPlus className={styles.kpiIcon} />
+                        {!esVentas && (
+                            <div className={`${styles.kpiCard} ${styles.kpiBlue}`}>
+                                <div className={styles.kpiHeader}>
+                                    <small className={styles.kpiLabel}>CLIENTES TOTALES</small>
+                                    <FaUserPlus className={styles.kpiIcon} />
+                                </div>
+                                <h4 className={styles.kpiValue}>{resumen.cantidadClientesNuevos}</h4>
                             </div>
-                            <h4 className={styles.kpiValue}>{resumen.cantidadClientesNuevos}</h4>
-                        </div>
+                        )}
                     </section>
 
                     {/* SECCIÓN 2: GRÁFICAS DE NEGOCIO (Ocultas para Ventas) */}
