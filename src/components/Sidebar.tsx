@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
 
                 {/* BOTONES DE NAVEGACIÓN */}
                 <nav className={styles.nav}>
-                    {/* ACCESO UNIVERSAL (Todos los roles) */}
+                    {/* ACCESO UNIVERSAL (Dashboard) */}
                     {renderNavButton('inicio', <FaThLarge />, 'Dashboard')}
                     
                     {/* ACCESO: Administrador, Socio, Ventas */}
