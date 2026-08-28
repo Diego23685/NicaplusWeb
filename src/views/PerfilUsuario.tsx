@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FaUserCircle, FaSave } from 'react-icons/fa';
+import { FaUserCircle, FaSave, FaUserPlus } from 'react-icons/fa';
 import api from '../services/api';
 
 export const PerfilUsuario: React.FC = () => {
@@ -9,6 +9,14 @@ export const PerfilUsuario: React.FC = () => {
     const [cargandoTasa, setCargandoTasa] = useState<boolean>(true);
     const [guardandoTasa, setGuardandoTasa] = useState<boolean>(false);
     const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
+    // Estados para el formulario de registro de nuevos usuarios
+    const [nombreNuevo, setNombreNuevo] = useState<string>('');
+    const [usernameNuevo, setUsernameNuevo] = useState<string>('');
+    const [passwordNuevo, setPasswordNuevo] = useState<string>('');
+    const [idRolNuevo, setIdRolNuevo] = useState<number>(3); // Por defecto Ventas (ID 3)
+    const [registrandoUsuario, setRegistrandoUsuario] = useState<boolean>(false);
+    const [mensajeRegistro, setMensajeRegistro] = useState<{ texto: string; error: boolean } | null>(null);
 
     useEffect(() => {
         api.get('/tasa-cambio')
@@ -44,9 +52,44 @@ export const PerfilUsuario: React.FC = () => {
         }
     };
 
+    const registrarUsuario = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!nombreNuevo || !usernameNuevo || !passwordNuevo) {
+            setMensajeRegistro({ texto: "Todos los campos son obligatorios.", error: true });
+            return;
+        }
+
+        setRegistrandoUsuario(true);
+        setMensajeRegistro(null);
+
+        try {
+            await api.post('/api/Auth/register', {
+                nombre: nombreNuevo,
+                username: usernameNuevo,
+                password: passwordNuevo,
+                idRol: Number(idRolNuevo)
+            });
+
+            setMensajeRegistro({ texto: "¡Usuario registrado con éxito!", error: false });
+            setNombreNuevo('');
+            setUsernameNuevo('');
+            setPasswordNuevo('');
+            setIdRolNuevo(3);
+            setTimeout(() => setMensajeRegistro(null), 4000);
+        } catch (err: any) {
+            console.error("Error al registrar usuario:", err);
+            const errorMsg = err.response?.data?.mensaje || err.response?.data || "No se pudo registrar el usuario.";
+            setMensajeRegistro({ texto: typeof errorMsg === 'string' ? errorMsg : "Error al registrar usuario.", error: true });
+        } finally {
+            setRegistrandoUsuario(false);
+        }
+    };
+
     if (!usuario) {
         return <p style={{ color: '#94a3b8' }}>No hay datos de sesión activos.</p>;
     }
+
+    const esAdministrador = usuario.rol === 'Administrador';
 
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', background: '#1e293b', padding: '30px', borderRadius: '12px', border: '1px solid #334155', color: '#fff' }}>
@@ -126,6 +169,82 @@ export const PerfilUsuario: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* SECCIÓN REGISTRO DE NUEVOS USUARIOS (EXCLUSIVO ADMINISTRADOR) */}
+                {esAdministrador && (
+                    <div style={{ marginTop: '10px', borderTop: '1px solid #334155', paddingTop: '20px' }}>
+                        <h3 style={{ fontSize: '1.1rem', color: '#38bdf8', marginBottom: '10px' }}>👥 Registrar Nuevo Usuario</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '15px' }}>
+                            Crea credenciales de acceso para nuevos colaboradores asignando su respectivo rol en el sistema.
+                        </p>
+
+                        <form onSubmit={registrarUsuario} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                                <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px', fontWeight: 'bold' }}>Nombre Completo</label>
+                                <input 
+                                    type="text" 
+                                    value={nombreNuevo} 
+                                    onChange={e => setNombreNuevo(e.target.value)} 
+                                    placeholder="Ej. Juan Pérez"
+                                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '0.95rem' }}
+                                    required 
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px', fontWeight: 'bold' }}>Nombre de Usuario (Username)</label>
+                                <input 
+                                    type="text" 
+                                    value={usernameNuevo} 
+                                    onChange={e => setUsernameNuevo(e.target.value)} 
+                                    placeholder="Ej. jperez"
+                                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '0.95rem' }}
+                                    required 
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px', fontWeight: 'bold' }}>Contraseña</label>
+                                <input 
+                                    type="password" 
+                                    value={passwordNuevo} 
+                                    onChange={e => setPasswordNuevo(e.target.value)} 
+                                    placeholder="••••••••"
+                                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '0.95rem' }}
+                                    required 
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px', fontWeight: 'bold' }}>Rol del Sistema</label>
+                                <select 
+                                    value={idRolNuevo} 
+                                    onChange={e => setIdRolNuevo(Number(e.target.value))}
+                                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '10px', color: '#fff', fontSize: '0.95rem' }}
+                                >
+                                    <option value={1}>1 - Administrador</option>
+                                    <option value={2}>2 - Socio</option>
+                                    <option value={3}>3 - Ventas</option>
+                                    <option value={4}>4 - Soporte</option>
+                                </select>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={registrandoUsuario}
+                                style={{ marginTop: '5px', background: '#10b981', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: registrandoUsuario ? 0.6 : 1 }}
+                            >
+                                <FaUserPlus /> {registrandoUsuario ? 'Registrando...' : 'Registrar Usuario'}
+                            </button>
+                        </form>
+
+                        {mensajeRegistro && (
+                            <div style={{ marginTop: '10px', background: mensajeRegistro.error ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: mensajeRegistro.error ? '#f87171' : '#4ade80', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                {mensajeRegistro.texto}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
