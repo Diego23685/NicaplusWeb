@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                         renderNavButton('notificaciones', <FaBell />, 'Notificaciones')}
 
                     {/* ACCESO: Administrador, Socio, Ventas */}
-                    {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && 
+                    {['Administrador', 'Socio'].includes(rolUsuario) && 
                         renderNavButton('proveedores', <FaTruck />, 'Proveedores')}
 
                     {/* MÓDULOS EXCLUSIVOS: Administrador y Socio */}
