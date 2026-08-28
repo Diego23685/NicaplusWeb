@@ -16,7 +16,8 @@ import {
     FaExclamationTriangle, 
     FaShieldAlt,
     FaClipboardList,
-    FaBell
+    FaBell,
+    FaTimes
 } from 'react-icons/fa';
 import _styles from '../components/Sidebar.module.css';
 const styles = _styles as Record<string, string>;
@@ -24,98 +25,139 @@ const styles = _styles as Record<string, string>;
 interface SidebarProps {
     vistaActiva: string;
     setVistaActiva: (vista: 'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'perfil' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria' | 'notificaciones') => void;
+    alCerrarMovil?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva, alCerrarMovil }) => {
     const { usuario, logout } = useAuth();
     const rolUsuario = usuario?.rol || '';
 
-    // Función auxiliar para renderizar los botones de forma limpia
+    const navegarA = (id: any) => {
+        setVistaActiva(id);
+        if (alCerrarMovil) alCerrarMovil();
+    };
+
     const renderNavButton = (
-        id: 'inicio' | 'caja' | 'taller' | 'reportes' | 'catalogos' | 'cuentas' | 'crm' | 'proveedores' | 'renovaciones' | 'tickets' | 'garantias' | 'contabilidad_caja' | 'analitica' | 'auditoria' | 'notificaciones',
+        id: any,
         icon: React.ReactNode,
         label: string
     ) => {
         const isActive = vistaActiva === id;
         return (
             <button 
-                onClick={() => setVistaActiva(id)} 
+                onClick={() => navegarA(id)} 
                 className={`${styles.navButton} ${isActive ? styles.navButtonActive : ''}`}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: isActive ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                    color: isActive ? '#38bdf8' : '#94a3b8',
+                    border: 'none',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
+                }}
             >
-                <span className={styles.iconTeal}>{icon}</span>
-                {label}
+                <span style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center' }}>{icon}</span>
+                <span style={{ flex: 1 }}>{label}</span>
             </button>
         );
     };
 
     return (
-        <div className={styles.sidebar}>
+        <div style={{ 
+            width: '100vw', 
+            maxWidth: '320px', 
+            height: '100%', 
+            background: '#0b0f19', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'space-between',
+            boxSizing: 'border-box',
+            padding: '20px 16px',
+            borderRight: '1px solid #1e293b',
+            boxShadow: '10px 0 30px rgba(0,0,0,0.5)'
+        }}>
+            {/* CABECERA MÓVIL / LOGO Y CIERRE */}
             <div>
-                {/* LOGO / BRANDING */}
-                <div className={styles.branding}>
-                    <div className={styles.brandLogoContainer}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #1e293b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <img 
                             src="/Logo.png" 
                             alt="Nicaplus Gaming" 
-                            className={styles.brandLogoImg} 
+                            style={{ width: '38px', height: '38px', objectFit: 'contain' }} 
                         />
                         <div>
-                            <h2 className={styles.brandTitle}>
-                                NICA<span className={styles.brandTeal}>PLUS</span>
+                            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#fff', letterSpacing: '0.5px' }}>
+                                NICA<span style={{ color: '#38bdf8' }}>PLUS</span>
                             </h2>
-                            <small className={styles.brandSubtitle}>
-                                Gaming & Tech ERP
+                            <small style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>
+                                Mobile ERP Suite
                             </small>
                         </div>
                     </div>
+
+                    {alCerrarMovil && (
+                        <button 
+                            onClick={alCerrarMovil}
+                            style={{
+                                background: '#1e293b',
+                                border: 'none',
+                                color: '#f8fafc',
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <FaTimes size={14} />
+                        </button>
+                    )}
                 </div>
 
-                {/* BOTONES DE NAVEGACIÓN */}
-                <nav className={styles.nav}>
-                    {/* ACCESO UNIVERSAL (Todos los roles) */}
+                {/* LISTA DE NAVEGACIÓN TÁCTIL */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: '4px' }}>
                     {renderNavButton('inicio', <FaThLarge />, 'Dashboard')}
                     
-                    {/* ACCESO: Administrador, Socio, Ventas */}
                     {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && 
                         renderNavButton('caja', <FaShoppingCart />, 'Ventas (POS)')}
 
-                    {/* ACCESO: Solo Administrador (Auditoría) */}
                     {['Administrador'].includes(rolUsuario) && 
                         renderNavButton('auditoria', <FaClipboardList />, 'Auditoría')}
                     
-                    {/* ACCESO: Administrador, Socio, Soporte */}
                     {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && 
                         renderNavButton('taller', <FaTools />, 'Taller Técnico')}
 
-                    {/* ACCESO: Administrador, Socio, Ventas */}
                     {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && 
                         renderNavButton('cuentas', <FaHandHoldingUsd />, 'Créditos y Deudas')}
                     
-                    {/* ACCESO: Administrador, Socio, Ventas, Soporte */}
                     {['Administrador', 'Socio', 'Ventas', 'Soporte'].includes(rolUsuario) && 
                         renderNavButton('crm', <FaUserFriends />, 'Clientes (CRM)')}
 
-                    {/* ACCESO: Administrador, Socio, Ventas */}
                     {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && 
                         renderNavButton('renovaciones', <FaCalendarAlt />, 'Renovaciones')}
 
-                    {/* ACCESO: Administrador, Socio, Soporte */}
                     {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && 
                         renderNavButton('tickets', <FaExclamationTriangle />, 'Reclamos y Soporte')}
 
-                    {/* ACCESO: Administrador, Socio, Soporte */}
                     {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && 
                         renderNavButton('garantias', <FaShieldAlt />, 'Bitácora Garantías')}
 
-                    {/* ACCESO: Administrador, Socio, Soporte */}
                     {['Administrador', 'Socio', 'Soporte'].includes(rolUsuario) && 
                         renderNavButton('notificaciones', <FaBell />, 'Notificaciones')}
 
-                    {/* ACCESO: Administrador, Socio, Ventas */}
-                    {['Administrador', 'Socio', 'Ventas'].includes(rolUsuario) && 
+                    {['Administrador', 'Socio'].includes(rolUsuario) && 
                         renderNavButton('proveedores', <FaTruck />, 'Proveedores')}
 
-                    {/* MÓDULOS EXCLUSIVOS: Administrador y Socio */}
                     {['Administrador', 'Socio'].includes(rolUsuario) && 
                         renderNavButton('catalogos', <FaBoxOpen />, 'Catálogos Admin')}
 
@@ -127,30 +169,58 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva })
                     
                     {['Administrador', 'Socio'].includes(rolUsuario) && 
                         renderNavButton('reportes', <FaChartBar />, 'Contabilidad')}
-                </nav>
+                </div>
             </div>
 
-            {/* SECCIÓN INFERIOR: PERFIL Y LOGOUT */}
-            <div className={styles.footer}>
+            {/* SECCIÓN INFERIOR: PERFIL Y CIERRE DE SESIÓN */}
+            <div style={{ borderTop: '1px solid #1e293b', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button 
-                    onClick={() => setVistaActiva('perfil')}
-                    className={`${styles.profileButton} ${vistaActiva === 'perfil' ? styles.profileButtonActive : ''}`}
+                    onClick={() => navegarA('perfil')}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: vistaActiva === 'perfil' ? '#1e293b' : 'transparent',
+                        border: '1px solid #1e293b',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                    }}
                 >
-                    <div className={styles.profileAvatar}>
-                        <FaUser size={15} />
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                        <FaUser size={14} />
                     </div>
-                    <div className={styles.profileInfo}>
-                        <div className={styles.profileName}>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                             {usuario?.nombre || 'Usuario'}
                         </div>
-                        <small className={styles.profileRol}>
+                        <small style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 600 }}>
                             {usuario?.rol || 'Sin Rol'}
                         </small>
                     </div>
                 </button>
 
-                <button onClick={logout} className={styles.logoutButton}>
-                    <FaSignOutAlt style={{ fontSize: '1rem' }} /> Cerrar Sesión
+                <button 
+                    onClick={logout} 
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#f87171',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: '10px',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                    }}
+                >
+                    <FaSignOutAlt /> Cerrar Sesión
                 </button>
             </div>
         </div>

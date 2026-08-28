@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { 
     FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
     FaChartLine, FaPercentage, FaExclamationTriangle, 
@@ -29,6 +30,9 @@ interface InicioDashboardProps {
 }
 
 export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva }) => {
+    const { usuario } = useAuth();
+    const esVentas = usuario?.rol === 'Ventas';
+
     const [resumen, setResumen] = useState<any>({
         ventasDia: 0,
         ventasSemana: 0,
@@ -58,11 +62,19 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                const [resResumen, resIndicadores, resTasa] = await Promise.all([
+                const peticiones: any[] = [
                     api.get('/reportes/resumen-dashboard'),
-                    api.get('/reportes/indicadores'),
                     api.get('/tasa-cambio').catch(() => ({ data: { valor: 37 } }))
-                ]);
+                ];
+
+                if (!esVentas) {
+                    peticiones.push(api.get('/reportes/indicadores'));
+                }
+
+                const respuestas = await Promise.all(peticiones);
+                const resResumen = respuestas[0];
+                const resTasa = respuestas[1];
+                const resIndicadores = !esVentas ? respuestas[2] : null;
 
                 setResumen({
                     ventasDia: resResumen.data.ventasDia ?? 0,
@@ -80,7 +92,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     alertas: resResumen.data.alertas ?? []
                 });
 
-                setIndicadores(resIndicadores.data);
+                if (resIndicadores) {
+                    setIndicadores(resIndicadores.data);
+                }
+
                 if (resTasa.data) {
                     const val = resTasa.data.valor ?? resTasa.data.Valor ?? 37;
                     setTasaCambio(Number(val));
@@ -92,7 +107,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
             }
         };
         cargarDatosDashboard();
-    }, []);
+    }, [esVentas]);
 
     const calcularDolares = (montoCordobas: number) => {
         return tasaCambio > 0 ? montoCordobas / tasaCambio : 0;
@@ -188,7 +203,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
             {/* 1. ENCABEZADO Y ACCESOS RÁPIDOS OPERATIVOS */}
             <header className={styles.dashboardHeader}>
                 <div className={styles.headerInfo}>
-                    <h3 className={styles.headerTitle}>Panel de Control</h3>
+                    <h3 className={styles.headerTitle}>{esVentas ? 'Panel de Ventas' : 'Panel de Control'}</h3>
                     <span className={styles.liveBadge}>● ACTIVO</span>
                 </div>
 
@@ -299,46 +314,54 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                         </div>
                     </div>
 
-                    {/* 5. GRID DE KPIS OPERATIVOS */}
+                    {/* 5. GRID DE KPIS OPERATIVOS (Oculta datos financieros globales a Ventas) */}
                     <section className={styles.kpiGrid}>
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiHeader}>
-                                <small>SEMANAL</small>
-                                <FaChartLine className={styles.textCyan} />
+                        {!esVentas && (
+                            <div className={styles.kpiCard}>
+                                <div className={styles.kpiHeader}>
+                                    <small>SEMANAL</small>
+                                    <FaChartLine className={styles.textCyan} />
+                                </div>
+                                <span className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</span>
+                                <small className={styles.kpiSub}>${calcularDolares(resumen.ventasSemana).toFixed(2)} USD</small>
                             </div>
-                            <span className={styles.kpiValue}>C$ {resumen.ventasSemana.toLocaleString('es-NI')}</span>
-                            <small className={styles.kpiSub}>${calcularDolares(resumen.ventasSemana).toFixed(2)} USD</small>
-                        </div>
+                        )}
 
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiHeader}>
-                                <small>MES (INGRESOS)</small>
-                                <FaPercentage className={styles.textPurple} />
+                        {!esVentas && (
+                            <div className={styles.kpiCard}>
+                                <div className={styles.kpiHeader}>
+                                    <small>MES (INGRESOS)</small>
+                                    <FaPercentage className={styles.textPurple} />
+                                </div>
+                                <span className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</span>
+                                <small className={styles.kpiSub}>${calcularDolares(resumen.ventasMes).toFixed(2)} USD | Margen: {porcentajeMargen}%</small>
                             </div>
-                            <span className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI')}</span>
-                            <small className={styles.kpiSub}>${calcularDolares(resumen.ventasMes).toFixed(2)} USD | Margen: {porcentajeMargen}%</small>
-                        </div>
+                        )}
 
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiHeader}>
-                                <small>UTILIDAD MES</small>
-                                <FaChartLine className={styles.textOrange} />
+                        {!esVentas && (
+                            <div className={styles.kpiCard}>
+                                <div className={styles.kpiHeader}>
+                                    <small>UTILIDAD MES</small>
+                                    <FaChartLine className={styles.textOrange} />
+                                </div>
+                                <span className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</span>
+                                <small className={styles.kpiSub} style={{ color: '#fed7aa' }}>${calcularDolares(resumen.utilidadMes).toFixed(2)} USD</small>
                             </div>
-                            <span className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI')}</span>
-                            <small className={styles.kpiSub} style={{ color: '#fed7aa' }}>${calcularDolares(resumen.utilidadMes).toFixed(2)} USD</small>
-                        </div>
+                        )}
 
-                        <div className={styles.kpiCard}>
-                            <div className={styles.kpiHeader}>
-                                <small>CLIENTES NUEVOS</small>
-                                <FaUserPlus className={styles.textBlue} />
+                        {!esVentas && (
+                            <div className={styles.kpiCard}>
+                                <div className={styles.kpiHeader}>
+                                    <small>CLIENTES NUEVOS</small>
+                                    <FaUserPlus className={styles.textBlue} />
+                                </div>
+                                <span className={styles.kpiValue}>{resumen.cantidadClientesNuevos}</span>
                             </div>
-                            <span className={styles.kpiValue}>{resumen.cantidadClientesNuevos}</span>
-                        </div>
+                        )}
                     </section>
 
-                    {/* 6. INDICADORES RÁPIDOS DE NEGOCIO */}
-                    {indicadores && (
+                    {/* 6. INDICADORES RÁPIDOS DE NEGOCIO (Oculto para Ventas) */}
+                    {!esVentas && indicadores && (
                         <section className={styles.indicatorBar}>
                             <div className={styles.indicatorTag}>
                                 <span>Clientes:</span>
@@ -357,21 +380,23 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                         </section>
                     )}
 
-                    {/* 7. GRÁFICAS ADAPTABLES */}
-                    <section className={styles.chartsGrid}>
-                        <div className={styles.chartCard}>
-                            <span className={styles.sectionTitle}>Flujo Semanal</span>
-                            <div className={styles.chartWrapper}>
-                                <Line data={datosGraficaLinea} options={opcionesComunes} />
+                    {/* 7. GRÁFICAS ADAPTABLES (Ocultas para Ventas) */}
+                    {!esVentas && (
+                        <section className={styles.chartsGrid}>
+                            <div className={styles.chartCard}>
+                                <span className={styles.sectionTitle}>Flujo Semanal</span>
+                                <div className={styles.chartWrapper}>
+                                    <Line data={datosGraficaLinea} options={opcionesComunes} />
+                                </div>
                             </div>
-                        </div>
-                        <div className={styles.chartCard}>
-                            <span className={styles.sectionTitle}>Venta por Rubro</span>
-                            <div className={styles.chartWrapper}>
-                                <Bar data={datosGraficaBarra} options={opcionesComunes} />
+                            <div className={styles.chartCard}>
+                                <span className={styles.sectionTitle}>Venta por Rubro</span>
+                                <div className={styles.chartWrapper}>
+                                    <Bar data={datosGraficaBarra} options={opcionesComunes} />
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
 
                     {/* 8. LISTAS OPERATIVAS (ALERTAS, TOP PRODUCTOS, ÚLTIMOS CLIENTES) */}
                     <section className={styles.operationalGrid}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { 
   FaTh, FaList, FaMoneyBillWave, FaTrashAlt, FaShoppingCart, FaUser, 
   FaSearch, FaTimes, FaCalendarAlt, FaWhatsapp, FaPrint, FaCheckCircle, 
@@ -421,6 +422,9 @@ export const imprimirTicketTermico = (datosVenta: any) => {
 };
 
 export const Caja: React.FC = () => {
+    const { usuario } = useAuth();
+    const esVentas = usuario?.rol === 'Ventas';
+
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -1039,7 +1043,7 @@ export const Caja: React.FC = () => {
                                                     </span>
                                                     {!p.tieneVariaciones && (
                                                         <small className={styles.productProfit}>
-                                                            +C$ {p.precioVenta - p.precioCosto} | ${precioDolar.toFixed(2)}
+                                                            {!esVentas && `+C$ ${p.precioVenta - p.precioCosto} | `}${precioDolar.toFixed(2)}
                                                         </small>
                                                     )}
                                                 </div>
@@ -1401,7 +1405,7 @@ export const Caja: React.FC = () => {
                             </div>
                         )}
 
-                        {carrito.length > 0 && (
+                        {!esVentas && carrito.length > 0 && (
                             <div className={styles.utilityBadge}>
                                 <FaMoneyBillWave className={styles.textPurple} />
                                 <span>Utilidad: <strong className={styles.textGreen}>C$ {margenGananciaTotal.toLocaleString()}</strong></span>
