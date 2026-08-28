@@ -309,7 +309,7 @@ export const imprimirTicketTermico = (datosVenta: any) => {
                     NICAPLUS GAMING<br>
                     Tienda Digital y Taller Técnico<br>
                     León, Nicaragua<br>
-                    Tel: +505 5846-3903
+                    Tel: +505 5846-3903 - 8787-0821
                 </div>
                 <div class="linea"></div>
                 <div class="text-left" style="width: 100%;">
