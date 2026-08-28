@@ -50,6 +50,17 @@
   z-index: 0;
 }
 
+/* Agrupa el buscador y el título a la izquierda de la navbar */
+.leftNavGroup {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+
 /* ==========================================================================
    2. NAVBAR ESTILO RETAIL (CORREGIDA SIN DESBORDES)
    ========================================================================== */
@@ -78,12 +89,27 @@
   box-sizing: border-box;
 }
 
+/* Transición suave para ocultar el título cuando el buscador se expande */
 .brandBlock {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
   flex-shrink: 0;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+}
+
+.ocultarTitulo {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-10px);
+  pointer-events: none;
+  width: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .brandIndicator {
@@ -139,12 +165,23 @@
   flex-shrink: 0;
 }
 
+/* Ajustes del buscador para que crezca hacia la derecha al tocarlo */
 .searchWrapper {
   position: relative;
   display: flex;
   align-items: center;
-  width: 160px;
-  transition: width 0.3s ease;
+  width: 150px; /* Ancho inicial compacto a la izquierda del título */
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.searchWrapperActive {
+  width: 280px; /* Ancho expandido al hacer clic/enfocar */
+}
+
+@media (min-width: 1024px) {
+  .searchWrapperActive {
+    width: 380px; /* Se estira aún más en pantallas grandes */
+  }
 }
 
 .searchWrapper:focus-within {
@@ -168,6 +205,7 @@
   font-size: 0.8rem;
   outline: none;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .searchInput:focus {

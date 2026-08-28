@@ -291,6 +291,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const catRowRef = useRef<HTMLDivElement | null>(null);
     const juegoRowRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [buscadorExpandido, setBuscadorExpandido] = useState(false);
 
     const mostrarAviso = (mensaje: string, tipo: 'error' | 'advertencia' | 'exito' | 'info' = 'advertencia') => {
         setNotificacion({ mensaje, tipo });
@@ -686,13 +687,54 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 </>
             )}
 
-            {/* NAVBAR */}
-            <header className={styles.navbar}>
-                <div className={styles.navContainer}>
-                    <div className={styles.brandBlock} onClick={() => cambiarSeccion('inicio')}>
-                        <div className={styles.brandIndicator} />
-                        <span className={styles.brandText}>NICAPLUS GAMING</span>
-                    </div>
+           {/* NAVBAR */}
+<header className={styles.navbar}>
+    <div className={styles.navContainer}>
+        
+        {/* BLOQUE IZQUIERDO: Buscador expandible + Título */}
+        <div className={`${styles.leftNavGroup} ${buscadorExpandido ? styles.expandido : ''}`}>
+            <div 
+                className={`${styles.searchWrapper} ${buscadorExpandido ? styles.searchWrapperActive : ''}`}
+            >
+                <FaSearch className={styles.searchIcon} />
+                <input 
+                    type="text" 
+                    placeholder="Buscar en la tienda..."
+                    value={busqueda}
+                    onChange={(e) => {
+                        setBusqueda(e.target.value);
+                        if(seccionActiva !== 'productos') setSeccionActiva('productos');
+                    }}
+                    onFocus={() => setBuscadorExpandido(true)}
+                    onBlur={() => {
+                        // Si no hay texto escrito, permitimos que vuelva a su estado original al perder el foco
+                        if (!busqueda.trim()) setBuscadorExpandido(false);
+                    }}
+                    className={styles.searchInput}
+                />
+                {(busqueda || buscadorExpandido) && (
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            limpiarBusqueda();
+                            setBuscadorExpandido(false);
+                        }} 
+                        style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', paddingRight: '8px' }}
+                        aria-label="Cerrar o limpiar búsqueda"
+                    >
+                        <FaTimes size={13} />
+                    </button>
+                )}
+            </div>
+
+            <div 
+                className={`${styles.brandBlock} ${buscadorExpandido ? styles.ocultarTitulo : ''}`} 
+                onClick={() => cambiarSeccion('inicio')}
+            >
+                <div className={styles.brandIndicator} />
+               
+            </div>
+        </div>
 
                     <div className={styles.mobileActionsBlock}>
                         <button 
@@ -721,29 +763,6 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     </nav>
 
                     <div className={styles.searchAndCartBlock}>
-                        <div className={styles.searchWrapper}>
-                            <FaSearch className={styles.searchIcon} />
-                            <input 
-                                type="text" 
-                                placeholder="Buscar en la tienda..."
-                                value={busqueda}
-                                onChange={(e) => {
-                                    setBusqueda(e.target.value);
-                                    if(seccionActiva !== 'productos') setSeccionActiva('productos');
-                                }}
-                                className={styles.searchInput}
-                            />
-                            {busqueda && (
-                                <button 
-                                    onClick={limpiarBusqueda} 
-                                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', paddingRight: '10px' }}
-                                    aria-label="Limpiar búsqueda"
-                                >
-                                    <FaTimes size={13} />
-                                </button>
-                            )}
-                        </div>
-                        
                         <button 
                             className={`${styles.cartBtnDesk} ${seccionActiva === 'carrito' ? styles.cartBtnActive : ''}`}
                             onClick={() => cambiarSeccion('carrito')} 
