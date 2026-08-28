@@ -159,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ vistaActiva, setVistaActiva, a
                         renderNavButton('proveedores', <FaTruck />, 'Proveedores')}
 
                     {['Administrador', 'Socio'].includes(rolUsuario) && 
-                        renderNavButton('catalogos', <FaBoxOpen />, 'Catálogos Admin')}
+                        renderNavButton('catalogos', <FaBoxOpen />, 'Inventario')}
 
                     {['Administrador', 'Socio'].includes(rolUsuario) && 
                         renderNavButton('contabilidad_caja', <FaChartBar />, 'Arqueo y Caja')}
