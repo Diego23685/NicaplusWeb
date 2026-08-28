@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { 
     FaUserPlus, FaBoxOpen, FaMoneyBillWave, 
@@ -18,6 +19,9 @@ interface InicioDashboardProps {
 }
 
 export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva }) => {
+    const { usuario } = useAuth();
+    const esVentas = usuario?.rol === 'Ventas';
+
     const [esMobile, setEsMobile] = useState<boolean>(window.innerWidth <= 768);
 
     const [resumen, setResumen] = useState<any>({
@@ -55,12 +59,20 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
     useEffect(() => {
         const cargarDatosDashboard = async () => {
             try {
-                // Traer datos del dashboard y la tasa de cambio registrada en la BD
-                const [resResumen, resIndicadores, resTasa] = await Promise.all([
+                const peticiones: any[] = [
                     api.get('/reportes/resumen-dashboard'),
-                    api.get('/reportes/indicadores'),
                     api.get('/tasa-cambio')
-                ]);
+                ];
+
+                // Si no es ventas, también traemos los indicadores de negocio generales
+                if (!esVentas) {
+                    peticiones.push(api.get('/reportes/indicadores'));
+                }
+
+                const respuestas = await Promise.all(peticiones);
+                const resResumen = respuestas[0];
+                const resTasa = respuestas[1];
+                const resIndicadores = !esVentas ? respuestas[2] : null;
 
                 setResumen({
                     ventasDia: resResumen.data.ventasDia ?? 0,
@@ -78,9 +90,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                     alertas: resResumen.data.alertas ?? []
                 });
 
-                setIndicadores(resIndicadores.data);
+                if (resIndicadores) {
+                    setIndicadores(resIndicadores.data);
+                }
 
-                // Asignar el valor de la tasa que viene de la BD (soporta valor o Valor)
                 if (resTasa.data) {
                     const valorObtenido = resTasa.data.valor ?? resTasa.data.Valor ?? 0;
                     setTasaCambio(Number(valorObtenido));
@@ -93,9 +106,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
         };
 
         cargarDatosDashboard();
-    }, []);
+    }, [esVentas]);
 
-    // Función de cálculo en frontend
     const calcularDolares = (montoCordobas: number) => {
         if (!tasaCambio || tasaCambio <= 0) return 0;
         return montoCordobas / tasaCambio;
@@ -293,8 +305,10 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
             
             <header className={styles.dashboardHeader}>
                 <div>
-                    <h3 className={styles.headerTitle}>Panel de Control</h3>
-                    <p className={styles.headerSubtitle}>Monitoreo en tiempo real del negocio.</p>
+                    <h3 className={styles.headerTitle}>{esVentas ? 'Panel de Ventas' : 'Panel de Control'}</h3>
+                    <p className={styles.headerSubtitle}>
+                        {esVentas ? 'Gestión rápida comercial y atención al cliente.' : 'Monitoreo en tiempo real del negocio.'}
+                    </p>
                 </div>
                 <span className={styles.activeBadge}>
                     SISTEMA ACTIVO — 2026
@@ -317,7 +331,8 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 )}
             </div>
 
-            {indicadores && (
+            {/* Los indicadores de salud y proveedores se ocultan para el rol Ventas */}
+            {!esVentas && indicadores && (
                 <section className={styles.indicatorGrid}>
                     <div className={styles.indicatorCard}>
                         <h4 className={styles.indicatorLabel}>Salud de Clientes</h4>
@@ -401,7 +416,7 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                 </div>
             ) : (
                 <>
-                    {/* SECCIÓN 1: KPI CARDS CON PRECIO EN C$ Y US$ */}
+                    {/* SECCIÓN 1: KPI CARDS FILTRADAS SEGÚN ROL */}
                     <section className={styles.kpiGrid}>
                         <div className={`${styles.kpiCard} ${styles.kpiGreen}`}>
                             <div className={styles.kpiHeader}>
@@ -421,23 +436,28 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                             <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasSemana).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
                         </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiPurple}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>INGRESOS (MES)</small>
-                                <FaPercentage className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
-                            <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Margen: {porcentajeMargen}%</small>
-                        </div>
+                        {/* Ocultamos ingresos totales del mes y utilidad a Ventas */}
+                        {!esVentas && (
+                            <>
+                                <div className={`${styles.kpiCard} ${styles.kpiPurple}`}>
+                                    <div className={styles.kpiHeader}>
+                                        <small className={styles.kpiLabel}>INGRESOS (MES)</small>
+                                        <FaPercentage className={styles.kpiIcon} />
+                                    </div>
+                                    <h4 className={styles.kpiValue}>C$ {resumen.ventasMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                                    <small className={styles.kpiSubtitle}>US$ {calcularDolares(resumen.ventasMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Margen: {porcentajeMargen}%</small>
+                                </div>
 
-                        <div className={`${styles.kpiCard} ${styles.kpiOrange}`}>
-                            <div className={styles.kpiHeader}>
-                                <small className={styles.kpiLabel}>UTILIDAD (MES)</small>
-                                <FaChartLine className={styles.kpiIcon} />
-                            </div>
-                            <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
-                            <small className={styles.kpiSubtitle} style={{ color: '#fed7aa' }}>US$ {calcularDolares(resumen.utilidadMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
-                        </div>
+                                <div className={`${styles.kpiCard} ${styles.kpiOrange}`}>
+                                    <div className={styles.kpiHeader}>
+                                        <small className={styles.kpiLabel}>UTILIDAD (MES)</small>
+                                        <FaChartLine className={styles.kpiIcon} />
+                                    </div>
+                                    <h4 className={`${styles.kpiValue} ${styles.textOrange}`}>C$ {resumen.utilidadMes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</h4>
+                                    <small className={styles.kpiSubtitle} style={{ color: '#fed7aa' }}>US$ {calcularDolares(resumen.utilidadMes).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>
+                                </div>
+                            </>
+                        )}
 
                         <div 
                             onClick={() => setVistaActiva('renovaciones')}
@@ -484,21 +504,23 @@ export const InicioDashboard: React.FC<InicioDashboardProps> = ({ setVistaActiva
                         </div>
                     </section>
 
-                    {/* SECCIÓN 2: GRÁFICAS DEL FLUJO */}
-                    <section className={styles.chartsGrid}>
-                        <div className={styles.chartCard}>
-                            <span className={styles.chartTitle}>Flujo de Caja Semanal</span>
-                            <div className={styles.chartWrapper}>
-                                <Line data={datosGraficaLinea} options={opcionesComunes} />
+                    {/* SECCIÓN 2: GRÁFICAS DE NEGOCIO (Ocultas para Ventas) */}
+                    {!esVentas && (
+                        <section className={styles.chartsGrid}>
+                            <div className={styles.chartCard}>
+                                <span className={styles.chartTitle}>Flujo de Caja Semanal</span>
+                                <div className={styles.chartWrapper}>
+                                    <Line data={datosGraficaLinea} options={opcionesComunes} />
+                                </div>
                             </div>
-                        </div>
-                        <div className={styles.chartCard}>
-                            <span className={styles.chartTitle}>Ventas por Categoría de Rubro</span>
-                            <div className={styles.chartWrapper}>
-                                <Bar data={datosGraficaBarra} options={opcionesComunes} />
+                            <div className={styles.chartCard}>
+                                <span className={styles.chartTitle}>Ventas por Categoría de Rubro</span>
+                                <div className={styles.chartWrapper}>
+                                    <Bar data={datosGraficaBarra} options={opcionesComunes} />
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
                 </>
             )}
 
