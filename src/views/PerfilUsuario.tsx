@@ -63,7 +63,7 @@ export const PerfilUsuario: React.FC = () => {
         setMensajeRegistro(null);
 
         try {
-            await api.post('/api/Auth/register', {
+            await api.post('/Auth/register', {
                 nombre: nombreNuevo,
                 username: usernameNuevo,
                 password: passwordNuevo,
