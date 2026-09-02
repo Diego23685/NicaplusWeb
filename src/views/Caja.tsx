@@ -831,7 +831,10 @@ export const Caja: React.FC = () => {
                 subTotal: Math.round((item.precioUnitario - (item.descuento || 0)) * (item.cantidad < 1 ? 1 : item.cantidad)),
                 descuento: item.descuento || 0,
                 garantiaDias: item.garantiaDias ?? 0,
-                metadataDigital: metaFinal || ''
+                metadataDigital: metaFinal || '',
+                // IDs exactos de PerfilesCuentas/Códigos que se le mostraron al cajero.
+                // El backend debe honrarlos en vez de resolver su propio perfil.
+                idsPerfiles: item.idsPerfiles || []
             };
         });
 
@@ -848,7 +851,16 @@ export const Caja: React.FC = () => {
         try {
             const res = await api.post('/ventas', payload);
 
-            const detallesParaTicket = (res.data.detalles || detallesMapeados).map((item: any) => {
+            if (!res.data.detalles || res.data.detalles.length === 0) {
+                console.error('El backend no devolvió el detalle real de la venta. No se puede confiar en las credenciales del carrito local.');
+                mostrarError('La venta se registró, pero el servidor no confirmó las credenciales asignadas. Verifica la venta #' + (res.data.idVenta || res.data.id) + ' antes de entregarla al cliente.');
+            }
+
+            // Importante: SIEMPRE se usa lo que confirmó el backend (res.data.detalles),
+            // nunca el metadataDigital que había en el carrito local — ese es solo lo
+            // que se le "mostró" al cajero antes de guardar, y puede no coincidir con
+            // el perfil que realmente quedó asignado en la base de datos.
+            const detallesParaTicket = (res.data.detalles || []).map((item: any) => {
                 const itemCarritoOriginal = carrito.find(c => c.idProducto === item.idProducto && c.idVariacion === item.idVariacion);
                 
                 return {
@@ -857,7 +869,7 @@ export const Caja: React.FC = () => {
                     descripcion: itemCarritoOriginal ? itemCarritoOriginal.descripcion : "",
                     diasSuscripcion: itemCarritoOriginal ? itemCarritoOriginal.diasSuscripcion : 30,
                     garantiaDias: itemCarritoOriginal ? itemCarritoOriginal.garantiaDias : (item.garantiaDias ?? 0),
-                    metadataDigital: item.metadataDigital || itemCarritoOriginal?.metadataDigital || ''
+                    metadataDigital: item.metadataDigital || ''
                 };
             });
 
