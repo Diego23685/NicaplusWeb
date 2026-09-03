@@ -94,6 +94,11 @@ export interface ItemCarrito {
 
 type Seccion = 'inicio' | 'nosotros' | 'productos' | 'contacto' | 'carrito' | 'producto-detalle';
 
+type SugerenciaBusqueda =
+    | { tipo: 'producto'; texto: string; producto: Producto }
+    | { tipo: 'categoria'; texto: string; id: number }
+    | { tipo: 'juego'; texto: string; id: number };
+
 interface CatalogoProps {
     alIrAlLogin: () => void;
     cliente: any;
@@ -342,6 +347,9 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [buscadorExpandido, setBuscadorExpandido] = useState(false);
 
+    const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false);
+    const [sugerenciaActiva, setSugerenciaActiva] = useState(-1); // índice resaltado con teclado
+
     const mostrarAviso = (mensaje: string, tipo: 'error' | 'advertencia' | 'exito' | 'info' = 'advertencia') => {
         setNotificacion({ mensaje, tipo });
     };
@@ -572,6 +580,43 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         });
     }, [productos, busqueda, estaBuscando, idCatSeleccionada, idJuegoSeleccionado, categorias, juegos]);
 
+    const sugerenciasBusqueda = useMemo((): SugerenciaBusqueda[] => {
+        const termino = busqueda.trim();
+        if (!termino || termino.length < 2) return [];
+
+        const vistos = new Set<string>();
+        const resultado: SugerenciaBusqueda[] = [];
+
+        for (const p of productos) {
+            if (resultado.filter(s => s.tipo === 'producto').length >= 5) break;
+            const clave = `p-${p.nombre}`;
+            if (!vistos.has(clave) && coincideBusquedaInteligente(termino, p.nombre || '')) {
+                vistos.add(clave);
+                resultado.push({ tipo: 'producto', texto: p.nombre, producto: p });
+            }
+        }
+
+        for (const c of categorias) {
+            if (resultado.filter(s => s.tipo === 'categoria').length >= 2) break;
+            const clave = `c-${c.nombre}`;
+            if (!vistos.has(clave) && coincideBusquedaInteligente(termino, c.nombre || '')) {
+                vistos.add(clave);
+                resultado.push({ tipo: 'categoria', texto: c.nombre, id: c.id });
+            }
+        }
+
+        for (const j of juegos) {
+            if (resultado.filter(s => s.tipo === 'juego').length >= 2) break;
+            const clave = `j-${j.nombre}`;
+            if (!vistos.has(clave) && coincideBusquedaInteligente(termino, j.nombre || '')) {
+                vistos.add(clave);
+                resultado.push({ tipo: 'juego', texto: j.nombre, id: j.id });
+            }
+        }
+
+        return resultado.slice(0, 8);
+    }, [busqueda, productos, categorias, juegos]);
+
     const totalCarritoItems = useMemo(() => carrito.reduce((sum, i) => sum + i.cantidad, 0), [carrito]);
 
     const itemsNavegacion = [
@@ -599,6 +644,25 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
     const limpiarBusqueda = () => {
         setBusqueda('');
+    };
+
+    const seleccionarSugerencia = (s: SugerenciaBusqueda) => {
+        limpiarBusqueda();
+        setBuscadorExpandido(false);
+        setSugerenciasAbiertas(false);
+        setSugerenciaActiva(-1);
+
+        if (s.tipo === 'producto') {
+            manejarVerDetalle(s.producto);
+        } else if (s.tipo === 'categoria') {
+            setIdCatSeleccionada(s.id);
+            setIdJuegoSeleccionado(null);
+            setSeccionActiva('productos');
+        } else {
+            setIdJuegoSeleccionado(s.id);
+            setIdCatSeleccionada(null);
+            setSeccionActiva('productos');
+        }
     };
 
     return (
@@ -682,7 +746,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         
         {/* BLOQUE IZQUIERDO: Buscador expandible + Título */}
         <div className={`${styles.leftNavGroup} ${buscadorExpandido ? styles.expandido : ''}`}>
-            <div 
+                        <div 
                 className={`${styles.searchWrapper} ${buscadorExpandido ? styles.searchWrapperActive : ''}`}
             >
                 <FaSearch className={styles.searchIcon} />
@@ -692,12 +756,33 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                     value={busqueda}
                     onChange={(e) => {
                         setBusqueda(e.target.value);
+                        setSugerenciaActiva(-1);
                         if(seccionActiva !== 'productos') setSeccionActiva('productos');
                     }}
-                    onFocus={() => setBuscadorExpandido(true)}
+                    onFocus={() => {
+                        setBuscadorExpandido(true);
+                        setSugerenciasAbiertas(true);
+                    }}
                     onBlur={() => {
                         // Si no hay texto escrito, permitimos que vuelva a su estado original al perder el foco
                         if (!busqueda.trim()) setBuscadorExpandido(false);
+                        setSugerenciasAbiertas(false);
+                    }}
+                    onKeyDown={(e) => {
+                        if (sugerenciasBusqueda.length === 0) return;
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            setSugerenciaActiva(prev => (prev + 1) % sugerenciasBusqueda.length);
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            setSugerenciaActiva(prev => (prev - 1 + sugerenciasBusqueda.length) % sugerenciasBusqueda.length);
+                        } else if (e.key === 'Enter' && sugerenciaActiva >= 0) {
+                            e.preventDefault();
+                            seleccionarSugerencia(sugerenciasBusqueda[sugerenciaActiva]);
+                        } else if (e.key === 'Escape') {
+                            setSugerenciasAbiertas(false);
+                            (e.target as HTMLInputElement).blur();
+                        }
                     }}
                     className={styles.searchInput}
                 />
@@ -707,12 +792,38 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                             e.stopPropagation();
                             limpiarBusqueda();
                             setBuscadorExpandido(false);
+                            setSugerenciasAbiertas(false);
                         }} 
                         style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', paddingRight: '8px' }}
                         aria-label="Cerrar o limpiar búsqueda"
                     >
                         <FaTimes size={13} />
                     </button>
+                )}
+
+                {sugerenciasAbiertas && sugerenciasBusqueda.length > 0 && (
+                    <div className={styles.searchSuggestions}>
+                        {sugerenciasBusqueda.map((sug, idx) => (
+                            <button
+                                key={`${sug.tipo}-${sug.texto}`}
+                                type="button"
+                                className={`${styles.suggestionItem} ${idx === sugerenciaActiva ? styles.suggestionItemActive : ''}`}
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // evita que el input pierda foco antes del click
+                                    seleccionarSugerencia(sug);
+                                }}
+                                onMouseEnter={() => setSugerenciaActiva(idx)}
+                            >
+                                <FaSearch size={11} className={styles.suggestionIcon} />
+                                <span className={styles.suggestionText}>{sug.texto}</span>
+                                {sug.tipo !== 'producto' && (
+                                    <span className={styles.suggestionTag}>
+                                        {sug.tipo === 'categoria' ? 'Categoría' : 'Juego'}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
                 )}
             </div>
 

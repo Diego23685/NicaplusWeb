@@ -212,6 +212,69 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease, width 0.25s ease;
 }
 
+.searchWrapper {
+    position: relative; /* necesario para que el dropdown se posicione bien debajo */
+}
+
+.searchSuggestions {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--c-surface, #170e2a);
+    border: 1px solid var(--c-border-soft, rgba(255, 255, 255, 0.07));
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 50;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+}
+
+.suggestionItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 10px;
+    color: var(--c-text-dim, #b7a6d1);
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+}
+.suggestionItem:hover,
+.suggestionItemActive {
+    background: var(--c-surface-2, #1d1236);
+    color: var(--c-text, #f5eefc);
+}
+
+.suggestionIcon { flex-shrink: 0; opacity: 0.6; }
+
+.suggestionText {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.suggestionTag {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--c-teal, #047688);
+    background: rgba(4, 118, 136, 0.15);
+    padding: 3px 7px;
+    border-radius: 999px;
+}
+
 .searchWrapperActive,
 .searchWrapper:focus-within {
     border-color: var(--c-magenta);
