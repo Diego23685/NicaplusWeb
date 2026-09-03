@@ -121,6 +121,61 @@ const calcularRangoPrecios = (p: Producto): string => {
     return `Desde C$ ${min.toLocaleString('es-NI')}`;
 };
 
+// Normaliza texto: minúsculas, sin acentos, espacios colapsados
+const normalizarTexto = (texto: string = ''): string => {
+    return texto
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // quita acentos/diacríticos (á->a, ñ se conserva)
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+// Distancia de Levenshtein: cuántos cambios (letras) separan dos palabras
+const distanciaLevenshtein = (a: string, b: string): number => {
+    if (a === b) return 0;
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const fila = Array.from({ length: b.length + 1 }, (_, i) => i);
+
+    for (let i = 1; i <= a.length; i++) {
+        let anterior = fila[0];
+        fila[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+            const temp = fila[j];
+            fila[j] = a[i - 1] === b[j - 1]
+                ? anterior
+                : Math.min(anterior, fila[j], fila[j - 1]) + 1;
+            anterior = temp;
+        }
+    }
+    return fila[b.length];
+};
+
+// ¿Una palabra buscada "coincide" con una palabra del producto?
+// Permite errores de tipeo proporcionales al largo de la palabra
+const palabraCoincide = (palabraBusqueda: string, palabraTexto: string): boolean => {
+    if (palabraTexto.includes(palabraBusqueda)) return true;
+    if (palabraBusqueda.length < 4) return false; // evita falsos positivos en palabras muy cortas ("de", "el")
+    const tolerancia = palabraBusqueda.length <= 5 ? 1 : 2;
+    return distanciaLevenshtein(palabraBusqueda, palabraTexto) <= tolerancia;
+};
+
+// Búsqueda inteligente: separa en palabras, no importa el orden,
+// tolera acentos, plurales parciales y errores de tipeo
+const coincideBusquedaInteligente = (termino: string, textoCompleto: string): boolean => {
+    const terminoNorm = normalizarTexto(termino);
+    if (!terminoNorm) return true;
+
+    const palabrasBusqueda = terminoNorm.split(' ').filter(Boolean);
+    const palabrasTexto = normalizarTexto(textoCompleto).split(' ').filter(Boolean);
+
+    return palabrasBusqueda.every(pb =>
+        palabrasTexto.some(pt => palabraCoincide(pb, pt))
+    );
+};
+
 /* ==========================================================================
       SUBCOMPONENTE INTERNO: DETALLE DE PRODUCTO
    ========================================================================== */
@@ -496,11 +551,8 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
         const nombreJuegoFiltro = juegoSeleccionado ? juegoSeleccionado.nombre.toLowerCase().trim() : null;
 
         return productos.filter((p: any) => {
-            const nombreProd = (p.nombre || '').toLowerCase();
-            const descProd = (p.descripcion || '').toLowerCase();
-            const termino = busqueda.toLowerCase().trim();
-            
-            const cumpleBusqueda = termino === '' || nombreProd.includes(termino) || descProd.includes(termino);
+            const textoCompleto = `${p.nombre || ''} ${p.descripcion || ''} ${p.categoriaNombre || ''} ${p.juegoNombre || ''}`;
+            const cumpleBusqueda = coincideBusquedaInteligente(busqueda, textoCompleto);
 
             if (estaBuscando) {
                 return cumpleBusqueda;
