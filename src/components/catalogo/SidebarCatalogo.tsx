@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import { FaSearch, FaGamepad, FaTags, FaTimes } from 'react-icons/fa';
+import { FaGamepad, FaTags, FaTimes } from 'react-icons/fa';
 import styles from './SidebarCatalogo.module.css';
 
 interface Categoria {
@@ -30,8 +30,6 @@ interface SidebarCatalogoProps {
 }
 
 export const SidebarCatalogo: React.FC<SidebarCatalogoProps> = ({
-    busqueda,
-    setBusqueda,
     categorias,
     idCatSeleccionada,
     setIdCatSeleccionada,
@@ -59,22 +57,7 @@ export const SidebarCatalogo: React.FC<SidebarCatalogoProps> = ({
                     </button>
                 )}
 
-                {/* Buscador Interno */}
-                <div>
-                    <h4 className={styles.sectionTitle}>
-                        <FaSearch size={11} /> Buscar Producto
-                    </h4>
-                    <div className={styles.searchContainer}>
-                        <input 
-                            type="text" 
-                            placeholder="¿Qué estás buscando?..."
-                            value={busqueda}
-                            onChange={(e) => setBusqueda(e.target.value)}
-                            className={styles.searchInput}
-                        />
-                        <FaSearch className={styles.searchIcon} />
-                    </div>
-                </div>
+                
 
                 <hr className={styles.separator} />
 
