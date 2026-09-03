@@ -904,6 +904,16 @@
     gap: 18px;
 }
 
+@media (max-width: 600px) {
+    .productsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    .productName { font-size: 0.85rem; }
+    .productDescription { font-size: 0.72rem; }
+    .productPrice { font-size: 0.85rem; }
+}
+
 .productCard {
     display: flex;
     flex-direction: column;
