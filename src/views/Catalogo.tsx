@@ -764,8 +764,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                 )}
 
                                 {/* COLUMNA DERECHA */}
-                                <div className={styles.catalogoMainContent} style={estaBuscando ? { width: '100%', maxWidth: '100%' } : {}}>
-                                    
+<div className={`${styles.catalogoMainContent} ${estaBuscando ? styles.catalogoMainContentFull : ''}`}>                                    
                                     {/* SECCIÓN DE ANUNCIOS DINÁMICOS (SÓLO SI NO HAY BÚSQUEDA) */}
                                     {!estaBuscando && (
                                         <section className={styles.heroPromoSection}>
