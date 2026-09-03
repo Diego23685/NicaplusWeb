@@ -1,241 +1,295 @@
 /* ==========================================================================
-   INTERFAZ DE DETALLE DE PRODUCTO PREMIUM (AMAZON STYLE)
+   NICAPLUS GAMING — CatalogoDetalle.module.css
+   Vista de detalle de producto — hereda tokens de Catalogo.module.css
+   (las variables CSS se heredan del contenedor .mainWrapper en el DOM)
    ========================================================================== */
+
 .detailViewContainer {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
+    /* Fallback de tokens por si este componente se usa de forma aislada */
+    --c-purple: #581c7e;
+    --c-magenta: #b002c2;
+    --c-teal: #047688;
+    --c-bg-soft: #120a1f;
+    --c-surface: #170e2a;
+    --c-surface-2: #1d1236;
+    --c-border: rgba(176, 2, 194, 0.22);
+    --c-border-soft: rgba(255, 255, 255, 0.07);
+    --c-text: #f5eefc;
+    --c-text-dim: #b7a6d1;
+    --c-text-faint: #7d6c97;
+    --c-success: #18e0a3;
+    --c-danger: #ff5273;
+    --grad-brand: linear-gradient(135deg, var(--c-purple) 0%, var(--c-magenta) 100%);
+    --font-display: 'Chakra Petch', 'Segoe UI', sans-serif;
+    --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
 
-.productDetailMainGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3.5rem;
-  margin-top: 1.5rem;
-  background: rgba(13, 8, 24, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  padding: 2.5rem;
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
-}
-
-/* Sección Izquierda: Visualización */
-.detailImageSection {
-  position: relative;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(176, 2, 194, 0.1);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  min-height: 400px;
-  overflow: hidden;
-}
-
-.detailMainImage {
-  max-width: 100%;
-  max-height: 450px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.5));
-  transition: transform 0.3s ease;
-}
-
-.detailMainImage:hover {
-  transform: scale(1.03);
-}
-
-.detailBadge {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-  color: #fff;
-}
-
-.detailNoImage {
-  color: #475569;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-
-/* Sección Derecha: Metadata y Compra */
-.detailInfoSection {
-  display: flex;
-  flex-direction: column;
-}
-
-.detailProductTitle {
-  font-size: 2rem;
-  font-weight: 900;
-  color: #ffffff;
-  margin-bottom: 1rem;
-  line-height: 1.2;
-}
-
-.detailPriceRow {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 0.5rem 0;
-}
-
-.detailPriceLabel {
-  color: #64748b;
-  font-size: 1rem;
-}
-
-.detailPriceValue {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #047688; /* Tu tono cian brillante */
-  text-shadow: 0 0 10px rgba(4, 118, 136, 0.2);
-}
-
-.detailDivider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 1.5rem 0;
-}
-
-.detailStockStatus {
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.stockAvailable {
-  color: #10b981;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-}
-
-.stockOut {
-  color: #ef4444;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-}
-
-.detailDescriptionBox h4 {
-  color: #94a3b8;
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
-}
-
-.detailDescriptionBox p {
-  color: #cbd5e1;
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.detailGarantiaBox {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
-  padding: 1rem;
-  margin: 1.5rem 0;
-}
-
-.garantiaItem {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-}
-
-.garantiaItem h5 {
-  color: #ffffff;
-  margin: 0 0 0.2rem 0;
-  font-size: 0.85rem;
-}
-
-.garantiaItem p {
-  color: #64748b;
-  margin: 0;
-  font-size: 0.8rem;
-}
-
-.detailActionsRow {
-  margin-top: auto; /* Empuja el botón al fondo del contenedor flex */
-}
-
-.detailAddCartBtn {
-  width: 100%;
-  background: linear-gradient(135deg, #b002c2 0%, #7e028b 100%);
-  color: white;
-  border: none;
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: 1rem;
-  letter-spacing: 0.05em;
-  padding: 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(176, 2, 194, 0.3);
-}
-
-.detailAddCartBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(176, 2, 194, 0.5);
-  background: linear-gradient(135deg, #c702db 0%, #9603a6 100%);
-}
-
-.detailAddCartBtn:disabled {
-  background: #334155;
-  color: #64748b;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* Adaptabilidad a Smartphones */
-@media (max-width: 768px) {
-  .productDetailMainGrid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-    padding: 1.2rem;
-  }
-  
-  .detailImageSection {
-    min-height: 280px;
-    padding: 1rem;
-  }
-  
-  .detailProductTitle {
-    font-size: 1.5rem;
-  }
+    max-width: 1100px;
+    margin: 0 auto;
 }
 
 .backToStoreBtn {
-  background: transparent;
-  border: 1px solid rgba(4, 118, 136, 0.4);
-  color: #047688;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 700;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-  margin-bottom: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-soft);
+    color: var(--c-text-dim);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.backToStoreBtn:hover { border-color: var(--c-magenta); color: var(--c-text); }
+
+.productDetailMainGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+    align-items: start;
 }
 
-.backToStoreBtn:hover {
-  background: rgba(4, 118, 136, 0.1);
-  border-color: #047688;
-  box-shadow: 0 0 10px rgba(4, 118, 136, 0.2);
+/* ---------- Columna de imagen ---------- */
+.detailImageSection {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--c-surface-2), var(--c-bg-soft));
+    border: 1px solid var(--c-border-soft);
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.detailMainImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 24px;
+}
+
+.detailNoImage {
+    font-family: var(--font-display);
+    color: var(--c-text-faint);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+}
+
+.detailBadge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 2;
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 6px 13px;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.detailBadgeDigital { background: var(--c-purple); }
+.detailBadgeFisico { background: var(--c-teal); }
+
+/* ---------- Columna de información ---------- */
+.detailInfoSection {
+    display: flex;
+    flex-direction: column;
+}
+
+.detailProductTitle {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 14px 0;
+    color: var(--c-text);
+}
+
+.detailPriceRow {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.detailPriceLabel {
+    font-size: 0.85rem;
+    color: var(--c-text-faint);
+}
+
+.detailPriceValue {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #e07bff, #6de8ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.detailDivider {
+    height: 1px;
+    background: var(--c-border-soft);
+    margin: 18px 0;
+}
+
+.detailStockStatus { margin-bottom: 16px; }
+
+.stockAvailable {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--c-success);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.stockOut {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--c-danger);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.detailDescriptionBox {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-soft);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+}
+.detailDescriptionBox h4 {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--c-text);
+}
+.detailDescriptionBox p {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--c-text-dim);
+    margin: 0;
+}
+
+.detailGarantiaBox { margin-bottom: 22px; }
+
+.garantiaItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: linear-gradient(120deg, rgba(4, 118, 136, 0.14), rgba(88, 28, 126, 0.1));
+    border: 1px solid var(--c-border-soft);
+    border-radius: 14px;
+    padding: 14px 16px;
+}
+.contactIcon { color: var(--c-teal); font-size: 1.2rem; margin-top: 2px; flex-shrink: 0; }
+.garantiaItem h5 {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin: 0 0 3px 0;
+    color: var(--c-text);
+}
+.garantiaItem p {
+    font-size: 0.78rem;
+    color: var(--c-text-faint);
+    margin: 0;
+}
+
+.detailActionsRow { display: flex; }
+
+.detailAddCartBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--grad-brand);
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    padding: 15px 20px;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 12px 28px rgba(176, 2, 194, 0.35);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.detailAddCartBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(176, 2, 194, 0.5); }
+.detailAddCartBtn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+/* ---------- Selector de variaciones ---------- */
+.detailVariantBox {
+    margin: 6px 0 20px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-soft);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.detailVariantLabel {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    color: var(--c-teal);
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.detailVariantRow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.variantChip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 9px 15px;
+    border-radius: 10px;
+    border: 1px solid var(--c-border-soft);
+    background: var(--c-bg-soft);
+    color: var(--c-text);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.variantChip:hover:not(:disabled) { border-color: var(--c-teal); transform: translateY(-1px); }
+
+.variantChipActive {
+    border-color: var(--c-magenta);
+    background: var(--grad-brand);
+    color: #fff;
+    font-weight: 700;
+}
+
+.variantChipDisabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: var(--c-text-faint);
+}
+
+.variantChipName { line-height: 1.2; }
+.variantChipPrice { font-size: 0.72rem; color: var(--c-teal); }
+.variantChipActive .variantChipPrice { color: #fff; }
+.variantChipDisabled .variantChipPrice { color: var(--c-text-faint); }
+
+@media (max-width: 800px) {
+    .productDetailMainGrid { grid-template-columns: 1fr; gap: 22px; }
 }

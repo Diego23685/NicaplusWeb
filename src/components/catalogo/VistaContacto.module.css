@@ -1,250 +1,140 @@
+/* ==========================================================================
+   NICAPLUS GAMING — VistaContacto.module.css
+   ========================================================================== */
+
 .container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto 60px auto;
-  background: radial-gradient(circle at top left, rgba(109, 40, 217, 0.15), transparent 45%),
-              radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 45%),
-              rgba(13, 21, 39, 0.25);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  padding: 60px 40px;
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
+    --c-purple: #581c7e;
+    --c-magenta: #b002c2;
+    --c-teal: #047688;
+    --c-bg-soft: #120a1f;
+    --c-surface: #170e2a;
+    --c-surface-2: #1d1236;
+    --c-border-soft: rgba(255, 255, 255, 0.07);
+    --c-border: rgba(176, 2, 194, 0.22);
+    --c-text: #f5eefc;
+    --c-text-dim: #b7a6d1;
+    --c-text-faint: #7d6c97;
+    --grad-brand: linear-gradient(135deg, var(--c-purple) 0%, var(--c-magenta) 100%);
+    --grad-text: linear-gradient(90deg, #e07bff, #6de8ff);
+    --font-display: 'Chakra Petch', 'Segoe UI', sans-serif;
+    --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+
+    position: relative;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 0 40px;
+    overflow: hidden;
 }
 
-/* Lienzo de partículas dinámicas */
 .canvasBackground {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
 }
 
-.contentWrapper {
-  position: relative;
-  z-index: 2; /* Por encima de las partículas */
-}
+.contentWrapper { position: relative; z-index: 1; }
 
 .subtitle {
-  color: #0ea5e9;
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 15px;
-  display: block;
+    display: block;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--c-teal);
+    margin-bottom: 8px;
 }
 
 .title {
-  font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
-  font-size: 3.5rem;
-  font-weight: 900;
-  color: #ffffff;
-  line-height: 1.1;
-  letter-spacing: -2px;
-  margin: 0 0 40px 0;
-  text-transform: uppercase;
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0 0 30px 0;
+    color: var(--c-text);
+    line-height: 1.15;
 }
 
 .titleGradient {
-  background: linear-gradient(135deg, #6d28d9 0%, #bf99fc 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+    background: var(--grad-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .flexLayout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 30px;
+    align-items: start;
 }
 
-.infoColumn {
-  flex: 1 1 45%;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
+.infoColumn { display: flex; flex-direction: column; gap: 20px; }
 
 .infoBlock {
-  background: rgba(255, 255, 255, 0.01);
-  border-left: 3px solid rgba(255, 255, 255, 0.05);
-  padding-left: 20px;
-  transition: border-color 0.3s ease;
-}
-
-.infoBlock:hover {
-  border-color: #00ffd1;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-soft);
+    border-left: 3px solid var(--c-magenta);
+    border-radius: 12px;
+    padding: 16px 18px;
 }
 
 .blockLabel {
-  color: #ffffff;
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+    display: block;
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--c-text);
+    margin-bottom: 6px;
 }
 
 .blockText {
-  color: #94a3b8;
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.6;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--c-text-faint);
+    margin: 0;
 }
 
-/* TARJETA DE DESPACHOS CENTRALIZADA */
+.rightColumn { display: flex; flex-direction: column; gap: 18px; }
+
 .dispatchCard {
-  flex: 1 1 45%;
-  min-height: 300px;
-  background: rgba(9, 15, 29, 0.6);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  text-align: center;
-  box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: linear-gradient(150deg, var(--c-purple), var(--c-bg-soft) 70%);
+    border: 1px solid var(--c-border);
+    border-radius: 18px;
+    padding: 26px;
+    text-align: center;
 }
 
-.dispatchCard:hover {
-  border-color: rgba(225, 29, 72, 0.4);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(225, 29, 72, 0.1);
-}
-
-.mapIcon {
-  color: #e11d48;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 0 10px rgba(225, 29, 72, 0.5));
-  animation: pulseIcon 2s infinite ease-in-out;
-}
+.mapIcon { color: var(--c-teal); margin-bottom: 10px; }
 
 .cardTitle {
-  display: block;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
 }
 
 .cardText {
-  color: #cbd5e1;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: rgba(245, 238, 252, 0.75);
+    margin: 0;
 }
 
-@keyframes pulseIcon {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(225, 29, 72, 0.5)); }
-  50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(225, 29, 72, 0.8)); }
-}
-
-@media (max-width: 868px) {
-  .container {
-    padding: 40px 20px;
-  }
-  .title {
-    font-size: 2.5rem;
-  }
-  .infoColumn, .dispatchCard {
-    flex: 1 1 100%;
-  }
-}
-
-/* ... Conserva tus estilos anteriores intactos ... */
-
-.flexLayout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 40px;
-}
-
-.infoColumn {
-  flex: 1 1 45%;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-/* CONTENEDOR DERECHO: CONVERTIDO EN GRID VERTICAL PARA AGREGAR EL MAPA */
-.rightColumn {
-  flex: 1 1 45%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.dispatchCard {
-  width: 100%;
-  background: rgba(9, 15, 29, 0.6);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 35px;
-  text-align: center;
-  box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dispatchCard:hover {
-  border-color: rgba(225, 29, 72, 0.4);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(225, 29, 72, 0.1);
-}
-
-/* CONTENEDOR DEL MAPA ESTILO OSCURO AMBIENTAL CON BORDE NEÓN */
 .mapContainer {
-  width: 100%;
-  height: 250px;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid hwb(263 0% 29% / 0.655); /* Púrpura sutil de base */
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
-              0 0 15px rgba(109, 40, 217, 0.15);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid var(--c-border-soft);
+    filter: grayscale(0.3) invert(0.92) hue-rotate(180deg) contrast(0.9);
+    height: 240px;
 }
 
-.mapContainer:hover {
-  border-color: #00ffd1; /* Cian/Neón en Hover */
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6),
-              0 0 25px rgba(0, 255, 209, 0.25);
-}
-
-/* Filtro optimizado: Mantiene las calles oscuras pero fuerza tonos Púrpura y Azul Neón */
 .mapIframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  filter: invert(100%) hue-rotate(210deg) brightness(85%) contrast(120%) saturate(180%);
-  opacity: 0.85;
-  transition: opacity 0.3s ease, filter 0.3s ease;
+    width: 100%;
+    height: 100%;
+    border: 0;
 }
 
-.mapContainer:hover .mapIframe {
-  opacity: 1;
-  filter: invert(100%) hue-rotate(210deg) brightness(95%) contrast(125%) saturate(210%);
-}
-
-/* ... Conserva el resto de tus estilos y media-queries ... */
-@media (max-width: 868px) {
-  .infoColumn, .rightColumn {
-    flex: 1 1 100%;
-  }
+@media (max-width: 850px) {
+    .flexLayout { grid-template-columns: 1fr; }
 }

@@ -21,6 +21,14 @@ import { Terminos } from './Terminos';
 // Constante para el número de WhatsApp
 const WHATSAPP_NUMERO = "50587870821";
 
+// Mensajes rotativos de la barra de anuncios superior
+const ANUNCIOS_TICKER = [
+    "🚚 Envíos a todo León",
+    "💳 Pago contra entrega o transferencia",
+    "🎮 Nuevos ingresos cada semana",
+    "⚡ Entrega digital inmediata por WhatsApp",
+];
+
 // Diccionario de iconos según el nombre de la categoría
 const obtenerIconoCategoria = (nombre = '') => {
   const n = nombre.toLowerCase();
@@ -154,7 +162,7 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
 
             <div className={detailStyles.productDetailMainGrid}>
                 <div className={detailStyles.detailImageSection}>
-                    <span className={detailStyles.detailBadge} style={{ background: producto.esDigital ? '#581c7e' : '#047688' }}>
+                    <span className={`${detailStyles.detailBadge} ${producto.esDigital ? detailStyles.detailBadgeDigital : detailStyles.detailBadgeFisico}`}>
                         {producto.esDigital ? "ENTREGA DIGITAL" : "PRODUCTO FÍSICO"}
                     </span>
                     {(varSeleccionada?.imagenUrl || producto.imagenUrl) ? (
@@ -174,11 +182,11 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
 
                     {/* SELECTOR DE VARIACIONES / PRESENTACIONES */}
                     {tieneVars && (
-                        <div style={{ margin: '14px 0', background: 'rgba(15, 23, 42, 0.6)', padding: '12px', borderRadius: '10px', border: '1px solid #334155' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#38bdf8', fontWeight: 800, marginBottom: '8px' }}>
+                        <div className={detailStyles.detailVariantBox}>
+                            <label className={detailStyles.detailVariantLabel}>
                                 <FaPalette /> Selecciona una presentación / opción:
                             </label>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <div className={detailStyles.detailVariantRow}>
                                 {producto.variaciones!.map(v => {
                                     const activa = varSeleccionada?.id === v.id;
                                     const sinStock = !producto.esDigital && v.stockActual <= 0;
@@ -188,24 +196,10 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                                             type="button"
                                             disabled={sinStock}
                                             onClick={() => setVarSeleccionada(v)}
-                                            style={{
-                                                padding: '8px 14px',
-                                                borderRadius: '8px',
-                                                border: activa ? '2px solid #38bdf8' : '1px solid #334155',
-                                                background: activa ? '#0284c7' : sinStock ? '#1e293b' : '#0f172a',
-                                                color: sinStock ? '#64748b' : '#fff',
-                                                cursor: sinStock ? 'not-allowed' : 'pointer',
-                                                fontSize: '0.85rem',
-                                                fontWeight: activa ? 800 : 600,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '2px',
-                                                opacity: sinStock ? 0.45 : 1
-                                            }}
+                                            className={`${detailStyles.variantChip} ${activa ? detailStyles.variantChipActive : ''} ${sinStock ? detailStyles.variantChipDisabled : ''}`}
                                         >
-                                            <span>{v.nombreVariacion}</span>
-                                            <small style={{ fontSize: '0.75rem', color: activa ? '#fff' : '#38bdf8' }}>
+                                            <span className={detailStyles.variantChipName}>{v.nombreVariacion}</span>
+                                            <small className={detailStyles.variantChipPrice}>
                                                 {sinStock ? 'Agotado' : `C$ ${v.precioVenta.toLocaleString('es-NI')}`}
                                             </small>
                                         </button>
@@ -223,7 +217,7 @@ const ProductoDetalle: React.FC<ProductoDetalleProps> = ({
                                 <FaCheckCircle /> Disponible {!producto.esDigital && `(${stockActual} unidades en tienda)`}
                             </span>
                         ) : (
-                            <span className={detailStyles.stockOut} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
+                            <span className={detailStyles.stockOut}>
                                 <FaExclamationTriangle /> Agotado temporalmente
                             </span>
                         )}
@@ -561,34 +555,15 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
             {/* SISTEMA DE TOAST NOTIFICACIONES */}
             {notificacion && (
-                <div style={{
-                    position: 'fixed',
-                    top: '20px',
-                    right: '20px',
-                    left: '20px',
-                    zIndex: 9999,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    backgroundColor: notificacion.tipo === 'error' ? '#3f0d12' : notificacion.tipo === 'exito' ? '#0d3f1a' : '#2d1b00',
-                    color: '#fff',
-                    borderLeft: `4px solid ${notificacion.tipo === 'error' ? '#ff4d4d' : notificacion.tipo === 'exito' ? '#00ff66' : '#ffb700'}`,
-                    padding: '12px 18px',
-                    borderRadius: '10px',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
-                    backdropFilter: 'blur(10px)',
-                    animation: 'slideInToast 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                    maxWidth: '400px',
-                    margin: '0 auto'
-                }}>
-                    {notificacion.tipo === 'error' && <FaExclamationTriangle style={{ color: '#ff4d4d', flexShrink: 0 }} size={18} />}
-                    {notificacion.tipo === 'exito' && <FaCheckCircle style={{ color: '#00ff66', flexShrink: 0 }} size={18} />}
-                    {notificacion.tipo === 'advertencia' && <FaExclamationTriangle style={{ color: '#ffb700', flexShrink: 0 }} size={18} />}
-                    {notificacion.tipo === 'info' && <FaInfo style={{ color: '#00bfff', flexShrink: 0 }} size={18} />}
-                    <span style={{ fontSize: '13px', fontWeight: 500, lineHeight: 1.3 }}>{notificacion.mensaje}</span>
+                <div className={`${styles.toast} ${styles[`toast_${notificacion.tipo}`]}`}>
+                    {notificacion.tipo === 'error' && <FaExclamationTriangle className={styles.toastIcon} size={18} />}
+                    {notificacion.tipo === 'exito' && <FaCheckCircle className={styles.toastIcon} size={18} />}
+                    {notificacion.tipo === 'advertencia' && <FaExclamationTriangle className={styles.toastIcon} size={18} />}
+                    {notificacion.tipo === 'info' && <FaInfo className={styles.toastIcon} size={18} />}
+                    <span className={styles.toastMsg}>{notificacion.mensaje}</span>
                     <button 
                         onClick={() => setNotificacion(null)}
-                        style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '0 4px', marginLeft: 'auto' }}
+                        className={styles.toastCloseBtn}
                         aria-label="Cerrar notificación"
                     >
                         <FaTimes size={14} />
@@ -596,52 +571,14 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 </div>
             )}
 
-            <style>{`
-                @keyframes slideInToast {
-                    from { transform: translateY(-30px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-                .mobile-bottom-nav {
-                    display: none;
-                }
-                @media (max-width: 768px) {
-                    .mobile-bottom-nav {
-                        display: flex;
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        height: 62px;
-                        background: rgba(13, 8, 24, 0.95);
-                        backdrop-filter: blur(16px);
-                        border-top: 1px solid rgba(176, 2, 194, 0.3);
-                        z-index: 990;
-                        justify-content: space-around;
-                        align-items: center;
-                        padding: 0 10px;
-                        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-                    }
-                    .mobile-bottom-item {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        background: transparent;
-                        border: none;
-                        color: #94a3b8;
-                        font-size: 0.7rem;
-                        gap: 3px;
-                        flex: 1;
-                        padding: 6px 0;
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                    }
-                    .mobile-bottom-item.active {
-                        color: #00e5ff;
-                        font-weight: bold;
-                    }
-                }
-            `}</style>
+            {/* BARRA DE ANUNCIOS / TICKER PROMOCIONAL */}
+            <div className={styles.tickerBar}>
+                <div className={styles.tickerTrack}>
+                    {[...ANUNCIOS_TICKER, ...ANUNCIOS_TICKER].map((texto, i) => (
+                        <span className={styles.tickerItem} key={i}>{texto}</span>
+                    ))}
+                </div>
+            </div>
 
             {/* OVERLAY & SIDEBAR MÓVIL */}
             {menuAbierto && (
@@ -827,7 +764,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                 )}
 
                                 {/* COLUMNA DERECHA */}
-                                <div className={styles.catalogoMainContent} style={estaBuscando ? { width: '100%', maxWidth: '100%' } : {}}>
+                                <div className={`${styles.catalogoMainContent} ${estaBuscando ? styles.catalogoMainContentFull : ''}`}>
                                     
                                     {/* SECCIÓN DE ANUNCIOS DINÁMICOS (SÓLO SI NO HAY BÚSQUEDA) */}
                                     {!estaBuscando && (
@@ -1000,25 +937,14 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     )}
                                     
                                     {/* ENCABEZADO DE RESULTADOS DE BÚSQUEDA */}
-                                    <div className={styles.productsHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div className={styles.productsHeader}>
                                         <h2 className={styles.productsHeaderTitle}>
                                             {estaBuscando ? `Resultados para "${busqueda}"` : 'Productos Disponibles'}
                                         </h2>
                                         {estaBuscando && (
                                             <button 
                                                 onClick={limpiarBusqueda}
-                                                style={{
-                                                    background: '#2e004f',
-                                                    color: '#e100ff',
-                                                    border: '1px solid #32003e',
-                                                    borderRadius: '20px',
-                                                    padding: '6px 14px',
-                                                    fontSize: '0.8rem',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px'
-                                                }}
+                                                className={styles.clearSearchBtn}
                                             >
                                                 <FaTimes /> Ver todo el catálogo
                                             </button>
@@ -1027,14 +953,14 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                                     
                                     {/* CUADRÍCULA DE PRODUCTOS */}
                                     {productosFiltrados.length === 0 ? (
-                                        <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#94a3b8', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px', border: '1px dashed #334155', margin: '1rem 0' }}>
-                                            <FaSearch size={44} style={{ opacity: 0.3, marginBottom: '1rem', color: '#38bdf8' }} />
-                                            <p style={{ fontSize: '1.1rem', color: '#e2e8f0', margin: '0 0 6px 0' }}>No encontramos coincidencias para "{busqueda}"</p>
-                                            <small style={{ color: '#64748b' }}>Prueba con términos más generales o limpia la búsqueda.</small>
-                                            <div style={{ marginTop: '16px' }}>
+                                        <div className={styles.noResultsBox}>
+                                            <FaSearch size={44} className={styles.noResultsIcon} />
+                                            <p className={styles.noResultsText}>No encontramos coincidencias para "{busqueda}"</p>
+                                            <small className={styles.noResultsSub}>Prueba con términos más generales o limpia la búsqueda.</small>
+                                            <div className={styles.noResultsAction}>
                                                 <button 
                                                     onClick={limpiarBusqueda}
-                                                    style={{ background: '#7a0090', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                                                    className={styles.resetCatalogBtn}
                                                 >
                                                     Restablecer Catálogo
                                                 </button>
@@ -1048,78 +974,29 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
 
                                                 return (
                                                     <div key={prod.id} className={styles.productCard}>
-                                                        <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)} style={{ cursor: 'pointer', position: 'relative' }}>
-    
+                                                        <div className={styles.imageWrapper} onClick={() => manejarVerDetalle(prod)}>
+
                                                             {/* BADGES SUPERIORES ALINEADOS EN FILA SIN SOLAPAMIENTO */}
-                                                            <div style={{
-                                                                position: 'absolute',
-                                                                top: '8px',
-                                                                left: '8px',
-                                                                right: '8px',
-                                                                display: 'flex',
-                                                                justifyContent: 'space-between',
-                                                                alignItems: 'center',
-                                                                zIndex: 5,
-                                                                pointerEvents: 'none'
-                                                            }}>
-                                                                {/* Tipo de Producto (Físico / Digital) */}
-                                                                <span style={{
-                                                                    background: prod.esDigital ? '#581c7e' : '#047688',
-                                                                    color: '#fff',
-                                                                    fontSize: '0.68rem',
-                                                                    fontWeight: 800,
-                                                                    padding: '3px 8px',
-                                                                    borderRadius: '6px',
-                                                                    textTransform: 'uppercase',
-                                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-                                                                    letterSpacing: '0.3px'
-                                                                }}>
+                                                            <div className={styles.cardBadgeRow}>
+                                                                <span className={`${styles.cardBadgeType} ${prod.esDigital ? styles.cardBadgeDigital : styles.cardBadgeFisico}`}>
                                                                     {prod.esDigital ? "Digital" : "Físico"}
                                                                 </span>
 
-                                                                {/* Badge de Variantes si aplica */}
                                                                 {tieneVariaciones && (
-                                                                    <span style={{
-                                                                        background: '#f59e0b',
-                                                                        color: '#000',
-                                                                        fontSize: '0.68rem',
-                                                                        fontWeight: 800,
-                                                                        padding: '3px 8px',
-                                                                        borderRadius: '6px',
-                                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '3px'
-                                                                    }}>
+                                                                    <span className={styles.cardBadgeVariant}>
                                                                         <FaPalette size={10} /> Variantes
                                                                     </span>
                                                                 )}
                                                             </div>
 
                                                             {/* INDICADOR DE STOCK EN TIENDA INFERIOR DERECHO */}
-                                                            <div style={{ position: 'absolute', bottom: '8px', right: '8px', zIndex: 5, pointerEvents: 'none' }}>
+                                                            <div className={styles.cardStockWrap}>
                                                                 {hayStock ? (
-                                                                    <span style={{
-                                                                        background: 'rgba(16, 185, 129, 0.95)',
-                                                                        color: '#fff',
-                                                                        fontSize: '0.7rem',
-                                                                        fontWeight: 800,
-                                                                        padding: '3px 8px',
-                                                                        borderRadius: '6px',
-                                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
-                                                                    }}>
+                                                                    <span className={styles.cardStockOk}>
                                                                         {!prod.esDigital ? `${prod.stockActual} u.` : 'Disponible'}
                                                                     </span>
                                                                 ) : (
-                                                                    <span style={{
-                                                                        background: 'rgba(239, 68, 68, 0.95)',
-                                                                        color: '#fff',
-                                                                        fontSize: '0.7rem',
-                                                                        fontWeight: 800,
-                                                                        padding: '3px 8px',
-                                                                        borderRadius: '6px',
-                                                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
-                                                                    }}>
+                                                                    <span className={styles.cardStockOut}>
                                                                         Agotado
                                                                     </span>
                                                                 )}
@@ -1206,17 +1083,17 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
             </main>
 
             {/* BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES */}
-            <nav className="mobile-bottom-nav">
+            <nav className={styles.mobileBottomNav}>
                 <button 
                     onClick={() => cambiarSeccion('inicio')} 
-                    className={`mobile-bottom-item ${seccionActiva === 'inicio' ? 'active' : ''}`}
+                    className={`${styles.mobileBottomItem} ${seccionActiva === 'inicio' ? styles.mobileBottomItemActive : ''}`}
                 >
                     <FaHome size={18} />
                     <span>Inicio</span>
                 </button>
                 <button 
                     onClick={() => cambiarSeccion('productos')} 
-                    className={`mobile-bottom-item ${seccionActiva === 'productos' ? 'active' : ''}`}
+                    className={`${styles.mobileBottomItem} ${seccionActiva === 'productos' ? styles.mobileBottomItemActive : ''}`}
                 >
                     <FaStore size={18} />
                     <span>Tienda</span>
@@ -1224,22 +1101,11 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 <button 
                     id="mobile-bottom-cart-btn"
                     onClick={() => cambiarSeccion('carrito')} 
-                    className={`mobile-bottom-item ${seccionActiva === 'carrito' ? 'active' : ''}`}
-                    style={{ position: 'relative' }}
+                    className={`${styles.mobileBottomItem} ${styles.mobileBottomItemCart} ${seccionActiva === 'carrito' ? styles.mobileBottomItemActive : ''}`}
                 >
                     <FaShoppingCart size={18} />
                     {totalCarritoItems > 0 && (
-                        <span style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '25%',
-                            background: '#f43f5e',
-                            color: '#fff',
-                            fontSize: '0.65rem',
-                            fontWeight: 'bold',
-                            padding: '1px 5px',
-                            borderRadius: '10px'
-                        }}>
+                        <span className={styles.mobileCartBubble}>
                             {totalCarritoItems}
                         </span>
                     )}
@@ -1247,7 +1113,7 @@ export const Catalogo: React.FC<CatalogoProps> = ({ alIrAlLogin, cliente, alCerr
                 </button>
                 <button 
                     onClick={() => cambiarSeccion('contacto')} 
-                    className={`mobile-bottom-item ${seccionActiva === 'contacto' ? 'active' : ''}`}
+                    className={`${styles.mobileBottomItem} ${seccionActiva === 'contacto' ? styles.mobileBottomItemActive : ''}`}
                 >
                     <FaMapMarkerAlt size={18} />
                     <span>Ubicación</span>
